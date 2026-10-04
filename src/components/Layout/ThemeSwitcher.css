@@ -1,0 +1,146 @@
+/* ═══════════════════════════════════
+   Theme Switcher
+   All styles owned by ThemeSwitcher.tsx
+   ═══════════════════════════════════ */
+
+/* ─── Trigger button wrapper ─── */
+
+.theme-switcher__wrap {
+  position: relative;
+}
+
+.theme-switcher__btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background 0.15s, transform 0.15s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.theme-switcher__btn:hover {
+  background: var(--bg-hover);
+  transform: rotate(20deg);
+}
+
+/* ─── Dropdown picker ─── */
+
+.theme-switcher__picker {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--modal-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+  padding: 8px;
+  z-index: var(--z-modal);
+  min-width: 180px;
+  animation: theme-switcher-pop 0.15s ease;
+}
+
+@keyframes theme-switcher-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.theme-switcher__picker-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.theme-switcher__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 5px;
+}
+
+/* ─── Individual theme item ─── */
+
+.theme-switcher__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 4px;
+  border-radius: 7px;
+  border: 2px solid transparent;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.theme-switcher__item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.theme-switcher__item--active {
+  border-color: var(--accent) !important;
+  background: var(--accent-light) !important;
+}
+
+/* ─── Swatch ─── */
+
+.theme-switcher__swatch {
+  width: 28px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-switcher__swatch-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme='dark'] .theme-switcher__swatch-icon {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* ─── Item label ─── */
+
+.theme-switcher__item-name {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.theme-switcher__item--active .theme-switcher__item-name {
+  color: var(--accent-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-switcher__picker {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+

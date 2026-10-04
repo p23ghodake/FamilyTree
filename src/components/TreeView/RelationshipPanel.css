@@ -1,0 +1,355 @@
+/* ─── Relationship Panel ─── */
+
+.relationship-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--modal-bg);
+  border: 1.5px solid var(--modal-border);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px var(--node-shadow);
+  padding: 16px 20px;
+  min-width: 380px;
+  max-width: 640px;
+  width: max-content;
+  z-index: var(--z-sticky);
+  animation: relationship-panel-slide-up 0.2s ease;
+}
+
+@keyframes relationship-panel-slide-up {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ─── Header ─── */
+
+.relationship-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.relationship-panel__title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.relationship-panel__header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.relationship-panel__clear {
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.relationship-panel__clear:hover { background: var(--border); color: var(--text-primary); }
+
+.relationship-panel__close {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.relationship-panel__close:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+
+/* ─── Step Guide ─── */
+
+.relationship-panel__steps {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.relationship-panel__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--input-border);
+  background: var(--input-bg);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.relationship-panel__step--active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent-text);
+  will-change: box-shadow;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .relationship-panel__step--active {
+    animation: relationship-panel-pulse 1.5s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .relationship-panel__step--active {
+    animation: none;
+  }
+}
+
+@keyframes relationship-panel-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3); }
+  50%       { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+}
+
+.relationship-panel__step--done {
+  border-color: var(--success);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.relationship-panel__step--disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.relationship-panel__step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--border);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.relationship-panel__step--active .relationship-panel__step-num {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.relationship-panel__step--done .relationship-panel__step-num {
+  background: var(--success);
+  color: var(--text-inverse);
+}
+
+.relationship-panel__step-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--success-bg);
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+
+/* photo fills the wrapper */
+.relationship-panel__step-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* non-photo avatars: scale font to fit 24px container */
+.relationship-panel__step-avatar .member-avatar__fa i   { font-size: 12px; }
+.relationship-panel__step-avatar .member-avatar__initials { font-size: 8px; }
+.relationship-panel__step-avatar .member-avatar__emoji    { font-size: 12px; }
+
+.relationship-panel__arrow {
+  color: var(--connector-line);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* ─── Result ─── */
+
+.relationship-panel__result {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.relationship-panel__label-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.relationship-panel__names {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+}
+
+.relationship-panel__is {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+.relationship-panel__label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--accent), var(--accent-text));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.relationship-panel__hops {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: -6px;
+}
+
+/* ─── Path chain ─── */
+
+.relationship-panel__chain {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: var(--input-bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+}
+
+.relationship-panel__chain-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1.5px solid var(--input-border);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  min-width: 46px;
+}
+
+.relationship-panel__chain-node:hover { background: var(--accent-light); border-color: var(--accent); }
+
+.relationship-panel__chain-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--input-border);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+}
+
+/* photo fills the wrapper */
+.relationship-panel__chain-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+}
+
+/* non-photo avatars: scale font to fit 28px container */
+.relationship-panel__chain-avatar .member-avatar__fa i    { font-size: 14px; }
+.relationship-panel__chain-avatar .member-avatar__initials { font-size: 9px; }
+.relationship-panel__chain-avatar .member-avatar__emoji    { font-size: 14px; }
+
+.relationship-panel__chain-node span {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 54px;
+}
+
+.relationship-panel__chain-node--source { border-color: var(--accent); background: var(--accent-light); }
+.relationship-panel__chain-node--source .relationship-panel__chain-avatar { border-color: var(--accent); }
+.relationship-panel__chain-node--target { border-color: var(--warning); background: var(--warning-bg); }
+.relationship-panel__chain-node--target .relationship-panel__chain-avatar { border-color: var(--warning); }
+
+.relationship-panel__chain-node--blood   { border-color: var(--rel-blood-light); background: var(--rel-blood-bg); }
+.relationship-panel__chain-node--blood .relationship-panel__chain-avatar { border-color: var(--rel-blood-light); }
+.relationship-panel__chain-node--marriage { border-color: var(--rel-marriage-light); background: var(--rel-marriage-bg); }
+.relationship-panel__chain-node--marriage .relationship-panel__chain-avatar { border-color: var(--rel-marriage-light); }
+
+.relationship-panel__chain-arrow {
+  font-size: 0.875rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.relationship-panel__chain-arrow--blood  { color: var(--rel-blood-dark); }
+.relationship-panel__chain-arrow--spouse { color: var(--rel-marriage-dark); font-size: 0.75rem; }
+
+/* ─── Legend ─── */
+
+.relationship-panel__legend {
+  display: flex;
+  gap: 14px;
+  padding: 6px 2px 0;
+}
+
+.relationship-panel__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.relationship-panel__legend-item--blood  { color: var(--rel-blood-dark); }
+.relationship-panel__legend-item--spouse { color: var(--rel-marriage-dark); }
+
+/* ─── No path ─── */
+
+.relationship-panel__no-path {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  font-size: 0.825rem;
+  color: var(--warning);
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .relationship-panel {
+    min-width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .relationship-panel {
+    animation: none !important;
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}

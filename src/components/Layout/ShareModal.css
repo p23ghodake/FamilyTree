@@ -1,0 +1,189 @@
+/* ─── Share Modal ─── */
+
+.share-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--backdrop-bg, rgba(0,0,0,0.45));
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: share-fade-in 0.15s ease;
+}
+
+@keyframes share-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.share-modal {
+  background: var(--modal-bg, var(--bg-primary));
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  animation: share-pop-in 0.15s ease;
+}
+
+@media (max-width: 480px) {
+  .share-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}
+
+@keyframes share-pop-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.share-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.share-modal__title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.share-modal__close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.share-modal__close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.share-modal__body {
+  padding: 20px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.share-modal__qr-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  line-height: 0;
+}
+
+.share-modal__hint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary, var(--text-muted));
+  text-align: center;
+}
+
+.share-modal__url-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.share-modal__url-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-secondary, var(--bg-primary));
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-family: monospace;
+  outline: none;
+  cursor: text;
+}
+
+.share-modal__url-input:focus {
+  border-color: var(--accent, #3b82f6);
+}
+
+.share-modal__copy-btn {
+  padding: 7px 14px;
+  background: var(--accent, #3b82f6);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.share-modal__copy-btn:hover {
+  background: var(--accent-hover, #2563eb);
+}
+
+.share-modal__copy-btn--copied {
+  background: var(--success, #16a34a);
+}
+
+.share-modal__note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-modal__backdrop {
+    animation: none !important;
+    opacity: 1;
+  }
+  .share-modal {
+    animation: none !important;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ── Too-large fallback ── */
+.share-modal__qr-too-large {
+  width: 100%;
+  background: var(--bg-secondary, #f8fafc);
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.share-modal__qr-too-large-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.share-modal__qr-too-large-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.share-modal__qr-too-large-sub {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+

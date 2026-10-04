@@ -1,0 +1,249 @@
+/* ═══════════════════════════════════
+   Stats Panel
+   ═══════════════════════════════════ */
+
+.stats-panel {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stats-panel {
+    animation: stats-slide-down 0.25s ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-panel {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes stats-slide-down {
+  from { max-height: 0; opacity: 0; overflow: hidden; }
+  to { max-height: 800px; opacity: 1; }
+}
+
+.stats-panel__filter-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  background: var(--accent-light, rgba(59,130,246,0.08));
+  border: 1px solid var(--accent, #3b82f6);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--accent, #3b82f6);
+  font-weight: 500;
+}
+
+/* ─── Summary Cards ─── */
+
+.stats-panel__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.stats-panel__card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stats-panel__card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  margin-bottom: 3px;
+  color: var(--text-inverse, #fff);
+}
+
+.stats-panel__card-icon--blue   { background: var(--accent, #3b82f6); }
+.stats-panel__card-icon--violet { background: var(--stat-violet, #8b5cf6); }
+.stats-panel__card-icon--amber  { background: var(--warning, #f59e0b); }
+.stats-panel__card-icon--teal   { background: var(--stat-teal, #14b8a6); }
+
+.stats-panel__card-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stats-panel__card-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Grid ─── */
+
+.stats-panel__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stats-panel__section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.stats-panel__section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+}
+
+/* ─── Bar Chart ─── */
+
+.stats-panel__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stats-panel__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-panel__bar-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 28px;
+  text-align: right;
+}
+
+.stats-panel__bar-track {
+  flex: 1;
+  height: 10px;
+  background: var(--bg-tertiary);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.stats-panel__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--stats-bar-fill), var(--accent-hover));
+  border-radius: 7px;
+  min-width: 4px;
+  transition: width 0.3s ease;
+  will-change: width;
+}
+
+.stats-panel__bar-value {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  width: 22px;
+}
+
+/* ─── Gender Bar ─── */
+
+.stats-panel__gender-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  margin-bottom: 5px;
+}
+
+.stats-panel__gender-fill {
+  transition: width 0.3s ease;
+  will-change: width;
+}
+
+.stats-panel__gender-fill--male {
+  background: var(--accent);
+}
+
+.stats-panel__gender-fill--female {
+  background: var(--connector-heart);
+}
+
+.stats-panel__gender-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stats-panel__gender-entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats-panel__gender-entry--male   { color: var(--accent, #3b82f6); }
+.stats-panel__gender-entry--female { color: var(--stat-pink, #ec4899); }
+
+/* ─── Lists ─── */
+
+.stats-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-panel__list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.stats-panel__list-count {
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 768px) {
+  .stats-panel__cards {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .stats-panel__card {
+    min-width: 80px;
+    padding: 10px 12px;
+  }
+
+  .stats-panel__card-value {
+    font-size: 20px;
+  }
+
+  .stats-panel__grid {
+    grid-template-columns: 1fr;
+  }
+}
