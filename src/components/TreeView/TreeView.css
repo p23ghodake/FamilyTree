@@ -1,0 +1,954 @@
+/* ═══════════════════════════════════════
+   Family Tree — Classic Genealogy Chart
+   ═══════════════════════════════════════ */
+
+.tree-view {
+  display: flex;
+  height: 100%;
+  background: var(--canvas-bg);
+  position: relative;
+}
+
+.tree-view__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+/* ─── Scrollable Tree Content ─── */
+
+.tree-view__content {
+  flex: 1;
+  overflow: auto;
+  padding: 40px 30px 60px;
+  position: relative;
+}
+
+/* ─── Relationship tracer mode: pointer cursor + hover ring on nodes ─── */
+
+.tree-view__content--rel-mode .pnode,
+.tree-view__content--rel-mode .pnode__circle {
+  cursor: pointer;
+}
+
+/* Hide the ⋮ menu button in rel-mode — prevents accidental opens during selection */
+.tree-view__content--rel-mode .pnode__menu-btn {
+  display: none !important;
+}
+
+/* Step 1 (waiting for source): blue hover ring */
+.tree-view__content--rel-mode:not(.tree-view__content--rel-step-2)
+  .pnode:not(.pnode--rel-source):not(.pnode--rel-target):hover .pnode__circle {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Step 2 (source picked, waiting for target): amber hover ring */
+.tree-view__content--rel-step-2
+  .pnode:not(.pnode--rel-source):not(.pnode--rel-target):hover .pnode__circle {
+  outline: 2.5px solid var(--rel-target-color);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.15) !important;
+}
+
+/* Already-selected source/target: show pointer to indicate re-click to change */
+.tree-view__content--rel-mode .pnode--rel-source .pnode__circle,
+.tree-view__content--rel-mode .pnode--rel-target .pnode__circle {
+  cursor: pointer;
+}
+
+/* ─── CSS Tree Chart (nested ul/li with connectors) ─── */
+
+.tree-chart,
+.tree-chart ul,
+.tree-chart li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-chart ul {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  padding-top: 28px;
+}
+
+.tree-chart li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 28px 6px 0;
+}
+
+/* ─── Root level: NO connectors ─── */
+
+.tree-chart > ul {
+  padding-top: 0;
+}
+
+.tree-chart > ul::before {
+  display: none;
+}
+
+.tree-chart > ul > li {
+  padding-top: 0;
+}
+
+.tree-chart > ul > li::before,
+.tree-chart > ul > li::after {
+  display: none;
+}
+
+/* ─── Vertical line FROM parent down to children bar ─── */
+
+.tree-chart li > ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 28px;
+  background: var(--connector-line);
+}
+
+/* ─── Connectors on each child <li> ─── */
+
+/* Left half of horizontal bar */
+.tree-chart li > ul > li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 0;
+  border-top: 2px solid var(--connector-line);
+}
+
+/* Right half + vertical drop to child */
+.tree-chart li > ul > li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  /* Offset -1px centers the 2px border-left at 50%, matching ul::before (which uses translateX(-50%));
+     +1px on width closes the 1px gap at the right edge of each li */
+  left: calc(50% - 1px);
+  width: calc(50% + 1px);
+  height: 28px;
+  border-top: 2px solid var(--connector-line);
+  border-left: 2px solid var(--connector-line);
+}
+
+/* First child: no left horizontal extension; rounded corner arcs into the bar on the left */
+.tree-chart li > ul > li:first-child::before {
+  border: none;
+}
+
+.tree-chart li > ul > li:first-child::after {
+  border-top-left-radius: 6px;
+}
+
+/* Last child: mirror of first child — bar goes left, rounded corner at right, vertical drop via border-right */
+.tree-chart li > ul > li:last-child::before {
+  right: calc(50% - 1px);
+  width: calc(50% + 1px);
+  height: 28px;
+  border-right: 2px solid var(--connector-line);
+  border-top-right-radius: 6px;
+}
+
+.tree-chart li > ul > li:last-child::after {
+  display: none;
+}
+
+/* Only child: just a straight vertical drop — no arc on either side, connects flush to parent line */
+.tree-chart li > ul > li:only-child::before {
+  display: none;
+}
+
+.tree-chart li > ul > li:only-child::after {
+  display: block;        /* override display:none from last-child::after */
+  border-top: none;
+  width: 0;
+  border-top-left-radius: 0;   /* reset left arc inherited from first-child */
+  border-top-right-radius: 0;  /* reset right arc inherited from last-child */
+}
+
+/* ─── Search highlight / dimmed ─── */
+
+.pnode--highlight .pnode__circle {
+  box-shadow: 0 0 0 4px var(--accent-light), 0 0 12px var(--accent-light);
+  border-color: var(--selection-border) !important;
+}
+
+.pnode--highlight .pnode__name {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+/* ─── Scroll-to beacon: plays once when a node is centred by search/selection ─── */
+@keyframes scroll-beacon {
+  0%   { box-shadow: 0 0 0 0px  rgba(255, 200, 50, 0.95); transform: scale(1);    }
+  25%  { box-shadow: 0 0 0 14px rgba(255, 200, 50, 0.65); transform: scale(1.18); }
+  55%  { box-shadow: 0 0 0 22px rgba(255, 200, 50, 0.25); transform: scale(1.06); }
+  80%  { box-shadow: 0 0 0 28px rgba(255, 200, 50, 0.08); transform: scale(1.02); }
+  100% { box-shadow: 0 0 0 0px  rgba(255, 200, 50, 0);    transform: scale(1);    }
+}
+
+.pnode--scroll-target .pnode__circle {
+  border-color: var(--scroll-beacon-color) !important;
+  z-index: var(--z-above);
+  will-change: transform, box-shadow;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pnode--scroll-target .pnode__circle {
+    animation: scroll-beacon 1.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pnode--scroll-target .pnode__circle {
+    animation: none;
+  }
+}
+
+.pnode--scroll-target .pnode__name {
+  color: var(--scroll-beacon-color);
+  font-weight: 700;
+  transition: color 0.3s;
+}
+
+.pnode--dimmed {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.pnode--hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* ─── Person Node ─── */
+
+.pnode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px;
+  transition: transform 0.2s;
+  width: 120px; /* Fixed width prevents horizontal shift when EN↔MR names have different lengths */
+  position: relative;
+  z-index: var(--z-base);
+}
+.pnode:hover {
+  transform: translateY(-3px);
+  z-index: var(--z-above);
+}
+
+/* Elevate node above all connectors/siblings when its menu is open */
+.pnode--menu-open {
+  z-index: var(--z-overlay) !important;
+}
+
+.pnode--sel {
+  transform: translateY(-3px);
+}
+
+.pnode__circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid;
+  overflow: visible;
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+  transition: box-shadow 0.2s;
+  position: relative;
+}
+
+.pnode__circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.pnode__marriage-badge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  line-height: 1;
+  z-index: var(--z-above);
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.35));
+  animation: marriage-badge-pop 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes marriage-badge-pop {
+  from { opacity: 0; transform: translateX(-50%) scale(0.4); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+.pnode__name {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-primary);
+  line-height: 1.5;
+  word-break: break-word;
+  max-width: 120px;
+  /* Always reserve 2-line height so EN↔MR switch doesn't shift the tree.
+     11px × 1.5 line-height × 2 lines = 33px */
+  min-height: 33px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pnode__dates {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* ─── Person Node hover action button ─── */
+
+.pnode__menu-btn {
+  position: absolute;
+  top: 0;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--input-border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px var(--node-shadow);
+  z-index: var(--z-above);
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.pnode:hover .pnode__menu-btn {
+  display: flex;
+}
+
+.pnode__menu-btn:hover {
+  background: var(--accent);
+  color: var(--text-inverse);
+  border-color: var(--accent);
+}
+
+.pnode__menu-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ─── Dropdown menu ─── */
+
+.pnode__menu {
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--node-shadow);
+  padding: 4px;
+  min-width: 148px;
+  z-index: var(--z-toast);
+  animation: menu-pop 0.12s ease;
+}
+
+@keyframes menu-pop {
+  from { transform: scale(0.9) translateY(-4px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);    opacity: 1; }
+}
+
+.pnode__menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+
+.pnode__menu-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.pnode__menu-item--danger {
+  color: var(--danger);
+}
+
+.pnode__menu-item--danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.pnode__menu-confirm {
+  padding: 6px 8px;
+  border-top: 1px solid var(--border);
+}
+
+.pnode__menu-confirm__label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+
+.pnode__menu-item--disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pnode__menu-item--disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* ─── Couple container ─── */
+
+.tree-couple {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* ─── Double Line (Marriage Bond) spouse connector ─── */
+
+.spouse-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  /* pnode padding-top (2px) + half circle (36px) - half bond height (4.5px) ≈ 34px */
+  margin-top: 34px;
+}
+
+/* Top rail: line — [year / heart] — line */
+.spouse-connector__top {
+  display: flex;
+  align-items: center;
+}
+
+.spouse-connector__line {
+  display: block;
+  flex: 1;
+  height: 2px;
+  background: var(--connector-line);
+}
+
+/* Bottom rail: continuous full-width line */
+.spouse-connector__line--full {
+  width: 100%;
+  flex: unset;
+}
+
+/* Mid: padding around heart/✕, year floats above */
+.spouse-connector__mid {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
+/* Year floats above the mid gap */
+.spouse-connector__year {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.spouse-connector__heart {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ─── Former spouse connector — dashed double line ─── */
+
+.spouse-connector--former .spouse-connector__line {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--connector-former-color) 0px, var(--connector-former-color) 4px,
+    transparent 4px, transparent 8px
+  );
+  height: 2px;
+}
+
+.spouse-connector__x {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--connector-former-color);
+  font-weight: 700;
+}
+
+/* Former spouse node — muted appearance */
+.pnode--former-spouse {
+  opacity: 0.65;
+}
+
+.pnode--former-spouse .pnode__circle {
+  filter: grayscale(40%);
+}
+
+.pnode--former-spouse .pnode__name {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ─── Zoom Controls ─── */
+
+.zoom-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--toolbar-bg);
+  border: 1px solid var(--toolbar-border);
+  border-radius: 12px;
+  padding: 4px 6px;
+  box-shadow: 0 2px 8px var(--node-shadow);
+  z-index: var(--z-above);
+}
+
+.zoom-controls__btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background 0.15s;
+}
+
+.zoom-controls__btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.zoom-controls__btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.zoom-controls__btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.zoom-controls__level {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 40px;
+  text-align: center;
+}
+
+.zoom-controls__reset {
+  font-size: 18px;
+  margin-left: 2px;
+}
+
+.zoom-controls__divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.zoom-controls__fit {
+  color: var(--accent);
+}
+
+.zoom-controls__fit:hover {
+  background: var(--accent-light);
+  color: var(--accent-text);
+}
+
+.zoom-controls__fit--active {
+  background: var(--success-active);
+  color: #fff;
+  border-color: var(--success-active-border);
+}
+
+.zoom-controls__fit--active:hover {
+  background: var(--success-active-hover);
+  color: #fff;
+}
+
+/* ─── Wrap rows mode ─── */
+
+/* Allow children to wrap to next row when they exceed available width */
+.tree-chart.tree-chart--wrap li > ul {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: var(--tree-wrap-width, 1200px);
+}
+
+/* Remove per-child T-bar connectors — center vertical drop from parent is enough */
+.tree-chart.tree-chart--wrap li > ul > li::before,
+.tree-chart.tree-chart--wrap li > ul > li::after {
+  display: none;
+}
+
+/* Each child gets its own vertical drop line from the parent connector */
+.tree-chart.tree-chart--wrap li > ul > li::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 28px;
+  background: var(--connector-line);
+  border: none;
+  right: auto;
+}
+
+/* ─── Bottom Color Bar ─── */
+
+.tree-view__colorbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  height: 6px;
+}
+
+.tree-view__colorbar span {
+  flex: 1;
+}
+
+/* ─── Relationship mode banner ─── */
+
+.tree-view__rel-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--accent), var(--accent-text));
+  color: var(--text-inverse);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: var(--z-dropdown);
+  box-shadow: 0 4px 16px var(--node-shadow);
+  white-space: nowrap;
+  animation: banner-in 0.3s ease;
+}
+
+/* ─── Lineage focus banner ─── */
+
+.tree-view__lineage-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--lineage-banner-start), var(--lineage-banner-end));
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 7px 14px 7px 16px;
+  border-radius: 20px;
+  z-index: var(--z-dropdown);
+  box-shadow: 0 4px 16px var(--lineage-banner-shadow);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  animation: banner-in 0.3s ease;
+}
+
+.tree-view__lineage-banner-close {
+  margin-left: 10px;
+  background: var(--lineage-btn-overlay);
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  padding: 0;
+}
+
+.tree-view__lineage-banner-close:hover {
+  background: var(--lineage-btn-overlay-hover);
+}
+
+@keyframes banner-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ─── Relationship highlight states ─── */
+
+.pnode--rel-source .pnode__circle {
+  outline: 3px solid var(--rel-source-color);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.25) !important;
+}
+
+.pnode--rel-source .pnode__name {
+  color: var(--rel-source-text);
+  font-weight: 800;
+}
+
+.pnode--rel-target .pnode__circle {
+  outline: 3px solid var(--rel-target-color);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.25) !important;
+}
+
+.pnode--rel-target .pnode__name {
+  color: var(--rel-target-text);
+  font-weight: 800;
+}
+
+/* Blood-connected intermediate node — crimson */
+.pnode--rel-blood-path .pnode__circle {
+  outline: 2.5px solid var(--rel-blood-color);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.18) !important;
+  will-change: box-shadow;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pnode--rel-blood-path .pnode__circle {
+    animation: rel-blood-path-pulse 1.8s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pnode--rel-blood-path .pnode__circle {
+    animation: none;
+  }
+}
+
+@keyframes rel-blood-path-pulse {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.18); }
+  50%       { box-shadow: 0 0 0 9px rgba(220, 38, 38, 0.08); }
+}
+
+.pnode--rel-blood-path .pnode__name {
+  color: var(--rel-blood-text);
+  font-weight: 700;
+}
+
+/* Marriage-connected intermediate node — deep pink */
+.pnode--rel-path .pnode__circle {
+  outline: 2.5px solid var(--rel-marriage-color);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(219, 39, 119, 0.18) !important;
+  will-change: box-shadow;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pnode--rel-path .pnode__circle {
+    animation: rel-path-pulse 1.8s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pnode--rel-path .pnode__circle {
+    animation: none;
+  }
+}
+
+@keyframes rel-path-pulse {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(219, 39, 119, 0.18); }
+  50%       { box-shadow: 0 0 0 9px rgba(219, 39, 119, 0.08); }
+}
+
+.pnode--rel-path .pnode__name {
+  color: var(--rel-marriage-text);
+  font-weight: 700;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 900px) {
+  .tree-view__content {
+    padding: 20px 10px 40px;
+  }
+
+  .pnode__circle {
+    width: 52px;
+    height: 52px;
+  }
+
+  .pnode {
+    width: 90px; /* Matches 52px circle + breathing room; keeps layout stable on mobile */
+  }
+
+  .pnode__name {
+    font-size: 10px;
+    min-height: 30px; /* 10px × 1.5 × 2 lines */
+    max-width: 86px;
+  }
+
+  .pnode__dates {
+    font-size: 9px;
+    max-width: 86px;
+  }
+
+  .spouse-connector__line {
+    width: 10px;
+  }
+
+  /* Recenter connector with smaller 52px circle: 2px padding + 26px half-circle - 4.5px half-bond ≈ 24px */
+  .spouse-connector {
+    margin-top: 24px;
+  }
+
+  .tree-chart li {
+    padding: 20px 3px 0;
+  }
+
+  .tree-chart ul {
+    padding-top: 20px;
+  }
+
+  .tree-chart li > ul::before {
+    height: 20px;
+  }
+
+  .tree-chart li > ul > li::after {
+    height: 20px;
+  }
+
+  .tree-chart li > ul > li:last-child::before {
+    height: 20px;
+  }
+
+  .tree-chart.tree-chart--wrap li > ul > li::before {
+    height: 20px;
+  }
+}
+
+/* ─── Avatar style variants ─── */
+
+.pnode__avatar-fa {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pnode__avatar-fa i {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.pnode__avatar-initials {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  user-select: none;
+}
+
+.pnode__avatar-emoji {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  line-height: 1;
+  user-select: none;
+}
+
+@media (max-width: 900px) {
+  .pnode__avatar-fa i      { font-size: 26px; }
+  .pnode__avatar-initials { font-size: 16px; }
+  .pnode__avatar-emoji    { font-size: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pnode__marriage-badge {
+    animation: none !important;
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  .pnode__menu {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+  .tree-view__rel-banner,
+  .tree-view__lineage-banner {
+    animation: none !important;
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}

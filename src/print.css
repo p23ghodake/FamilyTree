@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════════════════════
+   Print-Optimised View
+   Hidden in screen mode; activated when window.print() is called
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Print header: visible only on paper ── */
+.print-header {
+  display: none;
+}
+
+/* ════════════════════════════════════ */
+@media print {
+  /* ── Page setup: landscape A3 for wide trees ── */
+  @page {
+    size: A3 landscape;
+    margin: 12mm 16mm;
+  }
+
+  /* ── Hide all UI chrome ── */
+  .top-bar,
+  .zoom-controls,
+  .floating-search,
+  .filter-panel,
+  .relationship-panel,
+  .tree-view__colorbar,
+  .tree-view__rel-banner,
+  .tree-view__lineage-banner,
+  .pnode__menu-btn,
+  .pnode__menu,
+  .pnode__marriage-badge,
+  .share-modal__backdrop,
+  .member-form-modal,
+  .top-bar__stats-dropdown,
+  .top-bar__avatar-dropdown {
+    display: none !important;
+  }
+
+  /* ── Show print header ── */
+  .print-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 7px;
+    margin-bottom: 14px;
+    border-bottom: 1.5px solid var(--text-primary);
+    page-break-inside: avoid;
+  }
+
+  .print-header__title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.2px;
+  }
+
+  .print-header__meta {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-left: 10px;
+  }
+
+  .print-header__date {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ── Remove overflow and fixed heights ── */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: var(--bg-primary) !important;
+  }
+
+  .layout {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .layout__main {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .tree-view {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .tree-view__content {
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  /* ── Remove overflow from outer containers; JS sets correct print scale ── */
+  .tree-chart {
+    transform-origin: top left !important;
+  }
+
+  /* ── Keep colours and borders when printing ── */
+  .pnode__circle,
+  .pnode__avatar-fa,
+  .pnode__avatar-initials,
+  .pnode__avatar-emoji,
+  .spouse-connector {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* ── Connector lines ── */
+  .tree-chart li::before,
+  .tree-chart li::after,
+  .tree-chart ul::before {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* ── Avoid breaking nodes across pages ── */
+  .pnode {
+    break-inside: avoid;
+  }
+
+  .tree-couple {
+    break-inside: avoid;
+  }
+}

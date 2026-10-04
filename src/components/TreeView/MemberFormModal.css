@@ -1,0 +1,832 @@
+/* ─── Marriage History section ─── */
+
+.member-form__marriage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+}
+
+.member-form__marriage-row--former {
+  opacity: 0.7;
+  background: var(--bg-primary);
+}
+
+.member-form__marriage-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+}
+
+.member-form__marriage-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.member-form__marriage-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-form__marriage-years {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.member-form__marriage-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.member-form__marriage-badge--current {
+  background: var(--accent-light);
+  color: var(--accent-text);
+}
+
+.member-form__marriage-badge--former {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.member-form__marriage-end-btn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border: 1.5px solid var(--danger);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.member-form__marriage-end-btn:hover {
+  background: var(--danger-bg);
+}
+
+.member-form__marriage-end-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.member-form__marriage-end-year {
+  width: 80px !important;
+  flex-shrink: 0;
+}
+
+.member-form__marriage-end-confirm {
+  padding: 6px 12px !important;
+  font-size: 0.8rem !important;
+}
+
+/* ─── Photo upload field ─── */
+
+.member-form__photo-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.member-form__photo-preview {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.member-form__photo-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--input-border);
+  display: block;
+}
+
+.member-form__photo-clear {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+
+.member-form__photo-clear:hover { opacity: 0.8; }
+
+.member-form__photo-inputs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.member-form__photo-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1.5px dashed var(--input-border);
+  border-radius: 7px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  width: 100%;
+  justify-content: center;
+}
+
+.member-form__photo-upload-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent-text);
+  border-style: solid;
+}
+
+.member-form__photo-or {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ─── Relationship selector (compact) ─── */
+
+.member-form__section--rel {
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.member-form__rel-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.member-form__section--rel .member-form__section-title {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.member-form__rel-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.member-form__rel-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  border: 1.5px solid var(--input-border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.member-form__rel-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+  background: var(--accent-light);
+}
+
+.member-form__rel-chip--active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.member-form__rel-chip--active:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--text-inverse);
+}
+
+.member-form__rel-select-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.member-form__rel-select-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-top: 7px;
+  min-width: 44px;
+}
+
+.member-form__rel-select-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.member-form__rel-select-wrap .member-form__input {
+  padding: 5px 8px;
+  font-size: 0.8125rem;
+}
+
+/* ─── MemberFormModal Overlay ─── */
+
+.member-form__overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-toast);
+  padding: 16px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .member-form__overlay {
+    animation: member-form-fade-in 0.15s ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-form__overlay {
+    animation: none;
+  }
+}
+
+@keyframes member-form-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Modal Card ─── */
+
+.member-form {
+  background: var(--modal-bg);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px var(--node-shadow);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .member-form {
+    animation: member-form-slide-up 0.2s ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-form {
+    animation: none;
+  }
+}
+
+@keyframes member-form-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ─── Header ─── */
+
+.member-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--modal-border);
+  flex-shrink: 0;
+}
+
+.member-form__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-form__context {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.member-form__close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--bg-tertiary);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.member-form__close:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+/* ─── Body ─── */
+
+.member-form__body {
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Section ─── */
+
+.member-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-form__section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Row ─── */
+
+.member-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ─── Field ─── */
+
+.member-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.member-form__field--full {
+  grid-column: 1 / -1;
+}
+
+.member-form__field--checkbox {
+  justify-content: flex-end;
+  padding-bottom: 2px;
+}
+
+.member-form__field label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.member-form__req {
+  color: var(--danger);
+  font-size: 0.75rem;
+}
+
+/* ─── Input ─── */
+
+.member-form__input {
+  padding: 6px 10px;
+  border: 1.5px solid var(--input-border);
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.member-form__input:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.member-form__input--err {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.member-form__input--err:focus {
+  box-shadow: 0 0 0 3px var(--danger-bg);
+}
+
+.member-form__select {
+  cursor: pointer;
+}
+
+.member-form__textarea {
+  resize: vertical;
+  min-height: 52px;
+  font-family: inherit;
+}
+
+.member-form__err {
+  font-size: 0.75rem;
+  color: var(--danger);
+  margin-top: 1px;
+}
+
+.member-form__label-hint {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
+.member-form__section-hint {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 8px;
+  font-style: italic;
+}
+
+/* ─── Three-part date row (Day / Month / Year) ─── */
+
+.member-form__date-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.member-form__date-day {
+  width: 72px !important;
+  flex-shrink: 0;
+}
+
+.member-form__date-month {
+  width: 120px !important;
+  flex-shrink: 0;
+}
+
+.member-form__date-year {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Compact dates (Birth / Death inline rows) ─── */
+
+.member-form__dates-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.member-form__date-inline-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.member-form__date-inline-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 38px;
+  padding-top: 7px;
+}
+
+.member-form__date-inline-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.member-form__date-inline-content .member-form__input {
+  padding: 5px 6px;
+  font-size: 0.8125rem;
+}
+
+/* ─── Checkbox label ─── */
+
+.member-form__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 5px 10px;
+  border: 1.5px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.member-form__checkbox-label:hover {
+  background: var(--bg-hover);
+}
+
+.member-form__checkbox-label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ─── Footer ─── */
+
+.member-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--modal-border);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.member-form__footer-right {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ─── Buttons ─── */
+
+.member-form__btn {
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.member-form__btn--primary {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.member-form__btn--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--node-shadow);
+}
+
+.member-form__btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.member-form__btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--input-border);
+}
+
+.member-form__btn--ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.member-form__delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.member-form__delete-confirm__label {
+  font-size: 0.8rem;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.member-form__btn--sm {
+  padding: 5px 10px !important;
+  font-size: 0.78rem !important;
+}
+
+.member-form__btn--danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
+}
+
+.member-form__btn--danger:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 560px) {
+  .member-form__row {
+    grid-template-columns: 1fr;
+  }
+  .member-form__field--full {
+    grid-column: 1;
+  }
+  .member-form__footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .member-form__footer-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ─── Duplicate Member Warning ─── */
+
+.member-form__dup-warning {
+  border: 1.5px solid var(--warning, #f59e0b);
+  border-radius: 10px;
+  background: var(--warning-light, #fffbeb);
+  overflow: hidden;
+  animation: dup-fade-in 0.2s ease-out;
+}
+
+[data-theme='dark'] .member-form__dup-warning {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+@keyframes dup-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.member-form__dup-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--warning-text, #92400e);
+  border-bottom: 1px solid var(--warning, #f59e0b);
+}
+
+[data-theme='dark'] .member-form__dup-header {
+  color: #fbbf24;
+}
+
+.member-form__dup-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.member-form__dup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.member-form__dup-item:last-child {
+  border-bottom: none;
+}
+
+.member-form__dup-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+}
+
+.member-form__dup-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.member-form__dup-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-form__dup-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.member-form__dup-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.member-form__dup-badge--high {
+  background: var(--danger-light, #fee2e2);
+  color: var(--danger, #dc2626);
+}
+
+[data-theme='dark'] .member-form__dup-badge--high {
+  background: rgba(220, 38, 38, 0.18);
+  color: #f87171;
+}
+
+.member-form__dup-badge--medium {
+  background: var(--warning-light, #fffbeb);
+  color: var(--warning-text, #92400e);
+  border: 1px solid var(--warning, #f59e0b);
+}
+
+[data-theme='dark'] .member-form__dup-badge--medium {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border-color: #f59e0b;
+}
+
+.member-form__dup-hint {
+  display: block;
+  padding: 5px 10px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+}

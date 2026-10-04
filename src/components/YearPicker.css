@@ -1,0 +1,262 @@
+/* ═══════════════════════════════
+   Year Picker Component
+   ═══════════════════════════════ */
+
+/* ── Trigger wrapper ── */
+
+.year-picker {
+  position: relative;
+  width: 100%;
+}
+
+.year-picker__trigger {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+
+.year-picker--open .year-picker__trigger,
+.year-picker__trigger:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.year-picker--err .year-picker__trigger {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-bg);
+}
+
+.year-picker__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  outline: none;
+  width: 100%;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.year-picker__input::placeholder {
+  color: var(--text-muted);
+}
+
+.year-picker__chevron {
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1;
+  transition: transform 0.2s;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.year-picker__chevron--up {
+  transform: rotate(180deg);
+}
+
+/* ── Popup (rendered in portal, position:fixed) ── */
+
+.year-picker__popup {
+  position: fixed;
+  z-index: var(--z-max);
+  background: var(--toolbar-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10);
+  padding: 10px;
+  animation: year-picker-pop 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+@keyframes year-picker-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Decade navigation ── */
+
+.year-picker__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 4px;
+}
+
+.year-picker__nav-btn {
+  width: 30px;
+  height: 30px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.year-picker__nav-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--text-inverse);
+  border-color: var(--accent);
+}
+
+.year-picker__nav-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.year-picker__nav-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.year-picker__nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.year-picker__decade-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.year-picker__decade-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.year-picker__decade-range {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* ── Year grid ── */
+
+.year-picker__grid {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.year-picker__year {
+  padding: 6px 2px;
+  border: 1.5px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  line-height: 1;
+}
+
+.year-picker__year:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.year-picker__year:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Selected year */
+.year-picker__year--sel {
+  background: var(--accent) !important;
+  color: var(--text-inverse) !important;
+  border-color: var(--accent) !important;
+  font-weight: 700;
+}
+
+/* Current real-world year — subtle indicator dot */
+.year-picker__year--current {
+  border-color: var(--accent-light);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.year-picker__year--current::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin: 2px auto 0;
+}
+
+/* ── Footer ── */
+
+.year-picker__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.year-picker__jump-btn {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--accent-text);
+  background: var(--accent-light);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.year-picker__jump-btn:hover { opacity: 0.8; }
+
+.year-picker__clear-btn {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.year-picker__clear-btn:hover { opacity: 0.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .year-picker__popup {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
