@@ -30,9 +30,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        env:
-          CI: false # 👈 This tells GitHub to ignore warnings and finish building anyway
-        run: npm install
+        run: npm ci
 
       - name: Build project
         run: npm run build
