@@ -142,7 +142,8 @@ const MemberFormModal: React.FC = () => {
   }, [memberFormMode, memberFormTargetId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Members available to link as a relationship target
-  const allMembers = currentTree?.members ?? [];
+  const members = currentTree?.members;
+  const allMembers = useMemo(() => members ?? [], [members]);
 
   // Duplicate detection — only while adding (not editing)
   const duplicates = useMemo(() => {

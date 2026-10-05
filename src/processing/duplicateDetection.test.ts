@@ -143,13 +143,11 @@ describe('findDuplicates', () => {
   });
 
   it('sorts HIGH confidence before MEDIUM', () => {
-    const results = findDuplicates('Rama', 'Sharma', 1971, members);
-    if (results.length >= 2) {
-      const firstHigh = results.findIndex(r => r.level === 'high');
-      const firstMedium = results.findIndex(r => r.level === 'medium');
-      if (firstHigh !== -1 && firstMedium !== -1) {
-        expect(firstHigh).toBeLessThan(firstMedium);
-      }
-    }
+    const results = findDuplicates('Ram', 'Sharma', null, members);
+    const firstHigh = results.findIndex(r => r.level === 'high');
+    const firstMedium = results.findIndex(r => r.level === 'medium');
+    expect(firstHigh).toBeGreaterThanOrEqual(0);
+    expect(firstMedium).toBeGreaterThanOrEqual(0);
+    expect(firstHigh).toBeLessThan(firstMedium);
   });
 });
