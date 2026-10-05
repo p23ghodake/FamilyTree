@@ -1,19 +1,19 @@
 {
   "files": {
-    "main.css": "/static/css/main.2d57bca9.css",
-    "main.js": "/static/js/main.6952222d.js",
-    "static/js/316.27b2f807.chunk.js": "/static/js/316.27b2f807.chunk.js",
-    "static/media/fa-solid-900.woff2": "/static/media/fa-solid-900.dcef2f69dbd5989a2e69.woff2",
-    "static/media/fa-brands-400.woff2": "/static/media/fa-brands-400.41062caea457897b1d3b.woff2",
-    "static/media/fa-regular-400.woff2": "/static/media/fa-regular-400.fa2e58edfd73d8341e07.woff2",
-    "static/media/fa-v4compatibility.woff2": "/static/media/fa-v4compatibility.2129bf071a83c1d49732.woff2",
-    "index.html": "/index.html",
-    "main.2d57bca9.css.map": "/static/css/main.2d57bca9.css.map",
-    "main.6952222d.js.map": "/static/js/main.6952222d.js.map",
-    "316.27b2f807.chunk.js.map": "/static/js/316.27b2f807.chunk.js.map"
+    "main.css": "/p23ghodake/FamilyTree/static/css/main.1edbddb0.css",
+    "main.js": "/p23ghodake/FamilyTree/static/js/main.58bc4f41.js",
+    "static/js/316.27b2f807.chunk.js": "/p23ghodake/FamilyTree/static/js/316.27b2f807.chunk.js",
+    "static/media/fa-solid-900.woff2": "/p23ghodake/FamilyTree/static/media/fa-solid-900.dcef2f69dbd5989a2e69.woff2",
+    "static/media/fa-brands-400.woff2": "/p23ghodake/FamilyTree/static/media/fa-brands-400.41062caea457897b1d3b.woff2",
+    "static/media/fa-regular-400.woff2": "/p23ghodake/FamilyTree/static/media/fa-regular-400.fa2e58edfd73d8341e07.woff2",
+    "static/media/fa-v4compatibility.woff2": "/p23ghodake/FamilyTree/static/media/fa-v4compatibility.2129bf071a83c1d49732.woff2",
+    "index.html": "/p23ghodake/FamilyTree/index.html",
+    "main.1edbddb0.css.map": "/p23ghodake/FamilyTree/static/css/main.1edbddb0.css.map",
+    "main.58bc4f41.js.map": "/p23ghodake/FamilyTree/static/js/main.58bc4f41.js.map",
+    "316.27b2f807.chunk.js.map": "/p23ghodake/FamilyTree/static/js/316.27b2f807.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.2d57bca9.css",
-    "static/js/main.6952222d.js"
+    "static/css/main.1edbddb0.css",
+    "static/js/main.58bc4f41.js"
   ]
 }
