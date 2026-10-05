@@ -56,7 +56,11 @@ export const TreeBranch = React.memo<{
   };
 
   return (
-    <li role="treeitem" aria-expanded={node.children.length > 0 ? true : undefined}>
+    <li
+      role="treeitem"
+      aria-selected={selectedId === node.member.id}
+      aria-expanded={node.children.length > 0 ? true : undefined}
+    >
       <div className="tree-couple">
         {/* Former spouses — rendered LEFT of primary, dashed connector */}
         {node.formerSpouses.map(({ member: fsp, rel }) => (
