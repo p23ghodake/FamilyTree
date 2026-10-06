@@ -17,7 +17,7 @@ import './Toolbar.css';
 
 const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const {
-    state, dispatch, currentTree, cloudReady, cloudError, isSaving,
+    state, dispatch, currentTree,
     exportData, resetData, undo, redo, canUndo, canRedo,
   } = useFamilyTree();
   const { session, loading: authLoading, signOut } = useAuth();
@@ -308,15 +308,6 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         {authLoading ? 'Checking…' : session ? 'Sign out' : 'Sign in'}
       </button>
       {showLogin && !session && <LoginModal onClose={() => setShowLogin(false)} />}
-      {session && (
-        <span
-          className="family-data-save-status"
-          role="status"
-          title={cloudError ?? (cloudReady ? 'GitHub family data is ready' : 'Loading GitHub family data')}
-        >
-          {isSaving ? 'Saving…' : cloudReady ? 'Saved' : cloudError ? 'Unavailable' : 'Loading…'}
-        </span>
-      )}
 
       <button
         className="toolbar__btn toolbar__btn--lang"
