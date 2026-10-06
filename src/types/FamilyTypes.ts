@@ -6,6 +6,8 @@ export interface RawFamilyMember {
   lastName: string;
   firstName_mr?: string;
   lastName_mr?: string;
+  middleName?: string;
+  middleName_mr?: string;
   gender: 'male' | 'female' | 'unknown';
   birthYear: number | null;
   deathYear: number | null;
