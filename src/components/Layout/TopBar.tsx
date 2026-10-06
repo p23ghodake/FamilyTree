@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import toast from 'react-hot-toast';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../lib/AuthContext';
 import {
   UserPlusIcon, GitBranchIcon, BarChart2Icon, DownloadIcon, RotateCcwIcon,
   ImageIcon, Loader2Icon, Undo2Icon, Redo2Icon, UserIcon, HelpCircleIcon,
@@ -15,9 +16,10 @@ import './Toolbar.css';
 
 const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const {
-    state, dispatch, currentTree,
+    state, dispatch, currentTree, cloudReady, cloudError, isSaving,
     exportData, resetData, undo, redo, canUndo, canRedo,
   } = useFamilyTree();
+  const { session, loading: authLoading, signInWithGitHub, signOut } = useAuth();
   const { t, lang, toggleLang } = useLanguage();
 
   const [showStats, setShowStats] = useState(false);
@@ -45,14 +47,12 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
     undo();
-    toast.success(t.toastUndo, { id: 'undo-redo', duration: 1500 });
-  }, [canUndo, undo, t]);
+  }, [canUndo, undo]);
 
   const handleRedo = useCallback(() => {
     if (!canRedo) return;
     redo();
-    toast.success(t.toastRedo, { id: 'undo-redo', duration: 1500 });
-  }, [canRedo, redo, t]);
+  }, [canRedo, redo]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -138,9 +138,21 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const handleReset = useCallback(() => {
     if (window.confirm(t.confirmReset)) {
       resetData();
-      toast.success(t.toastResetSuccess);
     }
   }, [resetData, t]);
+
+  const handleAuthAction = useCallback(async () => {
+    try {
+      if (session) {
+        await signOut();
+      } else {
+        await signInWithGitHub();
+      }
+    } catch (error) {
+      console.error('GitHub authentication failed:', error);
+      toast.error(error instanceof Error ? error.message : 'GitHub authentication failed.');
+    }
+  }, [session, signInWithGitHub, signOut]);
 
   return (
     <div className="top-bar">
@@ -284,6 +296,24 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
           <RotateCcwIcon size={15} />
         </button>
       </div>
+
+      <button
+        className="toolbar__btn"
+        onClick={handleAuthAction}
+        disabled={authLoading}
+        title={session ? 'Sign out of GitHub' : 'Sign in with GitHub to edit and save family data'}
+      >
+        {authLoading ? 'Checking…' : session ? 'Sign out' : 'Sign in with GitHub'}
+      </button>
+      {session && (
+        <span
+          className="family-data-save-status"
+          role="status"
+          title={cloudError ?? (cloudReady ? 'GitHub family data is ready' : 'Loading GitHub family data')}
+        >
+          {isSaving ? 'Saving…' : cloudReady ? 'Saved' : cloudError ? 'Unavailable' : 'Loading…'}
+        </span>
+      )}
 
       <button
         className="toolbar__btn toolbar__btn--lang"

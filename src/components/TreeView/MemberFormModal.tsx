@@ -221,6 +221,8 @@ const MemberFormModal: React.FC = () => {
         spouseId: editMember.spouseId,
         parentIds: editMember.parentIds,
         childrenIds: editMember.childrenIds,
+        middleName: editMember.middleName,
+        middleName_mr: editMember.middleName_mr,
         generationIndex: editMember.generationIndex,
       } : {}),
     };
