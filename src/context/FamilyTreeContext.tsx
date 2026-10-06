@@ -432,7 +432,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     mutationQueueRef.current = mutationQueueRef.current.then(async () => {
       if (generation !== conflictGenerationRef.current) return;
       if (!session) {
-        toast.error('Sign in with GitHub before changing family data.', { id: 'family-save' });
+        toast.error('Sign in before changing family data.', { id: 'family-save' });
         return;
       }
       if (!cloudReadyRef.current || !shaRef.current) {

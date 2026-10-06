@@ -6,6 +6,7 @@ interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   signInWithGitHub: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -54,6 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider: 'github',
         options: { redirectTo: window.location.href },
       });
+      if (error) throw error;
+    },
+    signInWithPassword: async (email, password) => {
+      const { error } = await requireSupabase().auth.signInWithPassword({ email, password });
       if (error) throw error;
     },
     signOut: async () => {

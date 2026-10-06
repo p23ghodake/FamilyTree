@@ -99,8 +99,12 @@ Deno.serve(async request => {
   const login = [metadata.user_name, metadata.preferred_username]
     .find((value): value is string => typeof value === 'string' && value.length > 0)
     ?.toLowerCase();
-  const canEdit = !!login && editors.includes(login);
-  const canView = canEdit || (!!login && viewers.includes(login));
+  const email = typeof (user as { email?: unknown }).email === 'string'
+    ? (user as { email: string }).email.toLowerCase()
+    : undefined;
+  const identities = [login, email].filter((value): value is string => !!value);
+  const canEdit = identities.some(id => editors.includes(id));
+  const canView = canEdit || identities.some(id => viewers.includes(id));
   if (!canView) {
     return jsonResponse({ error: 'Your GitHub account is not allowed to access family data.' }, 403);
   }

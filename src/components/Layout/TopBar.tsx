@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../lib/AuthContext';
+import LoginModal from './LoginModal';
 import {
   UserPlusIcon, GitBranchIcon, BarChart2Icon, DownloadIcon, RotateCcwIcon,
   ImageIcon, Loader2Icon, Undo2Icon, Redo2Icon, UserIcon, HelpCircleIcon,
@@ -19,7 +20,8 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
     state, dispatch, currentTree, cloudReady, cloudError, isSaving,
     exportData, resetData, undo, redo, canUndo, canRedo,
   } = useFamilyTree();
-  const { session, loading: authLoading, signInWithGitHub, signOut } = useAuth();
+  const { session, loading: authLoading, signOut } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
   const { t, lang, toggleLang } = useLanguage();
 
   const [showStats, setShowStats] = useState(false);
@@ -146,13 +148,13 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
       if (session) {
         await signOut();
       } else {
-        await signInWithGitHub();
+        setShowLogin(true);
       }
     } catch (error) {
-      console.error('GitHub authentication failed:', error);
-      toast.error(error instanceof Error ? error.message : 'GitHub authentication failed.');
+      console.error('Authentication failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Authentication failed.');
     }
-  }, [session, signInWithGitHub, signOut]);
+  }, [session, signOut]);
 
   return (
     <div className="top-bar">
@@ -301,10 +303,11 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         className="toolbar__btn"
         onClick={handleAuthAction}
         disabled={authLoading}
-        title={session ? 'Sign out of GitHub' : 'Sign in with GitHub to edit and save family data'}
+        title={session ? 'Sign out' : 'Sign in to edit and save family data'}
       >
-        {authLoading ? 'Checking…' : session ? 'Sign out' : 'Sign in with GitHub'}
+        {authLoading ? 'Checking…' : session ? 'Sign out' : 'Sign in'}
       </button>
+      {showLogin && !session && <LoginModal onClose={() => setShowLogin(false)} />}
       {session && (
         <span
           className="family-data-save-status"
