@@ -1,0 +1,30 @@
+.login-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.login-modal {
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #222);
+  padding: 20px;
+  border-radius: 8px;
+  width: min(320px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-modal h3 {
+  margin: 0;
+}
+
+.login-modal input {
+  padding: 8px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+}
