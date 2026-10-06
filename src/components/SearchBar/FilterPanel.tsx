@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useFamilyTree, AdvancedFilters, isFiltersActive } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { ActivityIcon, HeartIcon } from '../Icons';
+import { ActivityIcon, HeartIcon, UserIcon } from '../Icons';
 import './FilterPanel.css';
 
 const FilterPanel: React.FC<{
@@ -69,6 +69,16 @@ const FilterPanel: React.FC<{
         <span className="filter-panel__toggle-dot" />
         <ActivityIcon size={13} />
         {t.filterLivingOnly}
+      </button>
+
+      <button
+        className={`filter-panel__toggle${f.excludeFemale ? ' filter-panel__toggle--on' : ''}`}
+        onClick={() => set({ excludeFemale: !f.excludeFemale })}
+        aria-pressed={f.excludeFemale}
+      >
+        <span className="filter-panel__toggle-dot" />
+        <UserIcon size={13} />
+        {t.filterExcludeFemale}
       </button>
 
       <button
