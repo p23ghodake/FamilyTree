@@ -89,6 +89,18 @@ Deno.serve(async request => {
     return jsonResponse({ error: 'Could not validate the Supabase session.' }, 500);
   }
 
+  const allowedUsers = (Deno.env.get('ALLOWED_GITHUB_USERS') ?? '')
+    .split(',')
+    .map(name => name.trim().toLowerCase())
+    .filter(Boolean);
+  const metadata = (user as { user_metadata?: Record<string, unknown> }).user_metadata ?? {};
+  const login = [metadata.user_name, metadata.preferred_username]
+    .find((value): value is string => typeof value === 'string' && value.length > 0)
+    ?.toLowerCase();
+  if (!login || !allowedUsers.includes(login)) {
+    return jsonResponse({ error: 'Your GitHub account is not allowed to access family data.' }, 403);
+  }
+
   const githubToken = Deno.env.get('GITHUB_TOKEN');
   if (!githubToken) {
     console.error('GITHUB_TOKEN is not configured for the family-data function.');
