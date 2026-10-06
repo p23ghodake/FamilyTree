@@ -1192,6 +1192,21 @@
           "location": null,
           "firstName_mr": "दीक्षा",
           "lastName_mr": "घोडके"
+        },
+        {
+          "id": "member-1791270298935-3520",
+          "firstName": "Prajakta",
+          "lastName": "Ghodake",
+          "gender": "unknown",
+          "birthYear": null,
+          "deathYear": null,
+          "imageUrl": null,
+          "isPrimaryInTree": false,
+          "notes": null,
+          "occupation": null,
+          "location": null,
+          "firstName_mr": "प्राजक्ता",
+          "lastName_mr": "घोडके"
         }
       ],
       "relationships": {
@@ -1204,6 +1219,10 @@
           {
             "spouse1Id": "b2m2c1",
             "spouse2Id": "member-1791269384323-4108"
+          },
+          {
+            "spouse1Id": "b2m2c2",
+            "spouse2Id": "member-1791270298935-3520"
           }
         ],
         "parentChild": [
