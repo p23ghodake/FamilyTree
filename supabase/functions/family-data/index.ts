@@ -89,16 +89,23 @@ Deno.serve(async request => {
     return jsonResponse({ error: 'Could not validate the Supabase session.' }, 500);
   }
 
-  const allowedUsers = (Deno.env.get('ALLOWED_GITHUB_USERS') ?? '')
+  const parseUsers = (name: string) => (Deno.env.get(name) ?? '')
     .split(',')
-    .map(name => name.trim().toLowerCase())
+    .map(entry => entry.trim().toLowerCase())
     .filter(Boolean);
+  const editors = parseUsers('ALLOWED_GITHUB_USERS');
+  const viewers = parseUsers('READONLY_GITHUB_USERS');
   const metadata = (user as { user_metadata?: Record<string, unknown> }).user_metadata ?? {};
   const login = [metadata.user_name, metadata.preferred_username]
     .find((value): value is string => typeof value === 'string' && value.length > 0)
     ?.toLowerCase();
-  if (!login || !allowedUsers.includes(login)) {
+  const canEdit = !!login && editors.includes(login);
+  const canView = canEdit || (!!login && viewers.includes(login));
+  if (!canView) {
     return jsonResponse({ error: 'Your GitHub account is not allowed to access family data.' }, 403);
+  }
+  if (request.method === 'PUT' && !canEdit) {
+    return jsonResponse({ error: 'Your GitHub account has read-only access to family data.' }, 403);
   }
 
   const githubToken = Deno.env.get('GITHUB_TOKEN');

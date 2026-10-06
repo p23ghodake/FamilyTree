@@ -25,7 +25,7 @@ npx supabase link --project-ref <project-ref>
 npx supabase functions deploy family-data
 ```
 
-Set the `ALLOWED_GITHUB_USERS` Edge Function secret to a comma-separated list of GitHub usernames allowed to read/write data (for example `npx supabase secrets set ALLOWED_GITHUB_USERS=user1,user2`); other signed-in users get a 403.
+Set the `ALLOWED_GITHUB_USERS` Edge Function secret to a comma-separated list of GitHub usernames allowed to read/write data (for example `npx supabase secrets set ALLOWED_GITHUB_USERS=user1,user2`); other signed-in users get a 403. Optionally set `READONLY_GITHUB_USERS` for users who can load data but not save changes.
 
 Set or update the `GITHUB_TOKEN` Edge Function secret in the Supabase Dashboard, or use the ignored `supabase/.env` method above. The function keeps JWT verification enabled; it also validates each access token with Supabase Auth. Its Contents API target is `src/data/g_familyData.json` in `p23ghodake/FamilyTree`.
 
