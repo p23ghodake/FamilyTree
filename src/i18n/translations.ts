@@ -123,6 +123,7 @@ type Translations = {
   filtersTitle: string;
   filterClear: string;
   filterLivingOnly: string;
+  filterExcludeFemale: string;
   filterMarriageEligible: string;
   filterDimLabel: string;
   filterDimOption: string;
@@ -386,6 +387,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     filtersTitle: 'Filters',
     filterClear: 'Clear',
     filterLivingOnly: 'Living members only',
+    filterExcludeFemale: 'Dim / hide females',
     filterMarriageEligible: 'Marriage eligible',
     filterDimLabel: 'Non-matching',
     filterDimOption: 'Dim',
@@ -655,6 +657,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     filtersTitle: 'फिल्टर',
     filterClear: 'साफ करा',
     filterLivingOnly: 'फक्त जिवंत सदस्य',
+    filterExcludeFemale: 'महिला अंधुक / लपवा',
     filterMarriageEligible: 'विवाहयोग्य',
     filterDimLabel: 'न जुळणारे',
     filterDimOption: 'अंधुक',

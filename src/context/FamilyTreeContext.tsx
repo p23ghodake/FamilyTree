@@ -95,6 +95,7 @@ export interface AdvancedFilters {
   gender: 'all' | 'male' | 'female';
   dimMode: 'dim' | 'hide';
   marriageEligible: boolean;
+  excludeFemale: boolean;
 }
 
 export const DEFAULT_FILTERS: AdvancedFilters = {
@@ -104,10 +105,11 @@ export const DEFAULT_FILTERS: AdvancedFilters = {
   gender: 'all',
   dimMode: 'dim',
   marriageEligible: false,
+  excludeFemale: false,
 };
 
 export function isFiltersActive(f: AdvancedFilters): boolean {
-  return f.livingOnly || f.location !== '' || f.occupation !== '' || f.gender !== 'all' || f.marriageEligible;
+  return f.livingOnly || f.location !== '' || f.occupation !== '' || f.gender !== 'all' || f.marriageEligible || f.excludeFemale;
 }
 
 // ─── Undo/redo ───
@@ -593,6 +595,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
         if (f.livingOnly && m.deathYear !== null) return false;
         if (f.location && m.location !== f.location) return false;
         if (f.gender !== 'all' && m.gender !== f.gender) return false;
+        if (f.excludeFemale && m.gender === 'female') return false;
         if (f.occupation && !(m.occupation ?? '').toLowerCase().includes(occQuery)) return false;
         if (f.marriageEligible) {
           if (m.deathYear !== null) return false;                        // must be living

@@ -74,8 +74,26 @@ const TreeView: React.FC = () => {
 
   const treeNodes = useMemo(() => {
     if (!currentTree) return [];
-    return buildTreeFromMembers(currentTree.members, currentTree.relationships);
-  }, [currentTree]);
+    const { excludeFemale, dimMode } = state.advancedFilters;
+    if (!excludeFemale || dimMode !== 'hide') {
+      return buildTreeFromMembers(currentTree.members, currentTree.relationships);
+    }
+
+    // Removing women from the data (not just hiding them) lets the tree re-flow without gaps.
+    const removed = new Set(currentTree.members.filter(m => m.gender === 'female').map(m => m.id));
+    const members = currentTree.members
+      .filter(m => !removed.has(m.id))
+      .map(m => ({
+        ...m,
+        parentIds: m.parentIds?.filter(id => !removed.has(id)),
+        childrenIds: m.childrenIds?.filter(id => !removed.has(id)),
+      }));
+    const relationships = {
+      spouses: currentTree.relationships.spouses.filter(r => !removed.has(r.spouse1Id) && !removed.has(r.spouse2Id)),
+      parentChild: currentTree.relationships.parentChild.filter(r => !removed.has(r.parentId) && !removed.has(r.childId)),
+    };
+    return buildTreeFromMembers(members, relationships);
+  }, [currentTree, state.advancedFilters]);
 
   // When lineage mode is active and a member has been clicked, use lineage set;
   // otherwise fall back to the advanced-filter matched IDs from context.
