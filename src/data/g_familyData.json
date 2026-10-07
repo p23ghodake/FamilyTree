@@ -1054,6 +1054,21 @@
           "location": null,
           "firstName_mr": "प्राजक्ता",
           "lastName_mr": "घोडके"
+        },
+        {
+          "id": "member-1791343701336-4742",
+          "firstName": "Kalpana",
+          "lastName": "Ghodake",
+          "gender": "female",
+          "birthYear": 1961,
+          "deathYear": null,
+          "imageUrl": null,
+          "isPrimaryInTree": false,
+          "notes": null,
+          "occupation": null,
+          "location": null,
+          "firstName_mr": "कल्पना",
+          "lastName_mr": "घोडके"
         }
       ],
       "relationships": {
@@ -1065,6 +1080,10 @@
           {
             "spouse1Id": "44",
             "spouse2Id": "member-1791343653175-5332"
+          },
+          {
+            "spouse1Id": "23",
+            "spouse2Id": "member-1791343701336-4742"
           }
         ],
         "parentChild": [
