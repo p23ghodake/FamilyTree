@@ -1039,6 +1039,21 @@
           "location": "Sakri",
           "firstName_mr": "दीक्षा",
           "lastName_mr": "घोडके"
+        },
+        {
+          "id": "member-1791343653175-5332",
+          "firstName": "Prajakta",
+          "lastName": "Ghodake",
+          "gender": "female",
+          "birthYear": null,
+          "deathYear": null,
+          "imageUrl": null,
+          "isPrimaryInTree": false,
+          "notes": null,
+          "occupation": null,
+          "location": null,
+          "firstName_mr": "प्राजक्ता",
+          "lastName_mr": "घोडके"
         }
       ],
       "relationships": {
@@ -1046,6 +1061,10 @@
           {
             "spouse1Id": "43",
             "spouse2Id": "member-1791343607140-720"
+          },
+          {
+            "spouse1Id": "44",
+            "spouse2Id": "member-1791343653175-5332"
           }
         ],
         "parentChild": [
