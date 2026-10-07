@@ -1,0 +1,824 @@
+{
+  "source": "Extracted from provided SVG",
+  "rootIds": [
+    "1"
+  ],
+  "nodeCount": 68,
+  "relationshipCount": 67,
+  "nodes": [
+    {
+      "id": "1",
+      "name": "नारायण शेठ",
+      "x": 0.0,
+      "y": 0.0,
+      "parentId": null,
+      "generation": 0
+    },
+    {
+      "id": "2",
+      "name": "तुकाराम शेठ",
+      "x": 180.0,
+      "y": 0.0,
+      "parentId": "1",
+      "generation": 1
+    },
+    {
+      "id": "3",
+      "name": "विठ्ठल शेठ",
+      "x": 360.0,
+      "y": 0.0,
+      "parentId": "2",
+      "generation": 2
+    },
+    {
+      "id": "4",
+      "name": "लोटन शेठ",
+      "x": 540.0,
+      "y": 0.0,
+      "parentId": "3",
+      "generation": 3
+    },
+    {
+      "id": "5",
+      "name": "गंगाराम शेठ",
+      "x": 720.0,
+      "y": 0.0,
+      "parentId": "4",
+      "generation": 4
+    },
+    {
+      "id": "6",
+      "name": "सुकलाल शेठ",
+      "x": 900.0,
+      "y": -507.875,
+      "parentId": "5",
+      "generation": 5
+    },
+    {
+      "id": "7",
+      "name": "नारायण शेठ",
+      "x": 900.0,
+      "y": -53.125,
+      "parentId": "5",
+      "generation": 5
+    },
+    {
+      "id": "8",
+      "name": "हिरामण शेठ",
+      "x": 900.0,
+      "y": 133.875,
+      "parentId": "5",
+      "generation": 5
+    },
+    {
+      "id": "9",
+      "name": "ताराचंद शेठ",
+      "x": 900.0,
+      "y": 329.375,
+      "parentId": "5",
+      "generation": 5
+    },
+    {
+      "id": "10",
+      "name": "बाबूराव शेठ",
+      "x": 900.0,
+      "y": 507.875,
+      "parentId": "5",
+      "generation": 5
+    },
+    {
+      "id": "11",
+      "name": "जगन्नाथ शेठ",
+      "x": 1080.0,
+      "y": -809.625,
+      "parentId": "6",
+      "generation": 6
+    },
+    {
+      "id": "12",
+      "name": "मधुकर शेठ",
+      "x": 1080.0,
+      "y": -605.625,
+      "parentId": "6",
+      "generation": 6
+    },
+    {
+      "id": "13",
+      "name": "सुधाकर शेठ",
+      "x": 1080.0,
+      "y": -367.625,
+      "parentId": "6",
+      "generation": 6
+    },
+    {
+      "id": "14",
+      "name": "प्रमोद शेठ",
+      "x": 1080.0,
+      "y": -206.125,
+      "parentId": "6",
+      "generation": 6
+    },
+    {
+      "id": "15",
+      "name": "वासुदेव शेठ",
+      "x": 1080.0,
+      "y": -138.125,
+      "parentId": "7",
+      "generation": 6
+    },
+    {
+      "id": "16",
+      "name": "कै. रवींद्र शेठ",
+      "x": 1080.0,
+      "y": -95.625,
+      "parentId": "7",
+      "generation": 6
+    },
+    {
+      "id": "17",
+      "name": "राजेंद्र शेठ",
+      "x": 1080.0,
+      "y": -53.125,
+      "parentId": "7",
+      "generation": 6
+    },
+    {
+      "id": "18",
+      "name": "संजय शेठ",
+      "x": 1080.0,
+      "y": 31.875,
+      "parentId": "7",
+      "generation": 6
+    },
+    {
+      "id": "19",
+      "name": "लक्ष्मण शेठ",
+      "x": 1080.0,
+      "y": 99.875,
+      "parentId": "8",
+      "generation": 6
+    },
+    {
+      "id": "20",
+      "name": "कै. सुरेश शेठ",
+      "x": 1080.0,
+      "y": 133.875,
+      "parentId": "8",
+      "generation": 6
+    },
+    {
+      "id": "21",
+      "name": "दिलीप शेठ",
+      "x": 1080.0,
+      "y": 167.875,
+      "parentId": "8",
+      "generation": 6
+    },
+    {
+      "id": "22",
+      "name": "दत्तात्रय शेठ",
+      "x": 1080.0,
+      "y": 235.875,
+      "parentId": "9",
+      "generation": 6
+    },
+    {
+      "id": "23",
+      "name": "ज्ञानेश्वर शेठ",
+      "x": 1080.0,
+      "y": 337.875,
+      "parentId": "9",
+      "generation": 6
+    },
+    {
+      "id": "24",
+      "name": "गोपाल शेठ",
+      "x": 1080.0,
+      "y": 422.875,
+      "parentId": "9",
+      "generation": 6
+    },
+    {
+      "id": "25",
+      "name": "तुकाराम शेठ",
+      "x": 1080.0,
+      "y": 507.875,
+      "parentId": "10",
+      "generation": 6
+    },
+    {
+      "id": "26",
+      "name": "प्रकाश शेठ",
+      "x": 1260.0,
+      "y": -903.125,
+      "parentId": "11",
+      "generation": 7
+    },
+    {
+      "id": "27",
+      "name": "पांडुरंग शेठ",
+      "x": 1260.0,
+      "y": -852.125,
+      "parentId": "11",
+      "generation": 7
+    },
+    {
+      "id": "28",
+      "name": "संजय शेठ",
+      "x": 1260.0,
+      "y": -801.125,
+      "parentId": "11",
+      "generation": 7
+    },
+    {
+      "id": "29",
+      "name": "अमृत शेठ",
+      "x": 1260.0,
+      "y": -716.125,
+      "parentId": "11",
+      "generation": 7
+    },
+    {
+      "id": "30",
+      "name": "दीपक शेठ",
+      "x": 1260.0,
+      "y": -648.125,
+      "parentId": "12",
+      "generation": 7
+    },
+    {
+      "id": "31",
+      "name": "रमेश शेठ",
+      "x": 1260.0,
+      "y": -563.125,
+      "parentId": "12",
+      "generation": 7
+    },
+    {
+      "id": "32",
+      "name": "दिनेश शेठ",
+      "x": 1260.0,
+      "y": -461.125,
+      "parentId": "13",
+      "generation": 7
+    },
+    {
+      "id": "33",
+      "name": "गणेश शेठ",
+      "x": 1260.0,
+      "y": -359.125,
+      "parentId": "13",
+      "generation": 7
+    },
+    {
+      "id": "34",
+      "name": "उमेश शेठ",
+      "x": 1260.0,
+      "y": -274.125,
+      "parentId": "13",
+      "generation": 7
+    },
+    {
+      "id": "35",
+      "name": "योगेश शेठ",
+      "x": 1260.0,
+      "y": -206.125,
+      "parentId": "14",
+      "generation": 7
+    },
+    {
+      "id": "36",
+      "name": "जयेश शेठ",
+      "x": 1260.0,
+      "y": -138.125,
+      "parentId": "15",
+      "generation": 7
+    },
+    {
+      "id": "37",
+      "name": "आशुतोष शेठ",
+      "x": 1260.0,
+      "y": -70.125,
+      "parentId": "17",
+      "generation": 7
+    },
+    {
+      "id": "38",
+      "name": "कुणाल शेठ",
+      "x": 1260.0,
+      "y": -36.125,
+      "parentId": "17",
+      "generation": 7
+    },
+    {
+      "id": "39",
+      "name": "तेजस शेठ",
+      "x": 1260.0,
+      "y": 31.875,
+      "parentId": "18",
+      "generation": 7
+    },
+    {
+      "id": "40",
+      "name": "महेश शेठ",
+      "x": 1260.0,
+      "y": 99.875,
+      "parentId": "19",
+      "generation": 7
+    },
+    {
+      "id": "41",
+      "name": "गौरव शेठ",
+      "x": 1260.0,
+      "y": 167.875,
+      "parentId": "21",
+      "generation": 7
+    },
+    {
+      "id": "42",
+      "name": "गजेंद्र शेठ",
+      "x": 1260.0,
+      "y": 235.875,
+      "parentId": "22",
+      "generation": 7
+    },
+    {
+      "id": "43",
+      "name": "पंकज शेठ",
+      "x": 1260.0,
+      "y": 320.875,
+      "parentId": "23",
+      "generation": 7
+    },
+    {
+      "id": "44",
+      "name": "प्रणीत शेठ",
+      "x": 1260.0,
+      "y": 354.875,
+      "parentId": "23",
+      "generation": 7
+    },
+    {
+      "id": "45",
+      "name": "यश शेठ",
+      "x": 1260.0,
+      "y": 422.875,
+      "parentId": "24",
+      "generation": 7
+    },
+    {
+      "id": "46",
+      "name": "सुनील शेठ",
+      "x": 1260.0,
+      "y": 490.875,
+      "parentId": "25",
+      "generation": 7
+    },
+    {
+      "id": "47",
+      "name": "केशव शेठ",
+      "x": 1260.0,
+      "y": 524.875,
+      "parentId": "25",
+      "generation": 7
+    },
+    {
+      "id": "48",
+      "name": "पंकज शेठ",
+      "x": 1440.0,
+      "y": -903.125,
+      "parentId": "26",
+      "generation": 8
+    },
+    {
+      "id": "49",
+      "name": "स्वप्नील शेठ",
+      "x": 1440.0,
+      "y": -818.125,
+      "parentId": "28",
+      "generation": 8
+    },
+    {
+      "id": "50",
+      "name": "सौरभ शेठ",
+      "x": 1440.0,
+      "y": -784.125,
+      "parentId": "28",
+      "generation": 8
+    },
+    {
+      "id": "51",
+      "name": "प्रतीक शेठ",
+      "x": 1440.0,
+      "y": -716.125,
+      "parentId": "29",
+      "generation": 8
+    },
+    {
+      "id": "52",
+      "name": "गौरव शेठ",
+      "x": 1440.0,
+      "y": -648.125,
+      "parentId": "30",
+      "generation": 8
+    },
+    {
+      "id": "53",
+      "name": "दुर्गेश शेठ",
+      "x": 1440.0,
+      "y": -580.125,
+      "parentId": "31",
+      "generation": 8
+    },
+    {
+      "id": "54",
+      "name": "मोहन शेठ",
+      "x": 1440.0,
+      "y": -546.125,
+      "parentId": "31",
+      "generation": 8
+    },
+    {
+      "id": "55",
+      "name": "सोनू शेठ",
+      "x": 1440.0,
+      "y": -478.125,
+      "parentId": "32",
+      "generation": 8
+    },
+    {
+      "id": "56",
+      "name": "मोनू शेठ",
+      "x": 1440.0,
+      "y": -444.125,
+      "parentId": "32",
+      "generation": 8
+    },
+    {
+      "id": "57",
+      "name": "सोनू शेठ",
+      "x": 1440.0,
+      "y": -376.125,
+      "parentId": "33",
+      "generation": 8
+    },
+    {
+      "id": "58",
+      "name": "मोनू शेठ",
+      "x": 1440.0,
+      "y": -342.125,
+      "parentId": "33",
+      "generation": 8
+    },
+    {
+      "id": "59",
+      "name": "गनू शेठ",
+      "x": 1440.0,
+      "y": -274.125,
+      "parentId": "34",
+      "generation": 8
+    },
+    {
+      "id": "60",
+      "name": "मितांश शेठ",
+      "x": 1440.0,
+      "y": -70.125,
+      "parentId": "37",
+      "generation": 8
+    },
+    {
+      "id": "61",
+      "name": "श्रीपाद शेठ",
+      "x": 1440.0,
+      "y": 99.875,
+      "parentId": "40",
+      "generation": 8
+    },
+    {
+      "id": "62",
+      "name": "पार्थ शेठ",
+      "x": 1440.0,
+      "y": 235.875,
+      "parentId": "42",
+      "generation": 8
+    },
+    {
+      "id": "63",
+      "name": "आयुष शेठ",
+      "x": 1440.0,
+      "y": 303.875,
+      "parentId": "43",
+      "generation": 8
+    },
+    {
+      "id": "64",
+      "name": "अयांश शेठ",
+      "x": 1440.0,
+      "y": 337.875,
+      "parentId": "43",
+      "generation": 8
+    },
+    {
+      "id": "65",
+      "name": "दादू शेठ",
+      "x": 1440.0,
+      "y": 490.875,
+      "parentId": "46",
+      "generation": 8
+    },
+    {
+      "id": "66",
+      "name": "प्रणव शेठ",
+      "x": 1620.0,
+      "y": -903.125,
+      "parentId": "48",
+      "generation": 9
+    },
+    {
+      "id": "67",
+      "name": "निर्वेद",
+      "x": 1620.0,
+      "y": -835.125,
+      "parentId": "49",
+      "generation": 9
+    },
+    {
+      "id": "68",
+      "name": "आदविक",
+      "x": 1620.0,
+      "y": -801.125,
+      "parentId": "49",
+      "generation": 9
+    }
+  ],
+  "relationships": [
+    {
+      "parentId": "1",
+      "childId": "2"
+    },
+    {
+      "parentId": "2",
+      "childId": "3"
+    },
+    {
+      "parentId": "3",
+      "childId": "4"
+    },
+    {
+      "parentId": "4",
+      "childId": "5"
+    },
+    {
+      "parentId": "5",
+      "childId": "6"
+    },
+    {
+      "parentId": "5",
+      "childId": "7"
+    },
+    {
+      "parentId": "5",
+      "childId": "8"
+    },
+    {
+      "parentId": "5",
+      "childId": "9"
+    },
+    {
+      "parentId": "5",
+      "childId": "10"
+    },
+    {
+      "parentId": "6",
+      "childId": "11"
+    },
+    {
+      "parentId": "6",
+      "childId": "12"
+    },
+    {
+      "parentId": "6",
+      "childId": "13"
+    },
+    {
+      "parentId": "6",
+      "childId": "14"
+    },
+    {
+      "parentId": "7",
+      "childId": "15"
+    },
+    {
+      "parentId": "7",
+      "childId": "16"
+    },
+    {
+      "parentId": "7",
+      "childId": "17"
+    },
+    {
+      "parentId": "7",
+      "childId": "18"
+    },
+    {
+      "parentId": "8",
+      "childId": "19"
+    },
+    {
+      "parentId": "8",
+      "childId": "20"
+    },
+    {
+      "parentId": "8",
+      "childId": "21"
+    },
+    {
+      "parentId": "9",
+      "childId": "22"
+    },
+    {
+      "parentId": "9",
+      "childId": "23"
+    },
+    {
+      "parentId": "9",
+      "childId": "24"
+    },
+    {
+      "parentId": "10",
+      "childId": "25"
+    },
+    {
+      "parentId": "11",
+      "childId": "26"
+    },
+    {
+      "parentId": "11",
+      "childId": "27"
+    },
+    {
+      "parentId": "11",
+      "childId": "28"
+    },
+    {
+      "parentId": "11",
+      "childId": "29"
+    },
+    {
+      "parentId": "12",
+      "childId": "30"
+    },
+    {
+      "parentId": "12",
+      "childId": "31"
+    },
+    {
+      "parentId": "13",
+      "childId": "32"
+    },
+    {
+      "parentId": "13",
+      "childId": "33"
+    },
+    {
+      "parentId": "13",
+      "childId": "34"
+    },
+    {
+      "parentId": "14",
+      "childId": "35"
+    },
+    {
+      "parentId": "15",
+      "childId": "36"
+    },
+    {
+      "parentId": "17",
+      "childId": "37"
+    },
+    {
+      "parentId": "17",
+      "childId": "38"
+    },
+    {
+      "parentId": "18",
+      "childId": "39"
+    },
+    {
+      "parentId": "19",
+      "childId": "40"
+    },
+    {
+      "parentId": "21",
+      "childId": "41"
+    },
+    {
+      "parentId": "22",
+      "childId": "42"
+    },
+    {
+      "parentId": "23",
+      "childId": "43"
+    },
+    {
+      "parentId": "23",
+      "childId": "44"
+    },
+    {
+      "parentId": "24",
+      "childId": "45"
+    },
+    {
+      "parentId": "25",
+      "childId": "46"
+    },
+    {
+      "parentId": "25",
+      "childId": "47"
+    },
+    {
+      "parentId": "26",
+      "childId": "48"
+    },
+    {
+      "parentId": "28",
+      "childId": "49"
+    },
+    {
+      "parentId": "28",
+      "childId": "50"
+    },
+    {
+      "parentId": "29",
+      "childId": "51"
+    },
+    {
+      "parentId": "30",
+      "childId": "52"
+    },
+    {
+      "parentId": "31",
+      "childId": "53"
+    },
+    {
+      "parentId": "31",
+      "childId": "54"
+    },
+    {
+      "parentId": "32",
+      "childId": "55"
+    },
+    {
+      "parentId": "32",
+      "childId": "56"
+    },
+    {
+      "parentId": "33",
+      "childId": "57"
+    },
+    {
+      "parentId": "33",
+      "childId": "58"
+    },
+    {
+      "parentId": "34",
+      "childId": "59"
+    },
+    {
+      "parentId": "37",
+      "childId": "60"
+    },
+    {
+      "parentId": "40",
+      "childId": "61"
+    },
+    {
+      "parentId": "42",
+      "childId": "62"
+    },
+    {
+      "parentId": "43",
+      "childId": "63"
+    },
+    {
+      "parentId": "43",
+      "childId": "64"
+    },
+    {
+      "parentId": "46",
+      "childId": "65"
+    },
+    {
+      "parentId": "48",
+      "childId": "66"
+    },
+    {
+      "parentId": "49",
+      "childId": "67"
+    },
+    {
+      "parentId": "49",
+      "childId": "68"
+    }
+  ]
+}
