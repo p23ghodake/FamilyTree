@@ -645,8 +645,8 @@
           "imageUrl": null,
           "isPrimaryInTree": false,
           "notes": null,
-          "occupation": null,
-          "location": null,
+          "occupation": "Software Engineer",
+          "location": "Pune",
           "firstName_mr": "पंकज शेठ",
           "lastName_mr": "घोडके"
         },
