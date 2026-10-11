@@ -15,7 +15,7 @@ import './FloatingSearch.css';
 
 const FloatingSearch: React.FC = () => {
   const { state, dispatch, matchedMemberIds, currentTree, filteredMembers, advancedMatchedIds, debouncedSearchQuery } = useFamilyTree();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   // hasQuery: immediate — drives clear-button visibility and selectItem clear behaviour
   const hasQuery = state.searchQuery.length > 0;
@@ -259,7 +259,7 @@ const FloatingSearch: React.FC = () => {
               onChange={e => dispatch({ type: 'SELECT_TREE', payload: e.target.value })}
             >
               {state.data.familyTreesStyled.map(tree => (
-                <option key={tree.familyTreeId} value={tree.familyTreeId}>{tree.familyTreeDisplayName}</option>
+                <option key={tree.familyTreeId} value={tree.familyTreeId}>{lang === 'mr' && tree.familyTreeDisplayName_mr ? tree.familyTreeDisplayName_mr : tree.familyTreeDisplayName}</option>
               ))}
             </select>
           )}

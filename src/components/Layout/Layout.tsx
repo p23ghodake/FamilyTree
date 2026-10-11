@@ -12,7 +12,7 @@ import './Layout.css';
 
 const Layout: React.FC = () => {
   const { state, currentTree } = useFamilyTree();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [tourActive, setTourActive] = useState(false);
 
   // Auto-show tour for first-time visitors
@@ -58,7 +58,7 @@ const Layout: React.FC = () => {
         <div className="print-header">
           <div>
             <span className="print-header__title">
-              {currentTree?.familyTreeDisplayName ?? 'Family Tree'}
+              {(lang === 'mr' && currentTree?.familyTreeDisplayName_mr) || currentTree?.familyTreeDisplayName || 'Family Tree'}
             </span>
             <span className="print-header__meta">{memberCount} {t.printMembers}</span>
           </div>

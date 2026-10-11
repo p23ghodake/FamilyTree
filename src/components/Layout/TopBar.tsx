@@ -166,7 +166,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         >
           <span className="top-bar__tree-icon">🌳</span>
           <div className="top-bar__tree-info">
-            <span className="top-bar__tree-name">{currentTree.familyTreeDisplayName}</span>
+            <span className="top-bar__tree-name">{lang === 'mr' && currentTree.familyTreeDisplayName_mr ? currentTree.familyTreeDisplayName_mr : currentTree.familyTreeDisplayName}</span>
             <span className="top-bar__tree-meta">{t.metaFormat(generationCount, totalMembers)}</span>
           </div>
         </div>

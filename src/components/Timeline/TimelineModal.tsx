@@ -170,7 +170,7 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
               <line x1="16" x2="16" y1="14" y2="18"/>
             </svg>
             <span className="tl-header__title">{t.tooltipTimeline}</span>
-            <span className="tl-header__tree">{currentTree.familyTreeDisplayName}</span>
+            <span className="tl-header__tree">{lang === 'mr' && currentTree.familyTreeDisplayName_mr ? currentTree.familyTreeDisplayName_mr : currentTree.familyTreeDisplayName}</span>
           </div>
           <div className="tl-header__filters">
             {(['birth', 'death', 'marriage'] as EventType[]).map(type => (
