@@ -19,6 +19,7 @@ import { memberMatchesQuery } from '../processing/searchFilter';
 import { ThemeName, applyTheme, loadSavedTheme } from '../theme/themeConfig';
 import familyDataJson from '../data/g_familyData.json';
 import { useAuth } from '../lib/AuthContext';
+import { isAdminUser } from '../lib/admin';
 import { FamilyDataServiceError, getFamilyData, saveFamilyData } from '../services/familyDataService';
 
 import { CONFIG } from '../constants/config';
@@ -680,7 +681,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   }, [currentTree?.members, state.relSource, state.relTarget, dispatch]);
 
   const exportData = useCallback(() => {
-    if (!state.data) return;
+    if (!state.data || !isAdminUser(session?.user)) return;
     const rawExport = buildRawExport(state.data);
     const blob = new Blob([JSON.stringify(rawExport, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -689,7 +690,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     a.download = 'familyData.json';
     a.click();
     URL.revokeObjectURL(url);
-  }, [state.data]);
+  }, [state.data, session]);
 
   const resetData = useCallback(() => {
     try {

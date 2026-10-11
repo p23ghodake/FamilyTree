@@ -21,7 +21,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
     exportData, resetData, undo, redo, canUndo, canRedo,
     canEdit,
   } = useFamilyTree();
-  const { session, loading: authLoading, signOut } = useAuth();
+  const { session, loading: authLoading, signOut, isAdmin } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const { t, lang, toggleLang } = useLanguage();
 
@@ -98,6 +98,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   }, []);
 
   const handleExportImage = useCallback(async () => {
+    if (!isAdmin) return;
     const treeEl = document.querySelector('.tree-chart') as HTMLElement;
     const contentEl = document.querySelector('.tree-view__content') as HTMLElement;
     if (!treeEl || !contentEl) return;
@@ -136,7 +137,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
     } finally {
       setIsExporting(false);
     }
-  }, [currentTree, t]);
+  }, [currentTree, t, isAdmin]);
 
   const handleReset = useCallback(() => {
     if (window.confirm(t.confirmReset)) {
@@ -253,12 +254,16 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
           </button>
           {showMore && (
             <div className="top-bar__more-dropdown" role="menu">
-              <button className="top-bar__more-option" role="menuitem" onClick={() => { exportData(); setShowMore(false); }}>
-                <DownloadIcon size={15} /><span>{t.menuExportJson}</span>
-              </button>
-              <button className="top-bar__more-option" role="menuitem" disabled={isExporting} onClick={() => { handleExportImage(); setShowMore(false); }}>
-                {isExporting ? <Loader2Icon size={15} /> : <ImageIcon size={15} />}<span>{t.menuExportImage}</span>
-              </button>
+              {isAdmin && (
+                <button className="top-bar__more-option" role="menuitem" onClick={() => { exportData(); setShowMore(false); }}>
+                  <DownloadIcon size={15} /><span>{t.menuExportJson}</span>
+                </button>
+              )}
+              {isAdmin && (
+                <button className="top-bar__more-option" role="menuitem" disabled={isExporting} onClick={() => { handleExportImage(); setShowMore(false); }}>
+                  {isExporting ? <Loader2Icon size={15} /> : <ImageIcon size={15} />}<span>{t.menuExportImage}</span>
+                </button>
+              )}
               <button className="top-bar__more-option" role="menuitem" onClick={() => { setShowShareModal(true); setShowMore(false); }}>
                 <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
@@ -277,14 +282,14 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
                 </svg>
                 <span>{t.menuTimeline}</span>
               </button>
-              <button className="top-bar__more-option" role="menuitem" onClick={() => { window.print(); setShowMore(false); }}>
+              {isAdmin && <button className="top-bar__more-option" role="menuitem" onClick={() => { window.print(); setShowMore(false); }}>
                 <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <polyline points="6 9 6 2 18 2 18 9" />
                   <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                   <rect width="12" height="8" x="6" y="14" />
                 </svg>
                 <span>{t.menuPrint}</span>
-              </button>
+              </button>}
             </div>
           )}
         </div>
