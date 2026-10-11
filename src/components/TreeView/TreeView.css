@@ -966,3 +966,98 @@
     border-radius: 16px;
   }
 }
+
+/* ═══════════════════════════════════════════
+   Connector lines — gradient, glow, rounded elbows,
+   node dots and hover trace (styling only)
+   ═══════════════════════════════════════════ */
+
+.tree-chart li {
+  --line: color-mix(in srgb, var(--tree-accent, var(--accent)) 38%, var(--connector-line));
+  --line-glow: color-mix(in srgb, var(--tree-accent, var(--accent)) 28%, transparent);
+}
+
+/* Vertical drop from parent: gradient fading into the children bar */
+.tree-chart li > ul::before {
+  background: linear-gradient(to bottom, var(--tree-accent, var(--accent)), var(--line));
+  border-radius: 2px;
+  box-shadow: 0 0 6px var(--line-glow);
+  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+/* Horizontal bars and child drops share the line colour, glow and rounded elbows */
+.tree-chart li > ul > li::before,
+.tree-chart li > ul > li::after {
+  border-color: var(--line);
+  filter: drop-shadow(0 0 3px var(--line-glow));
+  transition: border-color 0.2s, opacity 0.2s, filter 0.2s;
+}
+
+.tree-chart li > ul > li:last-child::before { border-right-color: var(--line); }
+
+.tree-chart li > ul > li:not(:only-child):first-child::after { border-top-left-radius: 14px; }
+.tree-chart li > ul > li:not(:only-child):last-child::before { border-top-right-radius: 14px; }
+
+/* Node dots: one where the line leaves the parent, one where it meets the child */
+.tree-chart li > ul::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--tree-accent, var(--accent));
+  box-shadow: 0 0 0 2px var(--modal-bg, var(--bg-primary)), 0 0 8px var(--line-glow);
+  pointer-events: none;
+}
+
+.tree-chart li > ul > li > .tree-couple { position: relative; }
+
+.tree-chart li > ul > li > .tree-couple::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--line);
+  box-shadow: 0 0 0 2px var(--modal-bg, var(--bg-primary));
+  pointer-events: none;
+  transition: background 0.2s;
+}
+
+/* Hover trace: light the path from the hovered person up to the root, quieten the rest */
+.tree-chart li:has(.tree-couple:hover) {
+  --line: var(--tree-accent, var(--accent));
+  --line-glow: color-mix(in srgb, var(--tree-accent, var(--accent)) 65%, transparent);
+}
+
+.tree-chart:has(.tree-couple:hover) li:not(:has(.tree-couple:hover)) > ul::before,
+.tree-chart:has(.tree-couple:hover) li:not(:has(.tree-couple:hover)) > ul::after,
+.tree-chart:has(.tree-couple:hover) li:not(:has(.tree-couple:hover))::before,
+.tree-chart:has(.tree-couple:hover) li:not(:has(.tree-couple:hover))::after {
+  opacity: 0.35;
+}
+
+/* Wrap mode: its drop lines are backgrounds, so tint them the same way */
+.tree-chart.tree-chart--wrap li > ul > li::before {
+  background: linear-gradient(to bottom, var(--line), transparent);
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-chart li > ul::before,
+  .tree-chart li > ul > li::before,
+  .tree-chart li > ul > li::after,
+  .tree-chart li > ul > li > .tree-couple::before { transition: none; }
+}
+
+@media print {
+  .tree-chart li > ul::before,
+  .tree-chart li > ul > li::before,
+  .tree-chart li > ul > li::after { filter: none; box-shadow: none; }
+}
