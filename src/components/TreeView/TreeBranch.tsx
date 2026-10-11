@@ -11,7 +11,7 @@ export const TreeBranch = React.memo<{
   isSearching: boolean;
   searchMatchedIds: Set<string>;
   onSelect: (id: string) => void;
-  onMenuAction: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
+  onMenuAction?: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
   filterMatchedIds: Set<string>;
   filterDimMode: 'dim' | 'hide';
   relSource: string | null;

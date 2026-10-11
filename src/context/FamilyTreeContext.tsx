@@ -383,6 +383,7 @@ interface FamilyTreeContextValue {
   state: State;
   dispatch: React.Dispatch<Action>;
   cloudReady: boolean;
+  canEdit: boolean;
   cloudError: string | null;
   isSaving: boolean;
   currentTree: StyledFamilyTree | null;
@@ -409,6 +410,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const [state, reducerDispatch] = useReducer(reducer, initialState);
   const { session, loading: authLoading } = useAuth();
   const [cloudReady, setCloudReady] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const stateRef = useRef(state);
@@ -515,6 +517,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     };
 
     shaRef.current = null;
+    setCanEdit(false);
     setCloudReadyState(false);
     setCloudError(null);
     if (!session) {
@@ -534,6 +537,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       }
       const processed = processAllFamilyData(result.data);
       shaRef.current = remote.sha;
+      setCanEdit(remote.canEdit === true);
       stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload: processed });
       reducerDispatch({ type: 'SET_DATA', payload: processed });
       setCloudReadyState(true);
@@ -746,9 +750,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const canRedo = state.future.length > 0;
 
   const contextValue = useMemo<FamilyTreeContextValue>(
-    () => ({ state, dispatch, cloudReady, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember }),
+    () => ({ state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, dispatch, cloudReady, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember],
+    [state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember],
   );
 
   return (

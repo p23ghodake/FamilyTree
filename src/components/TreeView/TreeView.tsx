@@ -8,7 +8,7 @@ import { CONFIG } from '../../constants/config';
 import './TreeView.css';
 
 const TreeView: React.FC = () => {
-  const { currentTree, state, dispatch, matchedMemberIds, filteredMembers, advancedMatchedIds, relResult, debouncedSearchQuery } = useFamilyTree();
+  const { currentTree, state, dispatch, matchedMemberIds, filteredMembers, advancedMatchedIds, relResult, debouncedSearchQuery, canEdit } = useFamilyTree();
   const { t } = useLanguage();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const treeChartRef = useRef<HTMLDivElement | null>(null);
@@ -496,7 +496,7 @@ const TreeView: React.FC = () => {
                 isSearching={isSearching}
                 searchMatchedIds={matchedMemberIds}
                 onSelect={handleSelect}
-                onMenuAction={handleMenuAction}
+                onMenuAction={canEdit ? handleMenuAction : undefined}
                 filterMatchedIds={effectiveFilterIds}
                 filterDimMode={effectiveDimMode}
                 relSource={state.relSource}

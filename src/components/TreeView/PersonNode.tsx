@@ -26,7 +26,7 @@ export const PersonNode = React.memo<{
   showMarriageBadge?: boolean;
   avatarStyle: AvatarStyle;
   onClick: (id: string) => void;
-  onMenuAction: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
+  onMenuAction?: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
 }>(({ member, isSelected, isHighlighted, isHidden, isFormerSpouse, relRole, relStep, showMarriageBadge, avatarStyle, onClick, onMenuAction }) => {
   const { t, lang } = useLanguage();
   const displayName = lang === 'mr' && member.firstName_mr && (member.lastName_mr || !member.lastName)
@@ -89,7 +89,7 @@ export const PersonNode = React.memo<{
       return;
     }
     setMenuOpen(false);
-    onMenuAction(action, member.id);
+    onMenuAction?.(action, member.id);
   };
 
   // Legal marriage age in India: 18 for female, 21 for male
@@ -198,7 +198,7 @@ export const PersonNode = React.memo<{
       </div>
 
       {/* ⋮ hover action button */}
-      <button
+      {onMenuAction && <button
         ref={menuBtnRef}
         className="pnode__menu-btn"
         onClick={openMenu}
@@ -207,10 +207,10 @@ export const PersonNode = React.memo<{
         aria-haspopup="menu"
       >
         <MoreVerticalIcon size={14} />
-      </button>
+      </button>}
 
       {/* Menu rendered via portal so it escapes zoom/overflow clipping */}
-      {menuOpen && ReactDOM.createPortal(
+      {onMenuAction && menuOpen && ReactDOM.createPortal(
         <div
           ref={menuRef}
           className="pnode__menu"
@@ -254,7 +254,7 @@ export const PersonNode = React.memo<{
               <span className="pnode__menu-confirm__label">{t.confirmDeleteNode}</span>
               <button
                 className="pnode__menu-item pnode__menu-item--danger"
-                onClick={() => { setMenuOpen(false); setConfirmDelete(false); onMenuAction('delete', member.id); }}
+                onClick={() => { setMenuOpen(false); setConfirmDelete(false); onMenuAction?.('delete', member.id); }}
               >
                 {t.btnYesDelete}
               </button>

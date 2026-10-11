@@ -106,7 +106,7 @@ Deno.serve(async request => {
   const canEdit = identities.some(id => editors.includes(id));
   const canView = canEdit || identities.some(id => viewers.includes(id));
   if (!canView) {
-    return jsonResponse({ error: 'Your GitHub account is not allowed to access family data.' }, 403);
+    return jsonResponse({ error: `Your account (${identities.join(' / ') || 'unknown'}) is not allowed to access family data.` }, 403);
   }
   if (request.method === 'PUT' && !canEdit) {
     return jsonResponse({ error: 'Your GitHub account has read-only access to family data.' }, 403);
@@ -139,7 +139,7 @@ Deno.serve(async request => {
     }
 
     try {
-      return jsonResponse({ data: JSON.parse(decodeBase64(file.content)), sha: file.sha });
+      return jsonResponse({ data: JSON.parse(decodeBase64(file.content)), sha: file.sha, canEdit });
     } catch (error) {
       console.error('The family data file is not valid UTF-8 JSON:', error);
       return jsonResponse({ error: 'The family data file is not valid JSON.' }, 500);

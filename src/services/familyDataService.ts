@@ -11,6 +11,7 @@ export class FamilyDataServiceError extends Error {
 interface FamilyDataResponse {
   data: RawFamilyData;
   sha: string;
+  canEdit?: boolean;
 }
 
 interface SaveFamilyDataResponse {

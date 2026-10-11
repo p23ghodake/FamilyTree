@@ -19,6 +19,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const {
     state, dispatch, currentTree,
     exportData, resetData, undo, redo, canUndo, canRedo,
+    canEdit,
   } = useFamilyTree();
   const { session, loading: authLoading, signOut } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
@@ -174,6 +175,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
       <div className="top-bar__spacer" />
 
       <div className="top-bar__actions">
+        {canEdit && (
         <button
           className="toolbar__btn toolbar__btn--icon"
           onClick={() => dispatch({ type: 'OPEN_MEMBER_FORM', payload: { mode: 'add' } })}
@@ -183,6 +185,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         >
           <UserPlusIcon size={15} />
         </button>
+        )}
 
         <button
           className={`toolbar__btn toolbar__btn--icon toolbar__btn--undo${canUndo ? ' available' : ''}`}
@@ -300,6 +303,15 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
       </div>
 
       <button
+        className="toolbar__btn toolbar__btn--lang"
+        onClick={toggleLang}
+        title={lang === 'en' ? t.tooltipSwitchLangToMr : t.tooltipSwitchLangToEn}
+      >
+        {lang === 'en' ? t.langLabelMr : t.langLabelEn}
+      </button>
+      <ThemeSwitcher />
+
+      <button
         className="toolbar__btn"
         onClick={handleAuthAction}
         disabled={authLoading}
@@ -308,15 +320,6 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         {authLoading ? 'Checking…' : session ? 'Sign out' : 'Sign in'}
       </button>
       {showLogin && !session && <LoginModal onClose={() => setShowLogin(false)} />}
-
-      <button
-        className="toolbar__btn toolbar__btn--lang"
-        onClick={toggleLang}
-        title={lang === 'en' ? t.tooltipSwitchLangToMr : t.tooltipSwitchLangToEn}
-      >
-        {lang === 'en' ? t.langLabelMr : t.langLabelEn}
-      </button>
-      <ThemeSwitcher />
       {onStartTour && (
         <button
           className="toolbar__btn toolbar__btn--icon toolbar__btn--tour"
