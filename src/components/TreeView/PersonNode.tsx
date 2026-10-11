@@ -148,7 +148,7 @@ export const PersonNode = React.memo<{
           : undefined}
         aria-label={relStep != null
           ? `${displayName}. ${relStep === 1 ? t.tracerSelectHint1 : t.tracerSelectHint2}`
-          : `${displayName}, ${member.birthYear ?? t.unknownYear}–${member.deathYear ?? t.present}. ${t.ariaKeyboardHint}`}
+          : `${displayName}${[member.birthYear, member.deathYear].filter(y => y != null).join(' – ') ? `, ${[member.birthYear, member.deathYear].filter(y => y != null).join(' – ')}` : ''}. ${t.ariaKeyboardHint}`}
         aria-pressed={isSelected}
       >
         {member.imageConfig.imageSourceType === 'provided' ? (
@@ -194,7 +194,7 @@ export const PersonNode = React.memo<{
       </div>
       <div className="pnode__name" title={displayName} onClick={() => onClick(member.id)}>{displayName}</div>
       <div className="pnode__dates" onClick={() => onClick(member.id)}>
-        {member.birthYear ?? t.unknownYear} - {member.deathYear ?? t.present}
+        {[member.birthYear, member.deathYear].filter(y => y != null).join(' – ')}
       </div>
 
       {/* ⋮ hover action button */}

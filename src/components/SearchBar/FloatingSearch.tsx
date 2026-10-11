@@ -237,7 +237,7 @@ const FloatingSearch: React.FC = () => {
                   <div className="floating-search__list-info">
                     <span className="floating-search__list-name">{m.fullName}</span>
                     <span className="floating-search__list-meta">
-                      {m.birthYear ?? t.unknownYear} – {m.deathYear ?? t.present}
+                      {[m.birthYear, m.deathYear].filter(y => y != null).join(' – ')}
                       {m.generationIndex !== null ? ` · ${t.genFormat(m.generationIndex)}` : ''}
                       {m.location ? ` · ${m.location}` : ''}
                     </span>
