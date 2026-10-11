@@ -952,3 +952,17 @@
     transform: translateX(-50%);
   }
 }
+
+/* ─── Narrow screens: keep banners inside the viewport ─── */
+@media (max-width: 600px) {
+  .tree-view__rel-banner,
+  .tree-view__lineage-banner {
+    max-width: calc(100% - 24px);
+    box-sizing: border-box;
+    white-space: normal;
+    text-align: center;
+    font-size: 0.74rem;
+    padding: 6px 14px;
+    border-radius: 16px;
+  }
+}

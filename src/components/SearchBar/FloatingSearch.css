@@ -347,3 +347,8 @@
   }
 }
 
+
+/* Touch devices: larger tap targets. */
+@media (pointer: coarse) {
+  .floating-search__collapse-btn { min-width: 32px; min-height: 32px; }
+}

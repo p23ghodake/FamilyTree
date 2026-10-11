@@ -187,3 +187,6 @@
   line-height: 1.5;
 }
 
+
+/* The modal is rendered inside the top bar's stacking context; lift the bar above panels while it is open. */
+.top-bar:has(.share-modal__backdrop, .tl-backdrop) { z-index: var(--z-modal); }

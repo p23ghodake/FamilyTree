@@ -144,3 +144,12 @@
   }
 }
 
+
+/* Narrow screens: anchor the picker to the top bar so it stays inside the viewport. */
+@media (max-width: 600px) {
+  .theme-switcher__wrap { position: static; }
+  .theme-switcher__picker {
+    right: 8px;
+    max-width: calc(100vw - 16px);
+  }
+}

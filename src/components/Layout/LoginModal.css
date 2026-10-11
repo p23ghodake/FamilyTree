@@ -168,3 +168,16 @@
 @media (prefers-reduced-motion: reduce) {
   .login-modal, .login-modal__backdrop, .login-modal__spinner { animation: none; }
 }
+
+/* The modal is rendered inside the top bar's stacking context; lift the bar above panels while it is open. */
+.top-bar:has(.login-modal__backdrop) { z-index: var(--z-modal, 1000); }
+
+.login-modal {
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+@media (max-width: 380px) {
+  .login-modal { padding: 28px 18px 18px; }
+}

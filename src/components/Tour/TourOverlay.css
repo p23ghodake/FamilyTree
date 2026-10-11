@@ -203,3 +203,14 @@
   .tour-tooltip   { animation: none; }
   .tour-tooltip__next:hover { transform: none; }
 }
+
+/* The tour positions the tooltip inline; keep it inside narrow viewports. */
+@media (max-width: 480px) {
+  .tour-tooltip {
+    width: auto;
+    max-width: calc(100vw - 16px);
+    left: 8px !important;
+    right: 8px;
+    box-sizing: border-box;
+  }
+}

@@ -353,3 +353,11 @@
     transform: translateX(-50%);
   }
 }
+
+@media (max-width: 600px) {
+  .relationship-panel {
+    z-index: calc(var(--z-sticky) + 1);
+    max-height: calc(100% - 24px);
+    overflow-y: auto;
+  }
+}
