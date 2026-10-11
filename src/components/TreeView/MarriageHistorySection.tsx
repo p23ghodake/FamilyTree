@@ -3,6 +3,7 @@ import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { StyledFamilyTree } from '../../types/FamilyTypes';
 import { getAvatarFallback } from '../../processing/avatarFallback';
+import { getDisplayFirstName } from '../../processing/displayName';
 import { hasUnderageChildren } from '../../processing/spouseRules';
 
 interface MarriageHistorySectionProps {
@@ -15,7 +16,7 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
   currentTree,
 }) => {
   const { dispatch } = useFamilyTree();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [endMarriageForm, setEndMarriageForm] = useState<{
     spouse1Id: string; spouse2Id: string; endYear: string;
@@ -57,12 +58,12 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
           <div key={spouseId} className={`member-form__marriage-row${isCurrent ? '' : ' member-form__marriage-row--former'}`}>
             <img
               src={spouseMember?.imageConfig.finalImageUrl ?? getAvatarFallback(spouseMember?.gender, spouseMember?.ageCategory)}
-              alt={spouseMember?.fullName}
+              alt={spouseMember ? getDisplayFirstName(spouseMember, lang) : undefined}
               className="member-form__marriage-avatar"
               onError={e => { (e.target as HTMLImageElement).src = getAvatarFallback(spouseMember?.gender, spouseMember?.ageCategory); }}
             />
             <div className="member-form__marriage-info">
-              <span className="member-form__marriage-name">{spouseMember?.fullName ?? spouseId}</span>
+              <span className="member-form__marriage-name">{spouseMember ? getDisplayFirstName(spouseMember, lang) : spouseId}</span>
               <span className="member-form__marriage-years">
                 {t.marriedYear(r.marriageYear ?? null)}
                 {!isCurrent && r.endYear ? ` → ${r.endYear}${r.endReason ? ` (${formatMarriageEndReason(r.endReason)})` : ''}` : ''}

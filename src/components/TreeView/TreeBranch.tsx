@@ -13,7 +13,6 @@ export const TreeBranch = React.memo<{
   onSelect: (id: string) => void;
   onMenuAction?: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
   filterMatchedIds: Set<string>;
-  filterDimMode: 'dim' | 'hide';
   relSource: string | null;
   relTarget: string | null;
   relPathSet: Set<string>;
@@ -21,7 +20,7 @@ export const TreeBranch = React.memo<{
   marriageFilterActive: boolean;
   avatarStyle: AvatarStyle;
   relStep: 1 | 2 | null;
-}>(({ node, selectedId, isSearching, searchMatchedIds, onSelect, onMenuAction, filterMatchedIds, filterDimMode, relSource, relTarget, relPathSet, bloodPathIds, marriageFilterActive, avatarStyle, relStep }) => {
+}>(({ node, selectedId, isSearching, searchMatchedIds, onSelect, onMenuAction, filterMatchedIds, relSource, relTarget, relPathSet, bloodPathIds, marriageFilterActive, avatarStyle, relStep }) => {
   const filterActive = filterMatchedIds.size > 0;
 
   const getHighlight = (id: string): boolean | null => {
@@ -34,11 +33,6 @@ export const TreeBranch = React.memo<{
     if (filterActive) return filterMatchedIds.has(id);
     return null;
   };
-
-  // Hide only when not searching; during search we dim but never hide so the
-  // tree context remains visible and the user can still see where results live.
-  const getHidden = (id: string): boolean =>
-    filterActive && filterDimMode === 'hide' && !filterMatchedIds.has(id) && !isSearching;
 
   const getRelRole = (id: string): 'source' | 'target' | 'blood-path' | 'path' | null => {
     if (id === relSource) return 'source';
@@ -69,7 +63,6 @@ export const TreeBranch = React.memo<{
               member={fsp}
               isSelected={selectedId === fsp.id}
               isHighlighted={getHighlight(fsp.id)}
-              isHidden={getHidden(fsp.id)}
               relRole={getRelRole(fsp.id)}
               showMarriageBadge={isBadgeEligible(fsp)}
               avatarStyle={avatarStyle}
@@ -103,7 +96,6 @@ export const TreeBranch = React.memo<{
           member={node.member}
           isSelected={selectedId === node.member.id}
           isHighlighted={getHighlight(node.member.id)}
-          isHidden={getHidden(node.member.id)}
           relRole={getRelRole(node.member.id)}
           showMarriageBadge={isBadgeEligible(node.member)}
           avatarStyle={avatarStyle}
@@ -139,7 +131,6 @@ export const TreeBranch = React.memo<{
               member={cs}
               isSelected={selectedId === cs.id}
               isHighlighted={getHighlight(cs.id)}
-              isHidden={getHidden(cs.id)}
               relRole={getRelRole(cs.id)}
               showMarriageBadge={isBadgeEligible(cs)}
               avatarStyle={avatarStyle}
@@ -162,7 +153,6 @@ export const TreeBranch = React.memo<{
               onSelect={onSelect}
               onMenuAction={onMenuAction}
               filterMatchedIds={filterMatchedIds}
-              filterDimMode={filterDimMode}
               relSource={relSource}
               relTarget={relTarget}
               relPathSet={relPathSet}

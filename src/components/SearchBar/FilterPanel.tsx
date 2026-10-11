@@ -12,7 +12,7 @@ const FilterPanel: React.FC<{
   const { state, dispatch, currentTree } = useFamilyTree();
   const { t } = useLanguage();
   const f = state.advancedFilters;
-  const active = isFiltersActive(f);
+  const active = isFiltersActive(f) || f.hideFemale;
 
   const locations = useMemo(() => {
     const locSet = new Set<string>();
@@ -23,22 +23,11 @@ const FilterPanel: React.FC<{
   const marriageEligibleCount = useMemo(() => {
     const members = currentTree?.members ?? [];
     const spouses = currentTree?.relationships.spouses ?? [];
-    let female = 0;
-    let male = 0;
-
-    members.forEach(m => {
-      if (m.deathYear !== null || m.age === null || m.gender === 'unknown') return;
-      const minAge = m.gender === 'female' ? 18 : 21;
-      if (m.age < minAge) return;
-      const hasCurrentSpouse = spouses.some(
-        r => (r.spouse1Id === m.id || r.spouse2Id === m.id) && r.status === 'current'
-      );
-      if (hasCurrentSpouse) return;
-      if (m.gender === 'female') female++;
-      else male++;
-    });
-
-    return { female, male, total: female + male };
+    return members.filter(m => {
+      if (m.deathYear !== null || m.age === null || m.gender === 'unknown') return false;
+      if (m.age < (m.gender === 'female' ? 18 : 21)) return false;
+      return !spouses.some(r => (r.spouse1Id === m.id || r.spouse2Id === m.id) && r.status === 'current');
+    }).length;
   }, [currentTree]);
 
   const set = (patch: Partial<AdvancedFilters>) =>
@@ -72,13 +61,13 @@ const FilterPanel: React.FC<{
       </button>
 
       <button
-        className={`filter-panel__toggle${f.excludeFemale ? ' filter-panel__toggle--on' : ''}`}
-        onClick={() => set({ excludeFemale: !f.excludeFemale })}
-        aria-pressed={f.excludeFemale}
+        className={`filter-panel__toggle${f.hideFemale ? ' filter-panel__toggle--on' : ''}`}
+        onClick={() => set({ hideFemale: !f.hideFemale })}
+        aria-pressed={f.hideFemale}
       >
         <span className="filter-panel__toggle-dot" />
         <UserIcon size={13} />
-        {t.filterExcludeFemale}
+        {f.hideFemale ? t.filterShowFemale : t.filterHideFemale}
       </button>
 
       <button
@@ -88,21 +77,10 @@ const FilterPanel: React.FC<{
         <span className="filter-panel__toggle-dot" />
         <HeartIcon size={13} />
         <span className="filter-panel__toggle-label">{t.filterMarriageEligible}</span>
-        {marriageEligibleCount.total > 0 && (
-          <span className="filter-panel__marriage-count">{marriageEligibleCount.total}</span>
+        {marriageEligibleCount > 0 && (
+          <span className="filter-panel__marriage-count">{marriageEligibleCount}</span>
         )}
       </button>
-
-      {f.marriageEligible && marriageEligibleCount.total > 0 && (
-        <div className="filter-panel__marriage-breakdown">
-          <span className="filter-panel__marriage-stat filter-panel__marriage-stat--female">
-            ♀ {marriageEligibleCount.female} {t.labelFemale} <span className="filter-panel__marriage-age">(18+)</span>
-          </span>
-          <span className="filter-panel__marriage-stat filter-panel__marriage-stat--male">
-            ♂ {marriageEligibleCount.male} {t.labelMale} <span className="filter-panel__marriage-age">(21+)</span>
-          </span>
-        </div>
-      )}
 
       <div className="filter-panel__row">
         <span className="filter-panel__label">{t.labelLocation}</span>
@@ -116,26 +94,6 @@ const FilterPanel: React.FC<{
             <option key={loc} value={loc}>{loc}</option>
           ))}
         </select>
-      </div>
-
-      <div className="filter-panel__row">
-        <span className="filter-panel__label">{t.filterDimLabel}</span>
-        <div className="filter-panel__segmented" role="group" aria-label={t.filterDimLabel}>
-          <button
-            className={`filter-panel__segmented-btn${f.dimMode === 'dim' ? ' filter-panel__segmented-btn--on' : ''}`}
-            onClick={() => set({ dimMode: 'dim' })}
-            aria-pressed={f.dimMode === 'dim'}
-          >
-            {t.filterDimOption}
-          </button>
-          <button
-            className={`filter-panel__segmented-btn${f.dimMode === 'hide' ? ' filter-panel__segmented-btn--on' : ''}`}
-            onClick={() => set({ dimMode: 'hide' })}
-            aria-pressed={f.dimMode === 'hide'}
-          >
-            {t.filterHideOption}
-          </button>
-        </div>
       </div>
     </div>
   );

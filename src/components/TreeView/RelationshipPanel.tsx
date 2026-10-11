@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
+import { getDisplayFirstName } from '../../processing/displayName';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   AlertCircleIcon,
@@ -28,9 +29,7 @@ const RelationshipPanel: React.FC = () => {
 
   // Mirror PersonNode's display-name logic: use Marathi fields when lang=mr
   const displayName = (m: NonNullable<ReturnType<typeof memberMap.get>>) =>
-    lang === 'mr' && m.firstName_mr && (m.lastName_mr || !m.lastName)
-      ? `${m.firstName_mr} ${m.lastName_mr || ''}`.trim()
-      : m.fullName;
+    getDisplayFirstName(m, lang);
 
   const displayFirst = (m: NonNullable<ReturnType<typeof memberMap.get>>) =>
     lang === 'mr' && m.firstName_mr ? m.firstName_mr : m.firstName;

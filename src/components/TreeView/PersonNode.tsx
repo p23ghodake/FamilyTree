@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { getDisplayFirstName } from '../../processing/displayName';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
 import { StyledFamilyMember, AvatarStyle } from '../../types/FamilyTypes';
@@ -32,9 +33,7 @@ export const PersonNode = React.memo<{
 }>(({ member, isSelected, isHighlighted, isHidden, isFormerSpouse, relRole, relStep, showMarriageBadge, avatarStyle, onClick, onMenuAction }) => {
   const { t, lang } = useLanguage();
   const { currentTree } = useFamilyTree();
-  const displayName = lang === 'mr' && member.firstName_mr && (member.lastName_mr || !member.lastName)
-    ? `${member.firstName_mr} ${member.lastName_mr || ''}`.trim()
-    : member.fullName;
+  const displayName = getDisplayFirstName(member, lang);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; left: number }>({ left: 0 });

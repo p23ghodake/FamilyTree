@@ -123,11 +123,9 @@ type Translations = {
   filtersTitle: string;
   filterClear: string;
   filterLivingOnly: string;
-  filterExcludeFemale: string;
+  filterHideFemale: string;
+  filterShowFemale: string;
   filterMarriageEligible: string;
-  filterDimLabel: string;
-  filterDimOption: string;
-  filterHideOption: string;
   labelFemale: string;
   labelMale: string;
 
@@ -391,11 +389,9 @@ export const translations: Record<'en' | 'mr', Translations> = {
     filtersTitle: 'Filters',
     filterClear: 'Clear',
     filterLivingOnly: 'Living members only',
-    filterExcludeFemale: 'Dim / hide females',
+    filterHideFemale: 'Hide females',
+    filterShowFemale: 'Show females',
     filterMarriageEligible: 'Marriage eligible',
-    filterDimLabel: 'Non-matching',
-    filterDimOption: 'Dim',
-    filterHideOption: 'Hide',
     labelFemale: 'women',
     labelMale: 'men',
     // StatsPanel
@@ -665,11 +661,9 @@ export const translations: Record<'en' | 'mr', Translations> = {
     filtersTitle: 'फिल्टर',
     filterClear: 'साफ करा',
     filterLivingOnly: 'फक्त जिवंत सदस्य',
-    filterExcludeFemale: 'महिला अंधुक / लपवा',
+    filterHideFemale: 'महिला लपवा',
+    filterShowFemale: 'महिला दाखवा',
     filterMarriageEligible: 'विवाहयोग्य',
-    filterDimLabel: 'न जुळणारे',
-    filterDimOption: 'अंधुक',
-    filterHideOption: 'लपवा',
     labelFemale: 'महिला',
     labelMale: 'पुरुष',
     // StatsPanel

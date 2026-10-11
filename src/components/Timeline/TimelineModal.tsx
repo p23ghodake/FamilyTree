@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
+import { getDisplayFirstName } from '../../processing/displayName';
 import { useLanguage } from '../../context/LanguageContext';
 import './TimelineModal.css';
 
@@ -85,9 +86,7 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
 
     // Language-aware display names (mirrors PersonNode logic)
     const dName = (m: typeof currentTree.members[number]) =>
-      lang === 'mr' && (m.firstName_mr || m.lastName_mr)
-        ? `${m.firstName_mr || m.firstName} ${m.lastName_mr || m.lastName}`.trim()
-        : m.fullName;
+      getDisplayFirstName(m, lang);
     const dFirst = (m: typeof currentTree.members[number]) =>
       lang === 'mr' && m.firstName_mr ? m.firstName_mr : m.firstName;
 

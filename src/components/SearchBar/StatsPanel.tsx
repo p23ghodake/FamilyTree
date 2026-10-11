@@ -5,11 +5,12 @@ import {
   UsersIcon, LayersIcon, CalendarIcon, ClockIcon,
   MapPinIcon, BriefcaseIcon, TrophyIcon, MaleIcon, FemaleIcon, UserIcon,
 } from '../Icons';
+import { getDisplayFirstName } from '../../processing/displayName';
 import './StatsPanel.css';
 
 const StatsPanel: React.FC<{ visible: boolean }> = ({ visible }) => {
   const { currentTree, filteredMembers, advancedMatchedIds, debouncedSearchQuery, state } = useFamilyTree();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const isTextSearch = debouncedSearchQuery.length > 0;
   const isAdvFilters = isFiltersActive(state.advancedFilters);
@@ -212,13 +213,13 @@ const StatsPanel: React.FC<{ visible: boolean }> = ({ visible }) => {
           <div className="stats-panel__list">
             {stats.oldest && (
               <div className="stats-panel__list-item">
-                <span>{t.recordOldest(stats.oldest.fullName)}</span>
+                <span>{t.recordOldest(getDisplayFirstName(stats.oldest, lang))}</span>
                 <span className="stats-panel__list-count">{stats.oldest.age} {t.statYrs}</span>
               </div>
             )}
             {stats.youngest && (
               <div className="stats-panel__list-item">
-                <span>{t.recordYoungest(stats.youngest.fullName)}</span>
+                <span>{t.recordYoungest(getDisplayFirstName(stats.youngest, lang))}</span>
                 <span className="stats-panel__list-count">{stats.youngest.age} {t.statYrs}</span>
               </div>
             )}

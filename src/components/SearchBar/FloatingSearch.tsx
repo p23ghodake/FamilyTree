@@ -10,6 +10,7 @@ import {
   ChevronUpIcon, ChevronDownIcon, GripVerticalIcon,
 } from '../Icons';
 import { getAvatarFallback } from '../../processing/avatarFallback';
+import { getDisplayFirstName } from '../../processing/displayName';
 import FilterPanel from '../SearchBar/FilterPanel';
 import './FloatingSearch.css';
 
@@ -47,15 +48,9 @@ const FloatingSearch: React.FC = () => {
         ? (currentTree?.members ?? []).filter(m => advancedMatchedIds.has(m.id))
         : (currentTree?.members ?? []);
 
+  // Default position: top-left corner of the tree area
   useLayoutEffect(() => {
-    const panel = panelRef.current;
-    const container = panel?.parentElement;
-    if (!panel || !container) return;
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
-    const pw = panel.offsetWidth || 300;
-    const ph = panel.offsetHeight || 56;
-    setPos({ x: cw - pw - 20, y: ch - ph - 72 });
+    setPos({ x: 16, y: 16 });
     setReady(true);
   }, []);
 
@@ -231,11 +226,11 @@ const FloatingSearch: React.FC = () => {
                   <img
                     className="floating-search__list-avatar"
                     src={m.imageConfig.finalImageUrl}
-                    alt={m.fullName}
+                    alt={getDisplayFirstName(m, lang)}
                     onError={e => { (e.target as HTMLImageElement).src = getAvatarFallback(m.gender, m.ageCategory); }}
                   />
                   <div className="floating-search__list-info">
-                    <span className="floating-search__list-name">{m.fullName}</span>
+                    <span className="floating-search__list-name">{getDisplayFirstName(m, lang)}</span>
                     <span className="floating-search__list-meta">
                       {[m.birthYear, m.deathYear].filter(y => y != null).join(' – ')}
                       {m.generationIndex !== null ? ` · ${t.genFormat(m.generationIndex)}` : ''}

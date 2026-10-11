@@ -74,8 +74,7 @@ const TreeView: React.FC = () => {
 
   const treeNodes = useMemo(() => {
     if (!currentTree) return [];
-    const { excludeFemale, dimMode } = state.advancedFilters;
-    if (!excludeFemale || dimMode !== 'hide') {
+    if (!state.advancedFilters.hideFemale) {
       return buildTreeFromMembers(currentTree.members, currentTree.relationships);
     }
 
@@ -101,8 +100,6 @@ const TreeView: React.FC = () => {
     if (lineageModeActive && lineageIds.size > 0) return lineageIds;
     return advancedMatchedIds;
   }, [lineageModeActive, lineageIds, advancedMatchedIds]);
-
-  const effectiveDimMode = lineageModeActive && lineageIds.size > 0 ? 'dim' : state.advancedFilters.dimMode;
 
   // Use the debounced query (same source as filteredMembers) so firstMatchId
   // only updates after the filter has actually been applied — prevents the
@@ -498,7 +495,6 @@ const TreeView: React.FC = () => {
                 onSelect={handleSelect}
                 onMenuAction={canEdit ? handleMenuAction : undefined}
                 filterMatchedIds={effectiveFilterIds}
-                filterDimMode={effectiveDimMode}
                 relSource={state.relSource}
                 relTarget={state.relTarget}
                 relPathSet={relPathSet}
