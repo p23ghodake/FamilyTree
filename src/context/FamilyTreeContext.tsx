@@ -70,6 +70,7 @@ function buildRawExport(data: ProcessedFamilyData): RawFamilyData {
           spouse1Id: s.spouse1Id,
           spouse2Id: s.spouse2Id,
           ...(s.marriageYear !== undefined && { marriageYear: s.marriageYear }),
+          ...(s.marriageDate && { marriageDate: s.marriageDate }),
           ...(s.endYear      && { endYear:      s.endYear }),
           ...(s.endReason    && { endReason:    s.endReason }),
         })),
@@ -184,6 +185,7 @@ type Action =
   | { type: 'UPDATE_MEMBER'; payload: { treeId: string; member: StyledFamilyMember } }
   | { type: 'DELETE_MEMBER'; payload: { treeId: string; memberId: string } }
   | { type: 'END_MARRIAGE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; endYear: number; endReason?: 'divorce' | 'death' | 'annulment' | 'separation' } }
+  | { type: 'UPDATE_MARRIAGE_DATE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; marriageDate: string | null } }
   | { type: 'UNDO' }
   | { type: 'REDO' };
 
@@ -193,6 +195,7 @@ const DATA_MUTATION_ACTIONS = new Set<Action['type']>([
   'UPDATE_MEMBER',
   'DELETE_MEMBER',
   'END_MARRIAGE',
+  'UPDATE_MARRIAGE_DATE',
   'UNDO',
   'REDO',
 ]);
@@ -342,6 +345,28 @@ function reducer(state: State, action: Action): State {
           r.showHeart = false;
           r.heartColorHex = CONFIG.colors.SPOUSE_FORMER_COLOR;
           r.lineStyle = { ...r.lineStyle, strokeColorHex: CONFIG.colors.SPOUSE_FORMER_COLOR, lineStyle: 'dashed' };
+        });
+        Object.assign(draft, withHistory(state));
+      });
+    }
+
+    case 'UPDATE_MARRIAGE_DATE': {
+      if (!state.data) return state;
+      const { treeId, spouse1Id, spouse2Id, marriageDate } = action.payload;
+      return produce(state, draft => {
+        const tree = draft.data!.familyTreesStyled.find(t => t.familyTreeId === treeId);
+        if (!tree) return;
+        tree.relationships.spouses.forEach(r => {
+          const matches =
+            (r.spouse1Id === spouse1Id && r.spouse2Id === spouse2Id) ||
+            (r.spouse1Id === spouse2Id && r.spouse2Id === spouse1Id);
+          if (!matches) return;
+          if (marriageDate) {
+            r.marriageDate = marriageDate;
+            r.marriageYear = parseInt(marriageDate.slice(0, 4));
+          } else {
+            delete r.marriageDate;
+          }
         });
         Object.assign(draft, withHistory(state));
       });

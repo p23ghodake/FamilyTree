@@ -6,6 +6,8 @@ import { AlertTriangleIcon, Trash2Icon, XIcon } from '../Icons';
 import { transliterateToMarathi } from '../../processing/transliteration';
 import { findDuplicates } from '../../processing/duplicateDetection';
 import { sanitizeImageUrl } from '../../processing/dataValidation';
+import toast from 'react-hot-toast';
+import { getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
 import YearPicker from '../YearPicker';
 import { RelationshipSection } from './RelationshipSection';
 import { PhotoUploadSection } from './PhotoUploadSection';
@@ -258,6 +260,13 @@ const MemberFormModal: React.FC = () => {
           setSaving(false);
           return;
         }
+      }
+
+      if (relType === 'spouse' && relatedId &&
+          (getCurrentSpouseId(currentTree, relatedId) || hasUnderageChildren(currentTree, relatedId))) {
+        toast.error(getCurrentSpouseId(currentTree, relatedId) ? t.alertAlreadyHasSpouse : t.tooltipSpouseChildrenAge);
+        setSaving(false);
+        return;
       }
 
       dispatch({

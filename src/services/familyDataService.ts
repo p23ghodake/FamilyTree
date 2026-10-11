@@ -34,10 +34,28 @@ async function serviceError(error: { message: string; context?: unknown }): Prom
   return new FamilyDataServiceError(message, response?.status);
 }
 
+type InvokeResult<T> = { data: T | null; error: { message: string; context?: unknown } | null };
+
+// On 401 the stored JWT is stale: refresh it and retry once, otherwise end the session so the user can sign in again.
+async function invokeWithRefresh<T>(call: () => Promise<InvokeResult<T>>): Promise<InvokeResult<T>> {
+  const result = await call();
+  const response = result.error?.context instanceof Response ? result.error.context : null;
+  if (response?.status !== 401) return result;
+  const client = requireSupabase();
+  const { data: refreshed, error: refreshError } = await client.auth.refreshSession();
+  if (refreshError || !refreshed.session) {
+    await client.auth.signOut({ scope: 'local' });
+    return {
+      data: null,
+      error: { message: 'Your session expired. Please sign in again.', context: undefined },
+    };
+  }
+  return call();
+}
+
 export async function getFamilyData(): Promise<FamilyDataResponse> {
-  const { data, error } = await requireSupabase().functions.invoke<FamilyDataResponse>('family-data', {
-    method: 'GET',
-  });
+  const { data, error } = await invokeWithRefresh(() =>
+    requireSupabase().functions.invoke<FamilyDataResponse>('family-data', { method: 'GET' }));
   if (error) {
     throw await serviceError(error);
   }
@@ -48,10 +66,11 @@ export async function getFamilyData(): Promise<FamilyDataResponse> {
 }
 
 export async function saveFamilyData(data: RawFamilyData, sha: string): Promise<string> {
-  const { data: response, error } = await requireSupabase().functions.invoke<SaveFamilyDataResponse>(
-    'family-data',
-    { method: 'PUT', body: { data, sha } },
-  );
+  const { data: response, error } = await invokeWithRefresh(() =>
+    requireSupabase().functions.invoke<SaveFamilyDataResponse>(
+      'family-data',
+      { method: 'PUT', body: { data, sha } },
+    ));
   if (error) {
     throw await serviceError(error);
   }

@@ -133,7 +133,35 @@ Deno.serve(async request => {
     }
 
     const file = await githubResponse.json();
-    if (typeof file.content !== 'string' || typeof file.sha !== 'string') {
+    if (typeof file.sha !== 'string') {
+      console.error('GitHub returned an unexpected Contents API response.');
+      return jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500);
+    }
+
+    // The Contents API omits content for files over 1 MB; the Blobs API supports larger files.
+    if (typeof file.content !== 'string' || file.content === '' || file.encoding !== 'base64') {
+      let blobResponse: Response;
+      try {
+        blobResponse = await fetch(
+          `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs/${file.sha}`,
+          { headers: githubHeaders(githubToken) },
+        );
+      } catch (error) {
+        console.error('GitHub blob read request failed:', error);
+        return jsonResponse({ error: 'Could not connect to GitHub to read family data.' }, 500);
+      }
+      if (!blobResponse.ok) {
+        console.error(`GitHub blob read failed with status ${blobResponse.status}.`);
+        return jsonResponse({ error: 'Failed to read family data from GitHub.' }, githubErrorStatus(blobResponse.status));
+      }
+      const blob = await blobResponse.json();
+      if (typeof blob.content !== 'string' || blob.encoding !== 'base64') {
+        return jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500);
+      }
+      file.content = blob.content;
+    }
+
+    if (typeof file.content !== 'string') {
       console.error('GitHub returned an unexpected Contents API response.');
       return jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500);
     }

@@ -3,6 +3,7 @@ import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { StyledFamilyTree } from '../../types/FamilyTypes';
 import { getAvatarFallback } from '../../processing/avatarFallback';
+import { hasUnderageChildren } from '../../processing/spouseRules';
 
 interface MarriageHistorySectionProps {
   editMemberId: string;
@@ -21,6 +22,8 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
     startYear: number | null;
     endReason: 'divorce' | 'death' | 'annulment' | 'separation';
   } | null>(null);
+
+  const [dateDrafts, setDateDrafts] = useState<Record<string, string>>({});
 
   const marriages = currentTree.relationships.spouses.filter(
     r => r.spouse1Id === editMemberId || r.spouse2Id === editMemberId
@@ -68,6 +71,45 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
             <span className={`member-form__marriage-badge${isCurrent ? ' member-form__marriage-badge--current' : ' member-form__marriage-badge--former'}`}>
               {isCurrent ? t.currentMarriage : t.formerMarriage}
             </span>
+            {isCurrent && (() => {
+              const blocked = hasUnderageChildren(currentTree, r.spouse1Id) || hasUnderageChildren(currentTree, r.spouse2Id);
+              const saved = r.marriageDate ?? '';
+              const draft = dateDrafts[spouseId] ?? saved;
+              return (
+                <div className="member-form__marriage-end-form">
+                  <label>
+                    {t.labelMarriageDate}{' '}
+                    <input
+                      type="date"
+                      className="member-form__input"
+                      value={/^\d{4}-\d{2}-\d{2}$/.test(draft) ? draft : ''}
+                      disabled={blocked}
+                      title={blocked ? t.tooltipSpouseChildrenAge : undefined}
+                      onChange={e => setDateDrafts(d => ({ ...d, [spouseId]: e.target.value }))}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="member-form__btn member-form__btn--primary"
+                    disabled={blocked || draft === saved}
+                    onClick={() => {
+                      dispatch({
+                        type: 'UPDATE_MARRIAGE_DATE',
+                        payload: {
+                          treeId: currentTree.familyTreeId,
+                          spouse1Id: r.spouse1Id,
+                          spouse2Id: r.spouse2Id,
+                          marriageDate: draft || null,
+                        },
+                      });
+                      setDateDrafts(d => { const { [spouseId]: _omit, ...rest } = d; return rest; });
+                    }}
+                  >
+                    {t.btnConfirm}
+                  </button>
+                </div>
+              );
+            })()}
             {isCurrent && !isEditing && (
               <button
                 type="button"

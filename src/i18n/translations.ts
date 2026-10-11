@@ -167,6 +167,10 @@ type Translations = {
   menuEdit: string;
   menuAddChild: string;
   menuAddSpouse: string;
+  menuEditSpouse: string;
+  tooltipSpouseChildrenAge: string;
+  alertAlreadyHasSpouse: string;
+  labelMarriageDate: string;
   menuDelete: string;
   confirmDeleteNode: string;
   tooltipMarriageAge: (minAge: number, age: number) => string;
@@ -428,6 +432,10 @@ export const translations: Record<'en' | 'mr', Translations> = {
     menuEdit: 'Edit',
     menuAddChild: 'Add Child',
     menuAddSpouse: 'Add Spouse',
+    menuEditSpouse: 'Edit Spouse',
+    tooltipSpouseChildrenAge: 'Spouse options are unavailable while a son is under 21 or a daughter is under 18',
+    alertAlreadyHasSpouse: 'This person already has a spouse. Edit the existing spouse instead.',
+    labelMarriageDate: 'Marriage date',
     menuDelete: 'Delete',
     confirmDeleteNode: 'Delete member?',
     tooltipMarriageAge: (minAge, age) => `Legal marriage age: ${minAge}+ years (current age: ${age})`,
@@ -698,6 +706,10 @@ export const translations: Record<'en' | 'mr', Translations> = {
     menuEdit: 'संपादित करा',
     menuAddChild: 'मूल जोडा',
     menuAddSpouse: 'जोडीदार जोडा',
+    menuEditSpouse: 'जोडीदार संपादित करा',
+    tooltipSpouseChildrenAge: 'मुलगा 21 वर्षांखालील किंवा मुलगी 18 वर्षांखालील असताना जोडीदार पर्याय उपलब्ध नाहीत',
+    alertAlreadyHasSpouse: 'या व्यक्तीला आधीच जोडीदार आहे. कृपया विद्यमान जोडीदार संपादित करा.',
+    labelMarriageDate: 'विवाह तारीख',
     menuDelete: 'हटवा',
     confirmDeleteNode: 'सदस्य हटवायचे?',
     tooltipMarriageAge: (minAge, age) => `कायदेशीर विवाह वय: ${minAge}+ वर्षे (सध्याचे वय: ${age})`,

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { useFamilyTree } from '../../context/FamilyTreeContext';
+import { getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
 import { StyledFamilyMember, AvatarStyle } from '../../types/FamilyTypes';
 import { BabyIcon, HeartIcon, MoreVerticalIcon, PencilIcon, Trash2Icon } from '../Icons';
 import { getAvatarFallback } from '../../processing/avatarFallback';
@@ -29,6 +31,7 @@ export const PersonNode = React.memo<{
   onMenuAction?: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
 }>(({ member, isSelected, isHighlighted, isHidden, isFormerSpouse, relRole, relStep, showMarriageBadge, avatarStyle, onClick, onMenuAction }) => {
   const { t, lang } = useLanguage();
+  const { currentTree } = useFamilyTree();
   const displayName = lang === 'mr' && member.firstName_mr && (member.lastName_mr || !member.lastName)
     ? `${member.firstName_mr} ${member.lastName_mr || ''}`.trim()
     : member.fullName;
@@ -82,6 +85,9 @@ export const PersonNode = React.memo<{
     });
     setMenuOpen(true);
   };
+
+  const currentSpouseId = currentTree ? getCurrentSpouseId(currentTree, member.id) : null;
+  const spouseBlockedByChildren = currentTree ? hasUnderageChildren(currentTree, member.id) : false;
 
   const handleMenuAction = (action: 'edit' | 'addChild' | 'addSpouse' | 'delete') => {
     if (action === 'delete') {
@@ -234,20 +240,37 @@ export const PersonNode = React.memo<{
               {t.menuAddChild}
             </button>
           )}
-          {isMarriageEligible
-            ? <button className="pnode__menu-item" role="menuitem" onClick={() => handleMenuAction('addSpouse')}>
-                <HeartIcon size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                {t.menuAddSpouse}
-              </button>
-            : <button
-                className="pnode__menu-item pnode__menu-item--disabled"
+          {currentSpouseId
+            ? <button
+                className={`pnode__menu-item${spouseBlockedByChildren ? ' pnode__menu-item--disabled' : ''}`}
                 role="menuitem"
-                title={t.tooltipMarriageAge(minMarriageAge, member.age ?? 0)}
-                disabled
+                title={spouseBlockedByChildren ? t.tooltipSpouseChildrenAge : undefined}
+                disabled={spouseBlockedByChildren}
+                onClick={() => { setMenuOpen(false); onMenuAction?.('edit', currentSpouseId); }}
               >
                 <HeartIcon size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                {t.menuAddSpouse}
+                {t.menuEditSpouse}
               </button>
+            : !isMarriageEligible
+              ? <button
+                  className="pnode__menu-item pnode__menu-item--disabled"
+                  role="menuitem"
+                  title={t.tooltipMarriageAge(minMarriageAge, member.age ?? 0)}
+                  disabled
+                >
+                  <HeartIcon size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                  {t.menuAddSpouse}
+                </button>
+              : <button
+                  className={`pnode__menu-item${spouseBlockedByChildren ? ' pnode__menu-item--disabled' : ''}`}
+                  role="menuitem"
+                  title={spouseBlockedByChildren ? t.tooltipSpouseChildrenAge : undefined}
+                  disabled={spouseBlockedByChildren}
+                  onClick={() => handleMenuAction('addSpouse')}
+                >
+                  <HeartIcon size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                  {t.menuAddSpouse}
+                </button>
           }
           {confirmDelete ? (
             <div className="pnode__menu-confirm">

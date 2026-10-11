@@ -98,6 +98,7 @@ export interface SpouseRelationship {
   spouse2Id: string;
   status: 'current' | 'former';
   marriageYear?: number;
+  marriageDate?: string;
   endYear?: number;
   endReason?: 'divorce' | 'death' | 'annulment' | 'separation';
   showHeart: boolean;
