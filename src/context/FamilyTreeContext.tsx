@@ -243,7 +243,18 @@ function reducer(state: State, action: Action): State {
         const tree = draft.data!.familyTreesStyled.find(t => t.familyTreeId === treeId);
         if (!tree) return;
         tree.members.push(member);
+        const pcLine = { strokeColorHex: CONFIG.colors.PARENT_CHILD_LINE_COLOR, strokeWidthPx: 2, lineStyle: 'solid' as const };
+        const hasParentLink = (parentId: string, childId: string) =>
+          tree.relationships.parentChild.some(r => r.parentId === parentId && r.childId === childId);
         if (relatedId && relType === 'spouse') {
+          // Existing children with only this one recorded parent become the new spouse's children too
+          const rel = tree.relationships.parentChild;
+          const singleParentKids = Array.from(new Set(
+            rel.filter(r => r.parentId === relatedId).map(r => r.childId)
+          )).filter(cid => rel.filter(r => r.childId === cid).length === 1);
+          singleParentKids.forEach(cid => {
+            rel.push({ parentId: member.id, childId: cid, lineStyle: { ...pcLine } });
+          });
           tree.relationships.spouses.push({
             spouse1Id: relatedId, spouse2Id: member.id,
             status: 'current',
@@ -263,6 +274,15 @@ function reducer(state: State, action: Action): State {
             parentId: relatedId, childId: member.id,
             lineStyle: { strokeColorHex: CONFIG.colors.PARENT_CHILD_LINE_COLOR, strokeWidthPx: 2, lineStyle: 'solid' },
           });
+          // Also link the child to the parent's spouse, but only when there is exactly one (never guess between marriages)
+          const spouseIds = Array.from(new Set(
+            tree.relationships.spouses
+              .filter(r => r.spouse1Id === relatedId || r.spouse2Id === relatedId)
+              .map(r => (r.spouse1Id === relatedId ? r.spouse2Id : r.spouse1Id))
+          ));
+          if (spouseIds.length === 1 && !hasParentLink(spouseIds[0], member.id)) {
+            tree.relationships.parentChild.push({ parentId: spouseIds[0], childId: member.id, lineStyle: { ...pcLine } });
+          }
         }
         Object.assign(draft, withHistory(state));
         draft.memberFormMode = null;

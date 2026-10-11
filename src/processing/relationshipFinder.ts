@@ -4,7 +4,8 @@ import { StyledFamilyMember, StyledRelationships } from '../types/FamilyTypes';
 
 function buildAdjacency(
   members: StyledFamilyMember[],
-  relationships: StyledRelationships
+  relationships: StyledRelationships,
+  bloodOnly = false
 ): Map<string, Set<string>> {
   const adj = new Map<string, Set<string>>();
 
@@ -16,19 +17,26 @@ function buildAdjacency(
   };
 
   relationships.parentChild.forEach(r => add(r.parentId, r.childId));
-  relationships.spouses.forEach(r => add(r.spouse1Id, r.spouse2Id));
+  if (!bloodOnly) relationships.spouses.forEach(r => add(r.spouse1Id, r.spouse2Id));
 
   // Also use embedded member data as fallback
   members.forEach(m => {
     (m.parentIds ?? []).forEach(pid => add(m.id, pid));
-    if (m.spouseId) add(m.id, m.spouseId);
+    if (!bloodOnly && m.spouseId) add(m.id, m.spouseId);
     (m.childrenIds ?? []).forEach(cid => add(m.id, cid));
   });
 
   return adj;
 }
 
-// ─── BFS shortest path ───
+// ─── Path selection ───
+//
+// Precedence rule (documented, deterministic):
+//   1. Direct spouse link
+//   2. Shortest blood path (parent/child links only)
+//   3. Shortest path that crosses a marriage
+// Blood ties are never overridden by marriage routes, so a person who is both
+// a cousin and an in-law is reported as a cousin.
 
 export function findRelationshipPath(
   sourceId: string,
@@ -38,7 +46,78 @@ export function findRelationshipPath(
 ): string[] | null {
   if (sourceId === targetId) return [sourceId];
 
-  const adj = buildAdjacency(members, relationships);
+  const full = buildAdjacency(members, relationships);
+  if (full.get(sourceId)?.has(targetId)) {
+    const isParentChild =
+      relationships.parentChild.some(
+        r => (r.parentId === sourceId && r.childId === targetId) ||
+             (r.parentId === targetId && r.childId === sourceId)
+      ) ||
+      members.some(
+        mb => (mb.id === sourceId && (mb.parentIds ?? []).includes(targetId)) ||
+              (mb.id === targetId && (mb.parentIds ?? []).includes(sourceId))
+      );
+    if (!isParentChild) return [sourceId, targetId];
+  }
+
+  return bloodPath(sourceId, targetId, members, relationships) ?? bfsPath(sourceId, targetId, full);
+}
+
+// Shortest true blood path: climb to a common ancestor, then descend.
+// Paths that go down and back up (e.g. through a shared child) are not blood ties.
+function bloodPath(
+  sourceId: string,
+  targetId: string,
+  members: StyledFamilyMember[],
+  relationships: StyledRelationships
+): string[] | null {
+  const parentsOf = new Map<string, Set<string>>();
+  const childrenOf = new Map<string, Set<string>>();
+  const link = (p: string, c: string) => {
+    if (!parentsOf.has(c)) parentsOf.set(c, new Set());
+    if (!childrenOf.has(p)) childrenOf.set(p, new Set());
+    parentsOf.get(c)!.add(p);
+    childrenOf.get(p)!.add(c);
+  };
+  relationships.parentChild.forEach(r => link(r.parentId, r.childId));
+  members.forEach(mb => {
+    (mb.parentIds ?? []).forEach(pid => link(pid, mb.id));
+    (mb.childrenIds ?? []).forEach(cid => link(mb.id, cid));
+  });
+
+  // State key: id + phase (0 = may still climb, 1 = descending only)
+  const key = (id: string, phase: number) => `${id}|${phase}`;
+  const prev = new Map<string, string | null>([[key(sourceId, 0), null]]);
+  const queue: Array<[string, number]> = [[sourceId, 0]];
+  while (queue.length > 0) {
+    const [id, phase] = queue.shift()!;
+    const next: Array<[string, number]> = [];
+    if (phase === 0) Array.from(parentsOf.get(id) ?? []).forEach(p => next.push([p, 0]));
+    Array.from(childrenOf.get(id) ?? []).forEach(c => next.push([c, 1]));
+    for (const [nid, nphase] of next) {
+      const k = key(nid, nphase);
+      if (prev.has(k)) continue;
+      prev.set(k, key(id, phase));
+      if (nid === targetId) {
+        const path: string[] = [];
+        let cur: string | null = k;
+        while (cur !== null) {
+          path.push(cur.split('|')[0]);
+          cur = prev.get(cur) ?? null;
+        }
+        return path.reverse();
+      }
+      queue.push([nid, nphase]);
+    }
+  }
+  return null;
+}
+
+function bfsPath(
+  sourceId: string,
+  targetId: string,
+  adj: Map<string, Set<string>>
+): string[] | null {
   // Parent-pointer BFS: O(n) space instead of O(n²) path-copy approach
   const parent = new Map<string, string | null>([[sourceId, null]]);
   const queue: string[] = [sourceId];
@@ -311,7 +390,7 @@ function labelFromDirectionsMr(
   if (dirs.length === 1) {
     if (dirs[0] === 'up')     return m ? 'वडील' : f ? 'आई' : 'पालक';
     if (dirs[0] === 'down')   return m ? 'मुलगा' : f ? 'मुलगी' : 'मूल';
-    return m ? 'नवरा' : f ? 'बायको' : 'जोडीदार';
+    return m ? 'पती' : f ? 'पत्नी' : 'जोडीदार';
   }
 
   const hasSpouse = dirs.includes('spouse');
@@ -322,7 +401,13 @@ function labelFromDirectionsMr(
     const downs = dirs.filter(d => d === 'down').length;
 
     if (downs === 0) {
-      if (ups === 2) return m ? 'आजोबा' : f ? 'आजी' : 'आजोबा/आजी';
+      if (ups === 2) {
+        // hopsReversed[0].toGender is the target's parent, which decides the side
+        const side = hopsReversed[0].toGender;
+        if (side === 'female') return m ? 'नाना' : f ? 'नानी' : 'नाना/नानी';
+        if (side === 'male')   return m ? 'आजोबा' : f ? 'आजी' : 'आजोबा/आजी';
+        return m ? 'आजोबा/नाना' : f ? 'आजी/नानी' : 'आजोबा/आजी/नाना/नानी';
+      }
       if (ups === 3) return m ? 'पणजोबा' : f ? 'पणजी' : 'पणजोबा/पणजी';
       if (ups >= 4) return 'पूर्वज';
     }
@@ -345,7 +430,7 @@ function labelFromDirectionsMr(
     if (key === 'up,down,down') {
       const siblingGender = hopsReversed[1].toGender;
       if (siblingGender === 'male') return m ? 'पुतण्या' : f ? 'पुतणी' : 'पुतण्या/पुतणी';
-      return m ? 'भाच्या' : f ? 'भाची' : 'भाच्या/भाची';
+      return m ? 'भाचा' : f ? 'भाची' : 'भाचा/भाची';
     }
 
     if (key === 'up,up,down,down') {
@@ -366,12 +451,12 @@ function labelFromDirectionsMr(
 
     // Great-uncle / great-aunt (sibling of a grandparent)
     if (ups === 3 && downs === 1) {
-      return m ? 'पणकाका' : f ? 'पणआत्या' : 'नातेवाईक';
+      return 'नातेवाईक';
     }
 
     // Great-nephew / great-niece (child of a nephew or niece)
     if (ups === 1 && downs === 3) {
-      return m ? 'पणपुतण्या' : f ? 'पणपुतणी' : 'नातेवाईक';
+      return 'नातेवाईक';
     }
 
     // 2nd+ cousins — and any 1st cousins not caught by the key check above
@@ -423,8 +508,8 @@ function labelFromDirectionsMr(
       if (bU === 1 && bD === 0) return m ? 'सावत्र वडील' : f ? 'सावत्र आई' : 'सावत्र पालक';
       if (bU === 1 && bD === 1) {
         const sibGender = before[1]?.toGender;
-        if (sibGender === 'male')   return f ? 'वहिनी' : m ? 'वहिनीचे पती' : 'वहिनी';
-        if (sibGender === 'female') return m ? 'भावोजी' : f ? 'भावोजींच्या पत्नी' : 'भावोजी';
+        if (sibGender === 'male')   return f ? 'वहिनी' : 'नातेवाईक';
+        if (sibGender === 'female') return m ? 'मेव्हणा' : 'नातेवाईक';
         return 'नातेवाईक';
       }
       if (bD === 2 && bU === 0) return m ? 'नातजावई' : f ? 'नातसून' : 'नातेवाईक';
@@ -511,7 +596,19 @@ export function computeRelationship(
     toGender: h.fromGender,
   }));
 
-  const label   = labelFromDirections(directions, source?.gender ?? 'unknown');
+  let label   = labelFromDirections(directions, source?.gender ?? 'unknown');
   const labelMr = labelFromDirectionsMr(hopsReversed, source?.gender ?? 'unknown', config);
+
+  // Name the side (paternal/maternal) when the connecting parent's gender is known
+  const sideOf = (id: string) => {
+    const g = memberMap.get(id)?.gender;
+    return g === 'male' ? 'Paternal' : g === 'female' ? 'Maternal' : '';
+  };
+  const dirKey = directions.join(',');
+  const sideId = dirKey === 'down,down' ? path[1] : dirKey === 'up,down,down' ? path[2] : null;
+  if (sideId && /^(Grandfather|Grandmother|Uncle|Aunt)$/.test(label)) {
+    const side = sideOf(sideId);
+    if (side) label = `${side} ${label.toLowerCase()}`;
+  }
   return { path, label, labelMr, directions, hops: path.length - 1 };
 }
