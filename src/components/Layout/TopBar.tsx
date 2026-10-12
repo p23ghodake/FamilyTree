@@ -11,7 +11,7 @@ import StatsPanel from '../SearchBar/StatsPanel';
 import TimelineModal from '../Timeline/TimelineModal';
 import { useDialog } from '../useDialog';
 import {
-  BarChart2Icon, GitBranchIcon, MenuIcon, PlusIcon, Redo2Icon, SettingsIcon,
+  BarChart2Icon, GitBranchIcon, HelpCircleIcon, MenuIcon, PlusIcon, Redo2Icon, SettingsIcon,
   ShareIcon, TimelineIcon, TreeIcon, Undo2Icon, UserPlusIcon,
 } from '../Icons';
 import './TopBar.css';
@@ -191,7 +191,6 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
     accountName,
     isExporting,
     canReset: canDelete && canEdit && cloudReady && !isSaving,
-    onStartTour,
     onExportJson: exportData,
     onExportImage: handleExportImage,
     onPrint: () => window.print(),
@@ -211,7 +210,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
       </div>
 
       {/* Desktop: views */}
-      <nav className="top-bar__views" aria-label={t.headerViews}>
+      <nav className="top-bar__views" aria-label={t.headerViews} data-tour="views">
         <button type="button" className="top-bar__view" aria-pressed={treeActive} onClick={showTree}>
           <TreeIcon size={15} /><span className="top-bar__label">{t.viewTree}</span>
         </button>
@@ -243,6 +242,11 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
             </span>
           </>
         )}
+        {onStartTour && (
+          <button type="button" className="top-bar__icon" onClick={onStartTour} aria-label={t.settingsTour} title={t.tooltipTour}>
+            <HelpCircleIcon size={16} />
+          </button>
+        )}
         <button type="button" className="top-bar__icon" onClick={() => setShowShareModal(true)} title={t.headerShareTree} aria-label={t.headerShareTree}>
           <ShareIcon size={16} />
         </button>
@@ -256,6 +260,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
               aria-expanded={menuOpen}
               aria-label={t.accountMenu(accountName ?? '')}
               title={accountName ?? t.settingsTitle}
+              data-tour="settings"
             >
               {getInitials(accountName ?? '?')}
             </button>
@@ -269,10 +274,11 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
                 aria-expanded={menuOpen}
                 aria-label={t.settingsTitle}
                 title={t.settingsTitle}
+                data-tour="settings"
               >
                 <SettingsIcon size={16} />
               </button>
-              <button type="button" className="top-bar__signin" onClick={() => setShowLogin(true)} disabled={authLoading} title={t.authSignInTooltip}>
+              <button type="button" className="top-bar__signin" onClick={() => setShowLogin(true)} disabled={authLoading} title={t.authSignInTooltip} data-tour="sign-in">
                 {authLoading ? t.authChecking : t.authSignIn}
               </button>
             </>
@@ -287,10 +293,15 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
 
       {/* Phone: compact actions */}
       <div className="top-bar__mobile">
+        {onStartTour && (
+          <button type="button" className="top-bar__icon" onClick={onStartTour} aria-label={t.settingsTour} title={t.tooltipTour}>
+            <HelpCircleIcon size={18} />
+          </button>
+        )}
         <button type="button" className="top-bar__icon" aria-pressed={state.relMode} onClick={toggleTrace} aria-label={t.tooltipTracer} title={t.tooltipTracer} data-tour="trace">
           <GitBranchIcon size={18} />
         </button>
-        <button ref={sheetButtonRef} type="button" className="top-bar__icon" onClick={() => setSheetOpen(true)} aria-expanded={sheetOpen} aria-label={t.headerMenu} title={t.headerMenu}>
+        <button ref={sheetButtonRef} type="button" className="top-bar__icon" onClick={() => setSheetOpen(true)} aria-expanded={sheetOpen} aria-label={t.headerMenu} title={t.headerMenu} data-tour="menu">
           <MenuIcon size={18} />
         </button>
       </div>

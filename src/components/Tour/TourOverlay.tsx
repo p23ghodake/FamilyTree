@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { TOUR_STEPS } from './tourSteps';
 import { CONFIG } from '../../constants/config';
@@ -17,8 +17,25 @@ interface SpotlightBounds {
 }
 
 const PAD = 8;
+const GAP = 12;
 const TOOLTIP_W = 290;
 const TOOLTIP_H_APPROX = 210;
+
+type Placement = 'top' | 'bottom' | 'left' | 'right';
+
+/** Use the preferred side when the card fits there, otherwise the side with the most room. */
+function choosePlacement(preferred: Placement, b: SpotlightBounds, w: number, h: number): Placement {
+  const room: Record<Placement, number> = {
+    top: b.top - GAP,
+    bottom: window.innerHeight - (b.top + b.height) - GAP,
+    left: b.left - GAP,
+    right: window.innerWidth - (b.left + b.width) - GAP,
+  };
+  const fits = (p: Placement) => room[p] >= (p === 'top' || p === 'bottom' ? h : w);
+  if (fits(preferred)) return preferred;
+  const fallback = (['bottom', 'top', 'right', 'left'] as Placement[]).find(fits);
+  return fallback ?? (room.bottom >= room.top ? 'bottom' : 'top');
+}
 
 function clamp(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
@@ -28,6 +45,8 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
   const { t } = useLanguage();
   const [stepIndex, setStepIndex] = useState(0);
   const [bounds, setBounds] = useState<SpotlightBounds | null>(null);
+  const [tipSize, setTipSize] = useState({ w: TOOLTIP_W, h: TOOLTIP_H_APPROX });
+  const tipRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
 
   const totalSteps = TOUR_STEPS.length;
@@ -58,6 +77,15 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
   useEffect(() => {
     if (active) setStepIndex(0);
   }, [active]);
+
+  // Measure the rendered card so placement uses its real size (text length varies by step and language).
+  useLayoutEffect(() => {
+    const el = tipRef.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    setTipSize(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
+  });
 
   // Measure target element on step change + re-measure on window resize
   useEffect(() => {
@@ -116,25 +144,29 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
   } else {
     const { top, left, width, height } = bounds;
     const cx   = left + width / 2;
+    const cy   = top + height / 2;
     const viewH = window.innerHeight;
     const viewW = window.innerWidth;
+    const { w, h } = tipSize;
+    const maxTop = Math.max(8, viewH - h - 8);
+    const maxLeft = Math.max(8, viewW - w - 8);
 
-    switch (step.placement) {
+    switch (choosePlacement(step.placement as Placement, bounds, w, h)) {
       case 'bottom':
-        tooltipStyle.top  = clamp(top + height + 12, 8, viewH - TOOLTIP_H_APPROX - 8);
-        tooltipStyle.left = clamp(cx - TOOLTIP_W / 2, 8, viewW - TOOLTIP_W - 8);
+        tooltipStyle.top  = clamp(top + height + GAP, 8, maxTop);
+        tooltipStyle.left = clamp(cx - w / 2, 8, maxLeft);
         break;
       case 'top':
-        tooltipStyle.top  = clamp(top - TOOLTIP_H_APPROX - 12, 8, viewH - TOOLTIP_H_APPROX - 8);
-        tooltipStyle.left = clamp(cx - TOOLTIP_W / 2, 8, viewW - TOOLTIP_W - 8);
+        tooltipStyle.top  = clamp(top - h - GAP, 8, maxTop);
+        tooltipStyle.left = clamp(cx - w / 2, 8, maxLeft);
         break;
       case 'right':
-        tooltipStyle.top  = clamp(top + height / 2 - TOOLTIP_H_APPROX / 2, 8, viewH - TOOLTIP_H_APPROX - 8);
-        tooltipStyle.left = clamp(left + width + 12, 8, viewW - TOOLTIP_W - 8);
+        tooltipStyle.top  = clamp(cy - h / 2, 8, maxTop);
+        tooltipStyle.left = clamp(left + width + GAP, 8, maxLeft);
         break;
       case 'left':
-        tooltipStyle.top  = clamp(top + height / 2 - TOOLTIP_H_APPROX / 2, 8, viewH - TOOLTIP_H_APPROX - 8);
-        tooltipStyle.left = clamp(left - TOOLTIP_W - 12, 8, viewW - TOOLTIP_W - 8);
+        tooltipStyle.top  = clamp(cy - h / 2, 8, maxTop);
+        tooltipStyle.left = clamp(left - w - GAP, 8, maxLeft);
         break;
     }
   }
@@ -164,7 +196,7 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
       )}
 
       {/* Tooltip card — key forces remount (re-triggers animation) on step change */}
-      <div className="tour-tooltip" style={tooltipStyle} key={stepIndex} role="document">
+      <div ref={tipRef} className="tour-tooltip" style={tooltipStyle} key={stepIndex} role="document">
         <div className="tour-tooltip__header">
           <span className="tour-tooltip__counter">
             {stepIndex + 1} / {totalSteps}

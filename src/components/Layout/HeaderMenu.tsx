@@ -4,7 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { THEMES, ThemeName } from '../../theme/themeConfig';
 import { AvatarStyle } from '../../types/FamilyTypes';
 import {
-  LanguagesIcon, SunIcon, UserIcon, HelpCircleIcon, DownloadIcon, ImageIcon,
+  LanguagesIcon, SunIcon, UserIcon, DownloadIcon, ImageIcon,
   PrinterIcon, RotateCcwIcon, LogInIcon, LogOutIcon, Loader2Icon,
 } from '../Icons';
 
@@ -16,7 +16,6 @@ export interface HeaderMenuProps {
   canReset: boolean;
   /** Closes the surrounding menu or sheet. */
   onDone: () => void;
-  onStartTour?: () => void;
   onExportJson: () => void;
   onExportImage: () => void;
   onPrint: () => void;
@@ -27,7 +26,7 @@ export interface HeaderMenuProps {
 
 /** Settings, admin tools and account actions shared by the desktop menu and the mobile sheet. */
 const HeaderMenu: React.FC<HeaderMenuProps> = ({
-  isAdmin, signedIn, accountName, isExporting, canReset, onDone, onStartTour,
+  isAdmin, signedIn, accountName, isExporting, canReset, onDone,
   onExportJson, onExportImage, onPrint, onReset, onSignIn, onSignOut,
 }) => {
   const { state, dispatch } = useFamilyTree();
@@ -90,12 +89,6 @@ const HeaderMenu: React.FC<HeaderMenuProps> = ({
           </optgroup>
         </select>
       </label>
-
-      {onStartTour && (
-        <button type="button" className="hdr-menu__item" onClick={run(onStartTour)}>
-          <HelpCircleIcon size={16} />{t.settingsTour}
-        </button>
-      )}
 
       {isAdmin && (
         <>

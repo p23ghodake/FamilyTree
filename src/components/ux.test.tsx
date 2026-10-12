@@ -266,6 +266,15 @@ describe('dialog keyboard behaviour', () => {
 });
 
 describe('header', () => {
+  it('offers the tour from a header button instead of the settings menu', () => {
+    const onStartTour = jest.fn();
+    render(<TopBar onStartTour={onStartTour} />);
+    screen.getAllByRole('button', { name: en.settingsTour }).forEach(button => fireEvent.click(button));
+    expect(onStartTour).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button', { name: en.settingsTitle }));
+    expect(within(screen.getByRole('dialog', { name: en.settingsTitle })).queryByText(en.settingsTour)).toBeNull();
+  });
+
   it('shows editing tools only to editors', () => {
     const view = render(<TopBar />);
     expect(screen.getByRole('button', { name: en.headerAddMember })).toBeTruthy();

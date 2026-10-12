@@ -621,19 +621,23 @@ export const translations: Record<'en' | 'mr', Translations> = {
     tourDone: 'Done ✓',
     tourStepTitles: [
       'Welcome to Family Tree 🌳',   //  0: welcome
-      'Add a Family Member',          //  1: add member
-      'Person Nodes',                 //  2: person node
-      'Search & Filter',              //  3: search
-      'Relationship Tracer',          //  4: trace
-      'Zoom & Navigation',            //  5: zoom
+      'Views',                        //  1: views
+      'People and details',           //  2: person & details
+      'Search and filters',           //  3: search
+      'Trace a relationship',         //  4: trace
+      'Add members',                  //  5: add member / sign in
+      'Settings and sharing',         //  6: settings
+      'Zoom and navigation',          //  7: zoom
     ],
     tourStepBodies: [
-      'This quick tour covers the essentials — you can re-run it anytime from the ? button.',
-      'Click here to add someone new — enter their name, dates, photo, and relationship to others.',
-      'Each circle shows a person\'s name and birth/death years, colour-coded by age group. Click to select; right-arrow opens the menu.',
-      'Search by name or use advanced filters to narrow by gender, location, or occupation.',
-      'Click two people to instantly see how they are related — cousins, great-aunts, and more — in English or Marathi.',
-      'Zoom with the buttons or scroll wheel. Drag or swipe with one finger to pan; pinch to zoom on touch. Hit Fit to see the whole tree.',
+      'Anyone can browse the family tree. Approved family editors sign in to add and update members. You can take this tour again any time with the ? button at the top.',
+      'Switch between the Tree, Trace, Timeline and Statistics views here. On a phone, Timeline and Statistics are in the ☰ menu.',
+      'Each circle shows a person, colour-coded by age group. Click it to open a details panel with dates, occupation, location, notes and links to parents, spouses and children. Editors can use the ⋮ menu to edit or add a child or spouse.',
+      'Tap the search button or press / to find anyone by name in English or Marathi. The filter button offers Living only, Hide females (on by default), Marriage eligible and Location. Clear turns all filters off.',
+      'Turn on Trace, then pick two people — in the tree or from search — to see exactly how they are related, in English or Marathi.',
+      'Signed-in editors add people with a short step-by-step form: relationship, name and gender, then optional dates and details. The Marathi name is filled in for you. Not signed in yet? Use Sign in with GitHub or email.',
+      'Change the language, colour theme and avatar style here. The share button next to it creates a read-only link to the tree.',
+      'Zoom with these buttons or the mouse wheel, drag to move around, and pinch to zoom on touch screens. Use Fit to see the whole tree.',
     ],
     // ThemeSwitcher
     tooltipThemePrefix: 'Theme',
@@ -1004,19 +1008,23 @@ export const translations: Record<'en' | 'mr', Translations> = {
     tourDone: 'पूर्ण ✓',
     tourStepTitles: [
       'कुटुंब वृक्षात स्वागत 🌳',   //  0: welcome
-      'कुटुंब सदस्य जोडा',           //  1: add member
-      'व्यक्ती नोड्स',                //  2: person node
-      'शोध आणि फिल्टर',               //  3: search
-      'नाते शोधक',                    //  4: trace
-      'झूम आणि नेव्हिगेशन',           //  5: zoom
+      'दृश्ये',                        //  1: views
+      'व्यक्ती आणि तपशील',              //  2: person & details
+      'शोध आणि फिल्टर',              //  3: search
+      'नाते शोधा',                   //  4: trace
+      'सदस्य जोडा',                  //  5: add member / sign in
+      'सेटिंग्ज आणि शेअरिंग',        //  6: settings
+      'झूम आणि नेव्हिगेशन',          //  7: zoom
     ],
     tourStepBodies: [
-      'हा जलद दौरा मुख्य वैशिष्ट्ये दाखवतो — ? बटणाद्वारे कधीही पुन्हा चालवा.',
-      'नवीन सदस्य जोडण्यासाठी येथे क्लिक करा — नाव, तारखा, फोटो आणि इतरांशी नाते प्रविष्ट करा.',
-      'प्रत्येक वर्तुळ व्यक्तीचे नाव आणि जन्म/मृत्यू वर्षे दाखवते, वयोगटानुसार रंगीत. निवडण्यासाठी क्लिक करा.',
-      'नावाने शोधा किंवा लिंग, स्थान किंवा व्यवसायानुसार सदस्य शोधण्यासाठी प्रगत फिल्टर वापरा.',
-      'दोन व्यक्तींवर क्लिक करा आणि ते कसे संबंधित आहेत ते पाहा — चुलत भाऊ, आत्या — इंग्रजी किंवा मराठीत.',
-      'बटणांनी किंवा स्क्रोल व्हीलने झूम करा. एका बोटाने पान करा; टचवर पिंच करून झूम करा. संपूर्ण वृक्ष पाहण्यासाठी Fit वापरा.',
+      'कुटुंब वृक्ष कोणीही पाहू शकतो. मान्यताप्राप्त कौटुंबिक संपादक साइन इन करून सदस्य जोडू व अद्ययावत करू शकतात. हा दौरा कधीही वरच्या ? बटणाने पुन्हा पाहा.',
+      'येथे वृक्ष, नाते शोधा, टाइमलाइन आणि आकडेवारी या दृश्यांमध्ये बदल करा. फोनवर टाइमलाइन आणि आकडेवारी ☰ मेनूमध्ये आहेत.',
+      'प्रत्येक वर्तुळ एक व्यक्ती दाखवते, वयोगटानुसार रंगीत. तारखा, व्यवसाय, स्थान, टिपणी आणि पालक, जोडीदार व मुलांच्या लिंकसह तपशील पाहण्यासाठी क्लिक करा. संपादक ⋮ मेनूतून संपादित करू किंवा मूल/जोडीदार जोडू शकतात.',
+      'इंग्रजी किंवा मराठी नावाने कोणालाही शोधण्यासाठी शोध बटण दाबा किंवा / दाबा. फिल्टर बटणात फक्त हयात, महिला लपवा (सुरुवातीला चालू), विवाहयोग्य आणि स्थान हे पर्याय आहेत. साफ केल्यावर सर्व फिल्टर बंद होतात.',
+      'नाते शोधा चालू करा आणि वृक्षातून किंवा शोधातून दोन व्यक्ती निवडा — ते कसे संबंधित आहेत ते इंग्रजी किंवा मराठीत दिसेल.',
+      'साइन इन केलेले संपादक छोट्या टप्प्यांच्या फॉर्मने सदस्य जोडतात: नाते, नाव व लिंग, नंतर पर्यायी तारखा व तपशील. मराठी नाव आपोआप भरले जाते. अजून साइन इन केले नाही? GitHub किंवा ईमेलने साइन इन करा.',
+      'येथे भाषा, रंग थीम आणि अवतार शैली बदला. शेजारचे शेअर बटण वृक्षाची फक्त पाहण्यासाठीची लिंक तयार करते.',
+      'या बटणांनी किंवा माउस व्हीलने झूम करा, फिरण्यासाठी ड्रॅग करा आणि टचस्क्रीनवर पिंच करून झूम करा. संपूर्ण वृक्ष पाहण्यासाठी Fit वापरा.',
     ],
     // ThemeSwitcher
     tooltipThemePrefix: 'थीम',
