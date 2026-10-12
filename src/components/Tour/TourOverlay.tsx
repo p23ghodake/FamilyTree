@@ -85,7 +85,7 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
     const w = el.offsetWidth;
     const h = el.offsetHeight;
     setTipSize(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
-  });
+  }, [active, stepIndex, bounds, t]);
 
   // Measure target element on step change + re-measure on window resize
   useEffect(() => {
