@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../lib/AuthContext';
 import { StyledFamilyMember } from '../../types/FamilyTypes';
 import { AlertTriangleIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FemaleIcon, HelpCircleIcon, MaleIcon, Trash2Icon, XIcon } from '../Icons';
 import { transliterateToMarathi } from '../../processing/transliteration';
@@ -119,6 +120,7 @@ const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 const MemberFormModal: React.FC = () => {
   const { state, dispatch, currentTree, styleNewMember, isSaving, canEdit } = useFamilyTree();
+  const { isAdmin } = useAuth();
   const { t } = useLanguage();
   const { memberFormMode, memberFormTargetId } = state;
 
@@ -330,7 +332,7 @@ const MemberFormModal: React.FC = () => {
   };
 
   const handleDelete = () => {
-    if (isSaving || !canEdit || !isEdit || !editMember || !currentTree) return;
+    if (isSaving || !canEdit || !isAdmin || !isEdit || !editMember || !currentTree) return;
     dispatch({ type: 'DELETE_MEMBER', payload: { treeId: currentTree.familyTreeId, memberId: editMember.id } });
   };
 
@@ -655,7 +657,7 @@ const MemberFormModal: React.FC = () => {
 
         <div className="member-form__footer">
           {isEdit ? (
-            confirmingDelete ? (
+            !isAdmin ? null : confirmingDelete ? (
               <div className="member-form__delete-confirm">
                 <span className="member-form__delete-confirm__label">{t.confirmDeleteMember}</span>
                 <button className="member-form__btn member-form__btn--danger member-form__btn--sm" onClick={handleDelete} disabled={locked}>
@@ -680,7 +682,7 @@ const MemberFormModal: React.FC = () => {
             </button>
           )}
           <div className="member-form__footer-right">
-            {isEdit && !confirmingDelete && (
+            {isEdit && (!isAdmin || !confirmingDelete) && (
               <button className="member-form__btn member-form__btn--ghost" onClick={handleClose} disabled={isSaving}>{t.btnCancel}</button>
             )}
             {!isEdit && step === 'who' && !isLastStep && !isSaving && (

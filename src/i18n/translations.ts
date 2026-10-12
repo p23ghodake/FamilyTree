@@ -309,6 +309,7 @@ type Translations = {
   saveConflictReloadFailed: (error: string) => string;
   loadFailed: (error: string) => string;
   resetAdminOnly: string;
+  deleteAdminOnly: string;
   shareOpenFailed: (error: string) => string;
   shareInvalidLink: string;
   importInvalidJson: string;
@@ -692,6 +693,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     saveConflictReloadFailed: (error) => `Save conflict detected, and the latest data could not be loaded: ${error}`,
     loadFailed: (error) => `Could not load the latest family data: ${error}`,
     resetAdminOnly: 'Only an administrator can reset shared family data.',
+    deleteAdminOnly: 'Only an administrator can delete family members.',
     shareOpenFailed: (error) => `Could not open shared tree: ${error}`,
     shareInvalidLink: 'Could not open shared tree: the link is invalid.',
     importInvalidJson: 'Import failed — the file is not valid JSON.',
@@ -1074,6 +1076,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     saveConflictReloadFailed: (error) => `जतन करताना संघर्ष झाला आणि नवीनतम माहिती लोड झाली नाही: ${error}`,
     loadFailed: (error) => `नवीनतम कौटुंबिक माहिती लोड झाली नाही: ${error}`,
     resetAdminOnly: 'सामायिक माहिती फक्त प्रशासक रीसेट करू शकतो.',
+    deleteAdminOnly: 'कुटुंबातील सदस्य फक्त प्रशासक हटवू शकतो.',
     shareOpenFailed: (error) => `शेअर केलेला वृक्ष उघडता आला नाही: ${error}`,
     shareInvalidLink: 'शेअर केलेला वृक्ष उघडता आला नाही: लिंक अवैध आहे.',
     importInvalidJson: 'आयात अयशस्वी — फाइल वैध JSON नाही.',

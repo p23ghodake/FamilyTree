@@ -39,10 +39,13 @@ async function mountEditor() {
   await waitFor(() => expect(context.canEdit).toBe(true));
 }
 
+const adminUser = { id: 'admin', identities: [{ provider: 'github', identity_data: { user_name: 'p23ghodake' } }] };
+const editorUser = { id: 'editor', identities: [{ provider: 'github', identity_data: { user_name: 'cousin' } }] };
+
 beforeEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
-  (useAuth as jest.Mock).mockReturnValue({ session: { user: { id: 'editor' } }, loading: false });
+  (useAuth as jest.Mock).mockReturnValue({ session: { user: adminUser }, loading: false });
   (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: 'original', canEdit: true });
   (saveFamilyData as jest.Mock).mockResolvedValue('saved');
 });
@@ -54,6 +57,23 @@ it('starts with Hide females on and lets Clear switch every filter off', async (
   act(() => context.dispatch({ type: 'CLEAR_ADVANCED_FILTERS' }));
   expect(context.state.advancedFilters).toEqual(NO_FILTERS);
   expect(NO_FILTERS.hideFemale).toBe(false);
+});
+
+it('lets only administrators delete members, including through undo', async () => {
+  (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser }, loading: false });
+  await mountEditor();
+  act(() => context.dispatch({ type: 'DELETE_MEMBER', payload: { treeId: 'test-tree', memberId: 'child' } }));
+  await waitFor(() => expect(context.isSaving).toBe(false));
+  expect(saveFamilyData).not.toHaveBeenCalled();
+  expect(context.currentTree?.members).toHaveLength(2);
+
+  const member = context.styleNewMember({ id: 'new', firstName: 'New', lastName: 'Family', gender: 'unknown' });
+  act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
+  await waitFor(() => expect(context.currentTree?.members).toHaveLength(3));
+  act(() => context.dispatch({ type: 'UNDO' }));
+  await waitFor(() => expect(context.isSaving).toBe(false));
+  expect(saveFamilyData).toHaveBeenCalledTimes(1);
+  expect(context.currentTree?.members).toHaveLength(3);
 });
 
 it('preserves exact birth and death dates when adding and editing', async () => {

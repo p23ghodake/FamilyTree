@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
+import { useAuth } from '../../lib/AuthContext';
 import { getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
 import { StyledFamilyMember, AvatarStyle } from '../../types/FamilyTypes';
 import { BabyIcon, HeartIcon, MoreVerticalIcon, PencilIcon, Trash2Icon } from '../Icons';
@@ -33,6 +34,7 @@ export const PersonNode = React.memo<{
 }>(({ member, isSelected, isHighlighted, isHidden, isFormerSpouse, relRole, relStep, showMarriageBadge, avatarStyle, onClick, onMenuAction }) => {
   const { t, lang } = useLanguage();
   const { currentTree } = useFamilyTree();
+  const { isAdmin } = useAuth();
   const displayName = getDisplayFirstName(member, lang);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -271,7 +273,7 @@ export const PersonNode = React.memo<{
                   {t.menuAddSpouse}
                 </button>
           }
-          {confirmDelete ? (
+          {!isAdmin ? null : confirmDelete ? (
             <div className="pnode__menu-confirm">
               <span className="pnode__menu-confirm__label">{t.confirmDeleteNode}</span>
               <button

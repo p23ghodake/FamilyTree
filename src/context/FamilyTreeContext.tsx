@@ -208,6 +208,12 @@ const DATA_MUTATION_ACTIONS = new Set<Action['type']>([
   'REDO',
 ]);
 
+/** True when `next` no longer contains a member that exists in `prev` (deletion, undo of an add, import). */
+function removesMembers(prev: ProcessedFamilyData, next: ProcessedFamilyData): boolean {
+  const nextIds = new Set(next.familyTreesStyled.flatMap(tree => tree.members.map(member => member.id)));
+  return prev.familyTreesStyled.some(tree => tree.members.some(member => !nextIds.has(member.id)));
+}
+
 function reducer(state: State, action: Action): State {
   const nextState = reduceState(state, action);
   if (nextState.data && nextState.data !== state.data && DATA_MUTATION_ACTIONS.has(action.type)) {
@@ -535,6 +541,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       const currentState = stateRef.current;
       const nextState = reducer(currentState, action);
       if (!nextState.data || nextState.data === currentState.data) return;
+      if (currentState.data && !isAdminUser(session.user) && removesMembers(currentState.data, nextState.data)) {
+        toast.error(tRef.current.deleteAdminOnly, { id: 'family-save' });
+        return;
+      }
 
       try {
         const savedSha = await saveFamilyData(buildRawExport(nextState.data), shaRef.current);

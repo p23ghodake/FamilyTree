@@ -44,6 +44,72 @@ function githubErrorStatus(status: number): number {
   return 500;
 }
 
+// Keep in sync with src/lib/admin.ts; the ADMIN_USERS secret overrides it.
+const DEFAULT_ADMINS = ['p23ghodake', 'ghodake.pankaj@gmail.com'];
+
+type FamilyFile = { content: string; sha: string } | { error: Response };
+
+async function readFamilyFile(githubToken: string): Promise<FamilyFile> {
+  let githubResponse: Response;
+  try {
+    githubResponse = await fetch(GITHUB_API_URL, { headers: githubHeaders(githubToken) });
+  } catch (error) {
+    console.error('GitHub file read request failed:', error);
+    return { error: jsonResponse({ error: 'Could not connect to GitHub to read family data.' }, 500) };
+  }
+  if (!githubResponse.ok) {
+    const status = githubErrorStatus(githubResponse.status);
+    console.error(`GitHub file read failed with status ${githubResponse.status}.`);
+    return { error: jsonResponse({ error: status === 403 ? 'GitHub denied access to the family data file.' : 'Failed to read family data from GitHub.' }, status) };
+  }
+
+  const file = await githubResponse.json();
+  if (typeof file.sha !== 'string') {
+    console.error('GitHub returned an unexpected Contents API response.');
+    return { error: jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500) };
+  }
+
+  // The Contents API omits content for files over 1 MB; the Blobs API supports larger files.
+  if (typeof file.content !== 'string' || file.content === '' || file.encoding !== 'base64') {
+    let blobResponse: Response;
+    try {
+      blobResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs/${file.sha}`,
+        { headers: githubHeaders(githubToken) },
+      );
+    } catch (error) {
+      console.error('GitHub blob read request failed:', error);
+      return { error: jsonResponse({ error: 'Could not connect to GitHub to read family data.' }, 500) };
+    }
+    if (!blobResponse.ok) {
+      console.error(`GitHub blob read failed with status ${blobResponse.status}.`);
+      return { error: jsonResponse({ error: 'Failed to read family data from GitHub.' }, githubErrorStatus(blobResponse.status)) };
+    }
+    const blob = await blobResponse.json();
+    if (typeof blob.content !== 'string' || blob.encoding !== 'base64') {
+      return { error: jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500) };
+    }
+    file.content = blob.content;
+  }
+
+  return { content: decodeBase64(file.content), sha: file.sha };
+}
+
+function memberIds(data: unknown): Set<string> {
+  const ids = new Set<string>();
+  const trees = (data as { familyTrees?: unknown } | null)?.familyTrees;
+  if (!Array.isArray(trees)) return ids;
+  for (const tree of trees) {
+    const members = (tree as { members?: unknown } | null)?.members;
+    if (!Array.isArray(members)) continue;
+    for (const member of members) {
+      const id = (member as { id?: unknown } | null)?.id;
+      if (typeof id === 'string') ids.add(id);
+    }
+  }
+  return ids;
+}
+
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -110,6 +176,9 @@ Deno.serve(async request => {
   const identities = [login, email].filter((value): value is string => !!value);
   const canEdit = identities.some(id => editors.includes(id));
   const canView = canEdit || identities.some(id => viewers.includes(id));
+  const configuredAdmins = parseUsers('ADMIN_USERS');
+  const admins = configuredAdmins.length > 0 ? configuredAdmins : DEFAULT_ADMINS;
+  const isAdmin = canEdit && identities.some(id => admins.includes(id));
   if (!canView) {
     return jsonResponse({ error: `Your account (${identities.join(' / ') || 'unknown'}) is not allowed to access family data.` }, 403);
   }
@@ -124,55 +193,10 @@ Deno.serve(async request => {
   }
 
   if (request.method === 'GET') {
-    let githubResponse: Response;
+    const file = await readFamilyFile(githubToken);
+    if ('error' in file) return file.error;
     try {
-      githubResponse = await fetch(GITHUB_API_URL, { headers: githubHeaders(githubToken) });
-    } catch (error) {
-      console.error('GitHub file read request failed:', error);
-      return jsonResponse({ error: 'Could not connect to GitHub to read family data.' }, 500);
-    }
-    if (!githubResponse.ok) {
-      const status = githubErrorStatus(githubResponse.status);
-      console.error(`GitHub file read failed with status ${githubResponse.status}.`);
-      return jsonResponse({ error: status === 403 ? 'GitHub denied access to the family data file.' : 'Failed to read family data from GitHub.' }, status);
-    }
-
-    const file = await githubResponse.json();
-    if (typeof file.sha !== 'string') {
-      console.error('GitHub returned an unexpected Contents API response.');
-      return jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500);
-    }
-
-    // The Contents API omits content for files over 1 MB; the Blobs API supports larger files.
-    if (typeof file.content !== 'string' || file.content === '' || file.encoding !== 'base64') {
-      let blobResponse: Response;
-      try {
-        blobResponse = await fetch(
-          `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs/${file.sha}`,
-          { headers: githubHeaders(githubToken) },
-        );
-      } catch (error) {
-        console.error('GitHub blob read request failed:', error);
-        return jsonResponse({ error: 'Could not connect to GitHub to read family data.' }, 500);
-      }
-      if (!blobResponse.ok) {
-        console.error(`GitHub blob read failed with status ${blobResponse.status}.`);
-        return jsonResponse({ error: 'Failed to read family data from GitHub.' }, githubErrorStatus(blobResponse.status));
-      }
-      const blob = await blobResponse.json();
-      if (typeof blob.content !== 'string' || blob.encoding !== 'base64') {
-        return jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500);
-      }
-      file.content = blob.content;
-    }
-
-    if (typeof file.content !== 'string') {
-      console.error('GitHub returned an unexpected Contents API response.');
-      return jsonResponse({ error: 'GitHub returned an invalid family data file response.' }, 500);
-    }
-
-    try {
-      return jsonResponse({ data: JSON.parse(decodeBase64(file.content)), sha: file.sha, canEdit });
+      return jsonResponse({ data: JSON.parse(file.content), sha: file.sha, canEdit });
     } catch (error) {
       console.error('The family data file is not valid UTF-8 JSON:', error);
       return jsonResponse({ error: 'The family data file is not valid JSON.' }, 500);
@@ -187,6 +211,21 @@ Deno.serve(async request => {
   }
   if (!body.data || typeof body.data !== 'object' || typeof body.sha !== 'string' || !body.sha) {
     return jsonResponse({ error: 'A family data object and current file SHA are required.' }, 400);
+  }
+
+  if (!isAdmin) {
+    const current = await readFamilyFile(githubToken);
+    if ('error' in current) return current.error;
+    let currentData: unknown;
+    try {
+      currentData = JSON.parse(current.content);
+    } catch {
+      return jsonResponse({ error: 'The family data file is not valid JSON.' }, 500);
+    }
+    const nextIds = memberIds(body.data);
+    if ([...memberIds(currentData)].some(id => !nextIds.has(id))) {
+      return jsonResponse({ error: 'Only an administrator can delete family members.' }, 403);
+    }
   }
 
   const content = `${JSON.stringify(body.data, null, 2)}\n`;

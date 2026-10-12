@@ -198,11 +198,22 @@ it('lets editors jump between steps and save from any of them', () => {
   context.state.memberFormTargetId = 'one';
   render(<MemberFormModal />);
   expect(screen.queryByRole('button', { name: new RegExp(t.btnNext) })).toBeNull();
+  expect(screen.queryByRole('button', { name: t.btnDeleteMember })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: new RegExp(t.wizardStepDetails) }));
   fireEvent.change(screen.getByLabelText(t.labelOccupation), { target: { value: 'Teacher' } });
   fireEvent.click(screen.getByRole('button', { name: t.btnSaveChanges }));
   expect(context.styleNewMember).toHaveBeenCalledWith(expect.objectContaining({ id: 'one', occupation: 'Teacher' }));
   expect(context.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'UPDATE_MEMBER' }));
+});
+
+it('shows member deletion only to administrators', () => {
+  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+  context.state.memberFormMode = 'edit';
+  context.state.memberFormTargetId = 'one';
+  render(<MemberFormModal />);
+  fireEvent.click(screen.getByRole('button', { name: t.btnDeleteMember }));
+  fireEvent.click(screen.getByRole('button', { name: t.btnYesDelete }));
+  expect(context.dispatch).toHaveBeenCalledWith({ type: 'DELETE_MEMBER', payload: { treeId: 'test', memberId: 'one' } });
 });
 
 it('disables saving, form edits and dismissal until the network save finishes', () => {
