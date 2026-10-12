@@ -124,8 +124,9 @@ type Translations = {
   filterClear: string;
   filterLivingOnly: string;
   filterHideFemale: string;
-  filterShowFemale: string;
   filterMarriageEligible: string;
+  filtersOnCount: (count: number) => string;
+  filterAnyLocation: string;
   labelFemale: string;
   labelMale: string;
 
@@ -273,6 +274,115 @@ type Translations = {
   labelDeathDay: string;
   labelDeathMonth: string;
   labelDeathYear: string;
+  // ── Auth & login ──
+  authSignIn: string;
+  authSignOut: string;
+  authChecking: string;
+  authSignInTooltip: string;
+  authFailed: string;
+  loginTitle: string;
+  loginSubtitle: string;
+  loginGitHubHint: string;
+  loginEmailOption: string;
+  loginEmailHint: string;
+  loginEmailTitle: string;
+  loginEmailSubtitle: string;
+  loginEmailPlaceholder: string;
+  loginCapsLock: string;
+  loginInvalid: string;
+  loginGitHubOpening: string;
+  loginEmail: string;
+  loginPassword: string;
+  loginPasswordPlaceholder: string;
+  loginShowPassword: string;
+  loginSigningIn: string;
+  loginGitHub: string;
+  loginFailed: string;
+  loginGitHubFailed: string;
+  loginBrowseNote: string;
+  // ── Save & load messages ──
+  saveSignInRequired: string;
+  saveNoPermission: string;
+  saveNotReady: string;
+  saveFailed: (error: string) => string;
+  saveConflict: string;
+  saveConflictReloadFailed: (error: string) => string;
+  loadFailed: (error: string) => string;
+  resetAdminOnly: string;
+  shareOpenFailed: (error: string) => string;
+  shareInvalidLink: string;
+  importInvalidJson: string;
+  importFailed: (error: string) => string;
+  importRepaired: (count: number) => string;
+  importProcessFailed: string;
+  // ── Member details panel ──
+  detailsPanelLabel: (name: string) => string;
+  detailsDiedAbbrev: string;
+  detailsAge: (age: number) => string;
+  detailsAgeAtDeath: (age: number) => string;
+  detailsParents: string;
+  detailsSpouses: string;
+  detailsChildren: string;
+  detailsFormerSpouse: string;
+  detailsMore: string;
+  detailsLess: string;
+  // ── Year picker ──
+  yearPrevDecade: string;
+  yearNextDecade: string;
+  yearToday: (year: number) => string;
+  yearJumpTo: (year: number) => string;
+  yearClear: string;
+  // ── Photo upload ──
+  photoNotImage: string;
+  photoProcessFailed: string;
+  photoProcessing: string;
+  // ── Header ──
+  viewTree: string;
+  viewTrace: string;
+  viewStats: string;
+  headerViews: string;
+  headerAddMember: string;
+  headerShareTree: string;
+  headerMenu: string;
+  headerUndo: string;
+  headerRedo: string;
+  settingsTitle: string;
+  settingsDisplay: string;
+  settingsLanguage: string;
+  settingsAvatarStyle: string;
+  settingsTour: string;
+  settingsAdmin: string;
+  settingsResetShared: string;
+  accountMenu: (name: string) => string;
+  wizardSteps: string;
+  wizardStepRelation: string;
+  wizardStepWho: string;
+  wizardStepDetails: string;
+  wizardStepOf: (n: number, total: number) => string;
+  wizardQRelation: string;
+  wizardQWho: string;
+  wizardQWhoEdit: string;
+  wizardQDetails: string;
+  wizardOptional: string;
+  relTileChild: string;
+  relTileSpouse: string;
+  relTileParent: string;
+  relTileNone: string;
+  relSearchLabel: string;
+  relNoMatches: string;
+  marathiTag: string;
+  marathiNotSet: string;
+  marathiDone: string;
+  photoAdd: string;
+  photoChange: string;
+  photoOptionalHint: string;
+  hintYearEnough: string;
+  labelLiving: string;
+  labelPhotoLink: string;
+  btnBack: string;
+  btnNext: string;
+  btnSkipAdd: string;
+  btnAddNamed: (name: string) => string;
 };
 
 export const translations: Record<'en' | 'mr', Translations> = {
@@ -381,8 +491,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     menuShare: 'Share',
     menuTimeline: 'Timeline',
     menuPrint: 'Print',
-    tooltipReset: 'Reset to original bundled data — clears all browser-saved changes',
-    confirmReset: 'Reset to original data? All changes will be lost.',
+    tooltipReset: 'Replace all shared family trees on GitHub with the original bundled data',
+    confirmReset: 'Replace ALL shared family trees on GitHub with the original bundled data? This affects every user and removes changes made since that snapshot.',
     alertExportFailed: 'Export failed. Try zooming out then retry.',
     alertImageInvalidUrl: 'Invalid photo URL. Use https://, http://, or upload a file.',
     // FilterPanel
@@ -390,8 +500,9 @@ export const translations: Record<'en' | 'mr', Translations> = {
     filterClear: 'Clear',
     filterLivingOnly: 'Living members only',
     filterHideFemale: 'Hide females',
-    filterShowFemale: 'Show females',
     filterMarriageEligible: 'Marriage eligible',
+    filtersOnCount: (count) => `${count} filter${count !== 1 ? 's' : ''} on`,
+    filterAnyLocation: 'Any place',
     labelFemale: 'women',
     labelMale: 'men',
     // StatsPanel
@@ -414,8 +525,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     statsFilteredNotice: (shown, total) => `Showing stats for ${shown} of ${total} members (filtered)`,
     // FloatingSearch
     searchPlaceholder: 'Search members…',
-    searchExpandTooltip: 'Expand search panel',
-    searchCollapseTooltip: 'Collapse search panel',
+    searchExpandTooltip: 'Search members (press /)',
+    searchCollapseTooltip: 'Close search',
     searchResultsHeader: (count, query) => `${count} result${count !== 1 ? 's' : ''} for "${query}"`,
     searchAllMembersHeader: (total) => `All members · ${total}`,
     searchNoResults: (query) => `No results for "${query}"`,
@@ -439,14 +550,14 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // RelationshipPanel
     tracerTitle: 'Relationship Tracer',
     tracerReset: 'Reset',
-    tracerStep1: 'Click a person in the tree',
-    tracerStep2: 'Click another person',
+    tracerStep1: 'Click or search for a person',
+    tracerStep2: 'Click or search for another person',
     tracerHops: (n) => `${n} hop${n !== 1 ? 's' : ''} apart`,
     tracerNoConnection: 'No connection found between these members',
     tracerHopParent: 'Parent ↑',
     tracerHopChild: 'Child ↓',
     tracerHopSpouse: 'Marriage ♥',
-    tracerActiveBanner: '🔗 Relationship Tracer active — click two people to find their connection',
+    tracerActiveBanner: '🔗 Relationship Tracer active — click or search for two people to find their connection',
     tlFilterBirths: 'Births',
     tlFilterDeaths: 'Deaths',
     tlFilterMarriages: 'Marriages',
@@ -546,6 +657,115 @@ export const translations: Record<'en' | 'mr', Translations> = {
     labelDeathDay: 'Death day',
     labelDeathMonth: 'Death month',
     labelDeathYear: 'Death year',
+    // Auth & login
+    authSignIn: 'Sign in',
+    authSignOut: 'Sign out',
+    authChecking: 'Checking…',
+    authSignInTooltip: 'Sign in to edit and save family data',
+    authFailed: 'Authentication failed.',
+    loginTitle: 'Sign in to edit',
+    loginSubtitle: 'Approved family editors can add and update members.',
+    loginGitHubHint: 'One tap if you use GitHub',
+    loginEmailOption: 'Continue with email',
+    loginEmailHint: 'Use your email and password',
+    loginEmailTitle: 'Sign in with email',
+    loginEmailSubtitle: 'Enter the email your family admin approved.',
+    loginEmailPlaceholder: 'name@email.com',
+    loginCapsLock: 'Caps Lock is on',
+    loginInvalid: 'Email or password is incorrect. Try again.',
+    loginGitHubOpening: 'Opening GitHub…',
+    loginEmail: 'Email',
+    loginPassword: 'Password',
+    loginPasswordPlaceholder: 'Enter your password',
+    loginShowPassword: 'Show password',
+    loginSigningIn: 'Signing in…',
+    loginGitHub: 'Continue with GitHub',
+    loginFailed: 'Sign in failed.',
+    loginGitHubFailed: 'GitHub sign in failed.',
+    loginBrowseNote: 'Just looking? You can browse without an account.',
+    // Save & load messages
+    saveSignInRequired: 'Sign in before changing family data.',
+    saveNoPermission: 'You do not have permission to change this family data.',
+    saveNotReady: 'Family data is not ready to save. Reload the latest data and try again.',
+    saveFailed: (error) => `Family data was not saved: ${error}`,
+    saveConflict: 'Another user saved changes first. The latest data has been loaded; please reapply your change.',
+    saveConflictReloadFailed: (error) => `Save conflict detected, and the latest data could not be loaded: ${error}`,
+    loadFailed: (error) => `Could not load the latest family data: ${error}`,
+    resetAdminOnly: 'Only an administrator can reset shared family data.',
+    shareOpenFailed: (error) => `Could not open shared tree: ${error}`,
+    shareInvalidLink: 'Could not open shared tree: the link is invalid.',
+    importInvalidJson: 'Import failed — the file is not valid JSON.',
+    importFailed: (error) => `Import failed — ${error}`,
+    importRepaired: (count) => `Imported data includes ${count} repaired item(s); the save is in progress.`,
+    importProcessFailed: 'Import failed — the data could not be processed.',
+    // Member details panel
+    detailsPanelLabel: (name) => `Details for ${name}`,
+    detailsDiedAbbrev: 'd.',
+    detailsAge: (age) => `${age} yrs`,
+    detailsAgeAtDeath: (age) => `aged ${age}`,
+    detailsParents: 'Parents',
+    detailsSpouses: 'Spouses',
+    detailsChildren: 'Children',
+    detailsFormerSpouse: 'former',
+    detailsMore: 'More',
+    detailsLess: 'Less',
+    // Year picker
+    yearPrevDecade: 'Previous decade',
+    yearNextDecade: 'Next decade',
+    yearToday: (year) => `Today (${year})`,
+    yearJumpTo: (year) => `Jump to ${year}`,
+    yearClear: 'Clear',
+    // Photo upload
+    photoNotImage: 'Choose an image file.',
+    photoProcessFailed: 'This image could not be processed. Try another file.',
+    photoProcessing: 'Processing photo…',
+    // Header
+    viewTree: 'Tree',
+    viewTrace: 'Trace',
+    viewStats: 'Statistics',
+    headerViews: 'Views',
+    headerAddMember: 'Add member',
+    headerShareTree: 'Share tree',
+    headerMenu: 'Menu',
+    headerUndo: 'Undo',
+    headerRedo: 'Redo',
+    settingsTitle: 'Settings',
+    settingsDisplay: 'Display',
+    settingsLanguage: 'Language',
+    settingsAvatarStyle: 'Avatar style',
+    settingsTour: 'Take the tour',
+    settingsAdmin: 'Admin',
+    settingsResetShared: 'Reset shared data…',
+    accountMenu: (name) => `Account and settings for ${name}`,
+    wizardSteps: 'Steps',
+    wizardStepRelation: 'Relationship',
+    wizardStepWho: 'Who',
+    wizardStepDetails: 'Dates & details',
+    wizardStepOf: (n, total) => `Step ${n} of ${total}`,
+    wizardQRelation: 'How are they related?',
+    wizardQWho: 'Who are you adding?',
+    wizardQWhoEdit: 'Name and gender',
+    wizardQDetails: 'A few more details',
+    wizardOptional: '(all optional)',
+    relTileChild: 'Child',
+    relTileSpouse: 'Spouse',
+    relTileParent: 'Parent',
+    relTileNone: 'Not linked',
+    relSearchLabel: 'Search by name',
+    relNoMatches: 'No matching members',
+    marathiTag: 'मराठी',
+    marathiNotSet: 'Not added yet',
+    marathiDone: 'Done',
+    photoAdd: 'Add photo',
+    photoChange: 'Change photo',
+    photoOptionalHint: 'A photo is optional. Tap the circle to add one.',
+    hintYearEnough: 'year is enough',
+    labelLiving: 'Living',
+    labelPhotoLink: 'Photo link',
+    btnBack: 'Back',
+    btnNext: 'Next',
+    btnSkipAdd: 'Skip & add',
+    btnAddNamed: (name) => `Add ${name}`,
   },
 
   mr: {
@@ -653,8 +873,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     menuShare: 'शेअर करा',
     menuTimeline: 'टाइमलाइन',
     menuPrint: 'प्रिंट',
-    tooltipReset: 'मूळ डेटावर रीसेट करा — सर्व बदल हटवले जातील',
-    confirmReset: 'मूळ डेटावर रीसेट करायचे? सर्व बदल हरवतील.',
+    tooltipReset: 'GitHub वरील सर्व सामायिक कुटुंब वृक्ष मूळ डेटाने बदला',
+    confirmReset: 'GitHub वरील सर्व सामायिक कुटुंब वृक्ष मूळ डेटाने बदलायचे? याचा सर्व वापरकर्त्यांवर परिणाम होईल आणि मूळ डेटानंतरचे बदल हटवले जातील.',
     alertExportFailed: 'निर्यात अयशस्वी. झूम आउट करून पुन्हा प्रयत्न करा.',
     alertImageInvalidUrl: 'अवैध फोटो URL. https://, http:// वापरा किंवा फाइल अपलोड करा.',
     // FilterPanel
@@ -662,8 +882,9 @@ export const translations: Record<'en' | 'mr', Translations> = {
     filterClear: 'साफ करा',
     filterLivingOnly: 'फक्त जिवंत सदस्य',
     filterHideFemale: 'महिला लपवा',
-    filterShowFemale: 'महिला दाखवा',
     filterMarriageEligible: 'विवाहयोग्य',
+    filtersOnCount: (count) => `${count} फिल्टर सुरू`,
+    filterAnyLocation: 'कोणतेही ठिकाण',
     labelFemale: 'महिला',
     labelMale: 'पुरुष',
     // StatsPanel
@@ -686,8 +907,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     statsFilteredNotice: (shown, total) => `${total} पैकी ${shown} सदस्यांचे आकडे दाखवत आहे (फिल्टर केलेले)`,
     // FloatingSearch
     searchPlaceholder: 'सदस्य शोधा…',
-    searchExpandTooltip: 'शोध पॅनेल विस्तृत करा',
-    searchCollapseTooltip: 'शोध पॅनेल लहान करा',
+    searchExpandTooltip: 'सदस्य शोधा (/ दाबा)',
+    searchCollapseTooltip: 'शोध बंद करा',
     searchResultsHeader: (count, query) => `"${query}" साठी ${count} निकाल`,
     searchAllMembersHeader: (total) => `सर्व सदस्य · ${total}`,
     searchNoResults: (query) => `"${query}" साठी कोणताही निकाल नाही`,
@@ -711,14 +932,14 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // RelationshipPanel
     tracerTitle: 'नाते शोधक',
     tracerReset: 'रीसेट',
-    tracerStep1: 'झाडातील व्यक्तीवर क्लिक करा',
-    tracerStep2: 'दुसऱ्या व्यक्तीवर क्लिक करा',
+    tracerStep1: 'व्यक्तीवर क्लिक करा किंवा शोधा',
+    tracerStep2: 'दुसऱ्या व्यक्तीवर क्लिक करा किंवा शोधा',
     tracerHops: (n) => `${n} स्तर दूर`,
     tracerNoConnection: 'या सदस्यांमध्ये कोणताही संबंध आढळला नाही',
     tracerHopParent: 'पालक ↑',
     tracerHopChild: 'मूल ↓',
     tracerHopSpouse: 'विवाह ♥',
-    tracerActiveBanner: '🔗 नाते शोधक सक्रिय — संबंध शोधण्यासाठी दोन व्यक्तींवर क्लिक करा',
+    tracerActiveBanner: '🔗 नाते शोधक सक्रिय — संबंध शोधण्यासाठी दोन व्यक्तींवर क्लिक करा किंवा त्यांना शोधा',
     tlFilterBirths: 'जन्म',
     tlFilterDeaths: 'मृत्यू',
     tlFilterMarriages: 'विवाह',
@@ -818,5 +1039,114 @@ export const translations: Record<'en' | 'mr', Translations> = {
     labelDeathDay: 'मृत्यू दिवस',
     labelDeathMonth: 'मृत्यू महिना',
     labelDeathYear: 'मृत्यू वर्ष',
+    // Auth & login
+    authSignIn: 'साइन इन',
+    authSignOut: 'साइन आउट',
+    authChecking: 'तपासत आहे…',
+    authSignInTooltip: 'कौटुंबिक माहिती संपादित व जतन करण्यासाठी साइन इन करा',
+    authFailed: 'प्रमाणीकरण अयशस्वी.',
+    loginTitle: 'संपादनासाठी साइन इन करा',
+    loginSubtitle: 'मान्यताप्राप्त कौटुंबिक संपादक सदस्य जोडू व अद्ययावत करू शकतात.',
+    loginGitHubHint: 'GitHub वापरत असल्यास एका टॅपमध्ये',
+    loginEmailOption: 'ईमेलने पुढे जा',
+    loginEmailHint: 'तुमचा ईमेल व पासवर्ड वापरा',
+    loginEmailTitle: 'ईमेलने साइन इन करा',
+    loginEmailSubtitle: 'कुटुंब प्रशासकाने मान्य केलेला ईमेल टाका.',
+    loginEmailPlaceholder: 'name@email.com',
+    loginCapsLock: 'Caps Lock चालू आहे',
+    loginInvalid: 'ईमेल किंवा पासवर्ड चुकीचा आहे. पुन्हा प्रयत्न करा.',
+    loginGitHubOpening: 'GitHub उघडत आहे…',
+    loginEmail: 'ईमेल',
+    loginPassword: 'पासवर्ड',
+    loginPasswordPlaceholder: 'तुमचा पासवर्ड टाका',
+    loginShowPassword: 'पासवर्ड दाखवा',
+    loginSigningIn: 'साइन इन होत आहे…',
+    loginGitHub: 'GitHub ने पुढे जा',
+    loginFailed: 'साइन इन अयशस्वी.',
+    loginGitHubFailed: 'GitHub साइन इन अयशस्वी.',
+    loginBrowseNote: 'फक्त पाहत आहात? खात्याशिवाय कुटुंब वृक्ष पाहू शकता.',
+    // Save & load messages
+    saveSignInRequired: 'कौटुंबिक माहिती बदलण्यापूर्वी साइन इन करा.',
+    saveNoPermission: 'ही कौटुंबिक माहिती बदलण्याची तुम्हाला परवानगी नाही.',
+    saveNotReady: 'माहिती जतन करण्यास तयार नाही. नवीनतम माहिती पुन्हा लोड करून प्रयत्न करा.',
+    saveFailed: (error) => `कौटुंबिक माहिती जतन झाली नाही: ${error}`,
+    saveConflict: 'दुसऱ्या वापरकर्त्याने आधी बदल जतन केले. नवीनतम माहिती लोड केली आहे; कृपया तुमचा बदल पुन्हा करा.',
+    saveConflictReloadFailed: (error) => `जतन करताना संघर्ष झाला आणि नवीनतम माहिती लोड झाली नाही: ${error}`,
+    loadFailed: (error) => `नवीनतम कौटुंबिक माहिती लोड झाली नाही: ${error}`,
+    resetAdminOnly: 'सामायिक माहिती फक्त प्रशासक रीसेट करू शकतो.',
+    shareOpenFailed: (error) => `शेअर केलेला वृक्ष उघडता आला नाही: ${error}`,
+    shareInvalidLink: 'शेअर केलेला वृक्ष उघडता आला नाही: लिंक अवैध आहे.',
+    importInvalidJson: 'आयात अयशस्वी — फाइल वैध JSON नाही.',
+    importFailed: (error) => `आयात अयशस्वी — ${error}`,
+    importRepaired: (count) => `आयात केलेल्या माहितीत ${count} दुरुस्त्या केल्या; जतन सुरू आहे.`,
+    importProcessFailed: 'आयात अयशस्वी — माहितीवर प्रक्रिया करता आली नाही.',
+    // Member details panel
+    detailsPanelLabel: (name) => `${name} यांची माहिती`,
+    detailsDiedAbbrev: 'मृ.',
+    detailsAge: (age) => `${age} वर्षे`,
+    detailsAgeAtDeath: (age) => `वय ${age}`,
+    detailsParents: 'पालक',
+    detailsSpouses: 'जोडीदार',
+    detailsChildren: 'मुले',
+    detailsFormerSpouse: 'पूर्वीचे',
+    detailsMore: 'अधिक',
+    detailsLess: 'कमी',
+    // Year picker
+    yearPrevDecade: 'मागील दशक',
+    yearNextDecade: 'पुढील दशक',
+    yearToday: (year) => `आज (${year})`,
+    yearJumpTo: (year) => `${year} वर जा`,
+    yearClear: 'साफ करा',
+    // Photo upload
+    photoNotImage: 'प्रतिमा फाइल निवडा.',
+    photoProcessFailed: 'या प्रतिमेवर प्रक्रिया करता आली नाही. दुसरी फाइल वापरा.',
+    photoProcessing: 'फोटोवर प्रक्रिया होत आहे…',
+    // Header
+    viewTree: 'वृक्ष',
+    viewTrace: 'नाते शोधा',
+    viewStats: 'आकडेवारी',
+    headerViews: 'दृश्ये',
+    headerAddMember: 'सदस्य जोडा',
+    headerShareTree: 'वृक्ष शेअर करा',
+    headerMenu: 'मेनू',
+    headerUndo: 'पूर्ववत',
+    headerRedo: 'पुन्हा करा',
+    settingsTitle: 'सेटिंग्ज',
+    settingsDisplay: 'प्रदर्शन',
+    settingsLanguage: 'भाषा',
+    settingsAvatarStyle: 'अवतार शैली',
+    settingsTour: 'दौरा सुरू करा',
+    settingsAdmin: 'प्रशासक',
+    settingsResetShared: 'सामायिक माहिती रीसेट करा…',
+    accountMenu: (name) => `${name} यांचे खाते आणि सेटिंग्ज`,
+    wizardSteps: 'पायऱ्या',
+    wizardStepRelation: 'नाते',
+    wizardStepWho: 'कोण',
+    wizardStepDetails: 'तारखा व तपशील',
+    wizardStepOf: (n, total) => `पायरी ${n} / ${total}`,
+    wizardQRelation: 'त्यांचे नाते काय आहे?',
+    wizardQWho: 'तुम्ही कोणाला जोडत आहात?',
+    wizardQWhoEdit: 'नाव आणि लिंग',
+    wizardQDetails: 'आणखी काही तपशील',
+    wizardOptional: '(सर्व पर्यायी)',
+    relTileChild: 'मूल',
+    relTileSpouse: 'जोडीदार',
+    relTileParent: 'पालक',
+    relTileNone: 'नाते नाही',
+    relSearchLabel: 'नावाने शोधा',
+    relNoMatches: 'जुळणारे सदस्य नाहीत',
+    marathiTag: 'मराठी',
+    marathiNotSet: 'अद्याप जोडलेले नाही',
+    marathiDone: 'झाले',
+    photoAdd: 'फोटो जोडा',
+    photoChange: 'फोटो बदला',
+    photoOptionalHint: 'फोटो पर्यायी आहे. जोडण्यासाठी वर्तुळावर टॅप करा.',
+    hintYearEnough: 'फक्त वर्ष पुरेसे',
+    labelLiving: 'हयात',
+    labelPhotoLink: 'फोटो लिंक',
+    btnBack: 'मागे',
+    btnNext: 'पुढे',
+    btnSkipAdd: 'वगळा व जोडा',
+    btnAddNamed: (name) => `${name} जोडा`,
   },
 };

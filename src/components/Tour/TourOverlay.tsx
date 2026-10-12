@@ -38,7 +38,9 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
       setBounds(null);
       return;
     }
-    const el = document.querySelector<HTMLElement>(step.selector);
+    // Desktop and phone layouts can both contain a target; use the one that is visible.
+    const el = Array.from(document.querySelectorAll<HTMLElement>(step.selector))
+      .find(candidate => candidate.getClientRects().length > 0);
     if (!el) {
       setBounds(null);
       return;

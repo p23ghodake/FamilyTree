@@ -1,7 +1,8 @@
-import React, { FormEvent, useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { EyeIcon, XIcon } from '../Icons';
+import { useLanguage } from '../../context/LanguageContext';
+import { AlertCircleIcon, AlertTriangleIcon, ChevronLeftIcon, ChevronRightIcon, EyeIcon, EyeOffIcon, MailIcon, XIcon } from '../Icons';
+import { useDialog } from '../useDialog';
 import './LoginModal.css';
 
 const GitHubMark: React.FC = () => (
@@ -10,108 +11,176 @@ const GitHubMark: React.FC = () => (
   </svg>
 );
 
+type Step = 'choose' | 'email';
+
 const LoginModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { signInWithPassword, signInWithGitHub } = useAuth();
+  const { t } = useLanguage();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const emailOptionRef = useRef<HTMLButtonElement>(null);
+  const [step, setStep] = useState<Step>('choose');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [githubBusy, setGithubBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useDialog(dialogRef, onClose);
 
+  const shownStepRef = useRef(step);
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    if (shownStepRef.current === step) return;
+    shownStepRef.current = step;
+    (step === 'email' ? emailInputRef.current : emailOptionRef.current)?.focus();
+  }, [step]);
+
+  const goTo = (next: Step) => {
+    setError(null);
+    setStep(next);
+  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setError(null);
     setBusy(true);
     try {
       await signInWithPassword(email.trim(), password);
       onClose();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Sign in failed.');
-    } finally {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      setError(/invalid login credentials/i.test(message) ? t.loginInvalid : message || t.loginFailed);
       setBusy(false);
     }
   };
 
   const handleGitHub = async () => {
+    setError(null);
+    setGithubBusy(true);
     try {
       await signInWithGitHub();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'GitHub sign in failed.');
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : t.loginGitHubFailed);
+      setGithubBusy(false);
     }
   };
+
+  const trackCapsLock = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    setCapsLock(event.getModifierState('CapsLock'));
+  };
+
+  const errorAlert = error && (
+    <div className="login-modal__alert" role="alert">
+      <AlertCircleIcon size={16} />
+      <span>{error}</span>
+    </div>
+  );
 
   return (
     <div className="login-modal__backdrop" onClick={onClose}>
       <div
+        ref={dialogRef}
         className="login-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-title"
         onClick={event => event.stopPropagation()}
       >
-        <button type="button" className="login-modal__close" onClick={onClose} aria-label="Close">
+        <div className="login-modal__grab" aria-hidden="true" />
+        <button type="button" className="login-modal__close" onClick={onClose} aria-label={t.close}>
           <XIcon size={16} />
         </button>
 
-        <div className="login-modal__header">
-          <div className="login-modal__logo" aria-hidden="true">🌳</div>
-          <h3 id="login-title">Welcome back</h3>
-          <p>Sign in to add, edit and save family members.</p>
-        </div>
-
-        <form className="login-modal__form" onSubmit={handleSubmit}>
-          <label className="login-modal__field">
-            <span>Email</span>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              autoFocus
-            />
-          </label>
-
-          <label className="login-modal__field">
-            <span>Password</span>
-            <div className="login-modal__password">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className="login-modal__eye"
-                onClick={() => setShowPassword(v => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                aria-pressed={showPassword}
-              >
-                <EyeIcon size={16} />
+        {step === 'choose' ? (
+          <div className="login-modal__step">
+            <div className="login-modal__logo" aria-hidden="true">🌳</div>
+            <h2 id="login-title" className="login-modal__title">{t.loginTitle}</h2>
+            <p className="login-modal__subtitle">{t.loginSubtitle}</p>
+            {errorAlert}
+            <div className="login-modal__methods">
+              <button type="button" className="login-modal__method" onClick={handleGitHub} disabled={githubBusy} data-autofocus>
+                <span className="login-modal__method-icon login-modal__method-icon--github"><GitHubMark /></span>
+                <span className="login-modal__method-text">
+                  <strong>{githubBusy ? t.loginGitHubOpening : t.loginGitHub}</strong>
+                  <small>{t.loginGitHubHint}</small>
+                </span>
+                <ChevronRightIcon size={16} className="login-modal__chevron" />
+              </button>
+              <button type="button" ref={emailOptionRef} className="login-modal__method" onClick={() => goTo('email')}>
+                <span className="login-modal__method-icon"><MailIcon size={18} /></span>
+                <span className="login-modal__method-text">
+                  <strong>{t.loginEmailOption}</strong>
+                  <small>{t.loginEmailHint}</small>
+                </span>
+                <ChevronRightIcon size={16} className="login-modal__chevron" />
               </button>
             </div>
-          </label>
-
-          <button type="submit" className="login-modal__primary" disabled={busy}>
-            {busy ? <><span className="login-modal__spinner" />Signing in…</> : 'Sign in'}
-          </button>
-        </form>
-
-        <div className="login-modal__divider"><span>or</span></div>
-
-        <button type="button" className="login-modal__github" onClick={handleGitHub}>
-          <GitHubMark /> Continue with GitHub
-        </button>
-
-        <p className="login-modal__note">Browsing the family tree doesn’t need an account.</p>
+            <p className="login-modal__note">{t.loginBrowseNote}</p>
+          </div>
+        ) : (
+          <form className="login-modal__step login-modal__form" onSubmit={handleSubmit}>
+            <button type="button" className="login-modal__back" onClick={() => goTo('choose')}>
+              <ChevronLeftIcon size={16} />
+              {t.btnBack}
+            </button>
+            <h2 id="login-title" className="login-modal__title">{t.loginEmailTitle}</h2>
+            <p className="login-modal__subtitle">{t.loginEmailSubtitle}</p>
+            {errorAlert}
+            <div className="login-modal__field">
+              <label htmlFor="login-email">{t.loginEmail}</label>
+              <input
+                ref={emailInputRef}
+                id="login-email"
+                type="email"
+                inputMode="email"
+                placeholder={t.loginEmailPlaceholder}
+                autoComplete="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setError(null); }}
+                aria-invalid={error ? true : undefined}
+                required
+              />
+            </div>
+            <div className="login-modal__field">
+              <label htmlFor="login-password">{t.loginPassword}</label>
+              <div className="login-modal__password">
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={t.loginPasswordPlaceholder}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setError(null); }}
+                  onKeyDown={trackCapsLock}
+                  onKeyUp={trackCapsLock}
+                  onBlur={() => setCapsLock(false)}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={capsLock ? 'login-caps' : undefined}
+                  required
+                />
+                <button
+                  type="button"
+                  className="login-modal__eye"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={t.loginShowPassword}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                </button>
+              </div>
+              {capsLock && (
+                <span id="login-caps" className="login-modal__caps">
+                  <AlertTriangleIcon size={13} />
+                  {t.loginCapsLock}
+                </span>
+              )}
+            </div>
+            <button type="submit" className="login-modal__primary" disabled={busy}>
+              {busy ? <><span className="login-modal__spinner" />{t.loginSigningIn}</> : t.authSignIn}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

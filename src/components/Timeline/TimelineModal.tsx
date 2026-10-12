@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { useLanguage } from '../../context/LanguageContext';
+import { useDialog } from '../useDialog';
 import './TimelineModal.css';
 
 type EventType = 'birth' | 'death' | 'marriage';
@@ -56,23 +57,27 @@ function assignLanes(sorted: TLEvent[], xOf: (y: number) => number): PlacedEvent
     const x     = xOf(evt.year);
     const left  = x - DOT_HALF;
     const right = x + DOT_HALF;
-    const lane  =
-      lanes.find(l => left >= l.lastRight + MIN_GAP) ??
-      lanes.reduce((a, b) => (a.lastRight <= b.lastRight ? a : b));
+    let lane = lanes.find(l => left >= l.lastRight + MIN_GAP);
+    if (!lane) {
+      lane = { pos: lanes.length % 2 === 0 ? 'above' : 'below', depth: Math.floor(lanes.length / 2), lastRight: -Infinity };
+      lanes.push(lane);
+    }
     lane.lastRight = right;
     return { ...evt, x, lanePos: lane.pos, laneDepth: lane.depth };
   });
 }
 
-interface Props { onClose: () => void; }
+interface Props { onClose: () => void; returnFocus?: () => HTMLElement | null; }
 
-const TimelineModal: React.FC<Props> = ({ onClose }) => {
+const TimelineModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const { currentTree } = useFamilyTree();
   const { t, lang } = useLanguage();
   const [active, setActive] = useState<Set<EventType>>(
     new Set<EventType>(['birth', 'death', 'marriage'])
   );
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef, onClose, true, returnFocus);
 
   // Per-type label and verb from translations
   const typeLabel = (type: EventType) =>
@@ -129,6 +134,8 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
 
   const aboveEvents = placedEvents.filter(e => e.lanePos === 'above');
   const belowEvents = placedEvents.filter(e => e.lanePos === 'below');
+  const aboveHeight = Math.max(155, ...aboveEvents.map(evt => evt.laneDepth * DEPTH_STEP + DOT_HALF * 2 + 12));
+  const belowHeight = Math.max(155, ...belowEvents.map(evt => evt.laneDepth * DEPTH_STEP + DOT_HALF * 2 + 12));
 
   const toggleFilter = (type: EventType) => {
     setActive(prev => {
@@ -143,9 +150,17 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
     if (e.target === e.currentTarget) onClose();
   }, [onClose]);
 
-  const showTip  = useCallback((evt: PlacedEvent, e: React.MouseEvent) =>
-    setTooltip({ evt, clientX: e.clientX, clientY: e.clientY }), []);
+  const showTip = useCallback((evt: PlacedEvent, e: { currentTarget: HTMLElement }) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({ evt, clientX: Math.max(110, Math.min(window.innerWidth - 110, rect.left + rect.width / 2)), clientY: Math.max(80, rect.top) });
+  }, []);
   const hideTip  = useCallback(() => setTooltip(null), []);
+  const handleDotKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && tooltip) {
+      e.preventDefault();
+      hideTip();
+    }
+  };
 
   if (!currentTree) return null;
 
@@ -155,7 +170,7 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
 
   return (
     <div className="tl-backdrop" onClick={handleBackdrop}>
-      <div className="tl-modal">
+      <div ref={dialogRef} className="tl-modal" role="dialog" aria-modal="true" aria-labelledby="timeline-title">
 
         {/* Header */}
         <div className="tl-header">
@@ -168,7 +183,7 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
               <line x1="8" x2="8" y1="14" y2="18"/><line x1="12" x2="12" y1="14" y2="18"/>
               <line x1="16" x2="16" y1="14" y2="18"/>
             </svg>
-            <span className="tl-header__title">{t.tooltipTimeline}</span>
+            <span id="timeline-title" className="tl-header__title">{t.tooltipTimeline}</span>
             <span className="tl-header__tree">{lang === 'mr' && currentTree.familyTreeDisplayName_mr ? currentTree.familyTreeDisplayName_mr : currentTree.familyTreeDisplayName}</span>
           </div>
           <div className="tl-header__filters">
@@ -181,7 +196,7 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
               </button>
             ))}
           </div>
-          <button className="tl-close" onClick={onClose} title={t.close}>
+          <button className="tl-close" onClick={onClose} title={t.close} aria-label={t.close}>
             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth={2.5} strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -201,18 +216,25 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
           </div>
         ) : (
           <div className="tl-scroll" onMouseLeave={hideTip}>
-            <div className="tl-canvas" style={{ width: canvasW }}>
+            <div className="tl-canvas" style={{ width: canvasW, gridTemplateRows: `${aboveHeight}px 52px ${belowHeight}px` }}>
 
               {/* Above track */}
               <div className="tl-track tl-track--above">
                 {aboveEvents.map(evt => (
-                  <div key={evt.id}
+                  <button key={evt.id}
+                    type="button"
                     className={`tl-dot tl-dot--${evt.type}`}
                     style={{ left: evt.x, bottom: evt.laneDepth * DEPTH_STEP }}
+                    aria-label={`${evt.label}: ${t.tlTooltipMeta(typeVerb(evt.type), evt.year)}`}
+                    aria-describedby={tooltip?.evt.id === evt.id ? 'timeline-event-tooltip' : undefined}
                     onMouseEnter={e => showTip(evt, e)}
-                    onMouseLeave={hideTip}>
+                    onMouseLeave={hideTip}
+                    onFocus={e => showTip(evt, e)}
+                    onBlur={hideTip}
+                    onClick={e => showTip(evt, e)}
+                    onKeyDown={handleDotKeyDown}>
                     <span className="tl-dot__initials">{getInitials(evt)}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -231,13 +253,20 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
               {/* Below track */}
               <div className="tl-track tl-track--below">
                 {belowEvents.map(evt => (
-                  <div key={evt.id}
+                  <button key={evt.id}
+                    type="button"
                     className={`tl-dot tl-dot--${evt.type}`}
                     style={{ left: evt.x, top: evt.laneDepth * DEPTH_STEP }}
+                    aria-label={`${evt.label}: ${t.tlTooltipMeta(typeVerb(evt.type), evt.year)}`}
+                    aria-describedby={tooltip?.evt.id === evt.id ? 'timeline-event-tooltip' : undefined}
                     onMouseEnter={e => showTip(evt, e)}
-                    onMouseLeave={hideTip}>
+                    onMouseLeave={hideTip}
+                    onFocus={e => showTip(evt, e)}
+                    onBlur={hideTip}
+                    onClick={e => showTip(evt, e)}
+                    onKeyDown={handleDotKeyDown}>
                     <span className="tl-dot__initials">{getInitials(evt)}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -261,6 +290,8 @@ const TimelineModal: React.FC<Props> = ({ onClose }) => {
       {/* Hover tooltip — rendered outside scroll so it's never clipped */}
       {tooltip && (
         <div
+          id="timeline-event-tooltip"
+          role="tooltip"
           className={`tl-tooltip tl-tooltip--${tooltip.evt.type}`}
           style={{ left: tooltip.clientX, top: tooltip.clientY - 72 }}
           onMouseEnter={() => setTooltip(tooltip)}

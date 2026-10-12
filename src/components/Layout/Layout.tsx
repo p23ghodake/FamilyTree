@@ -6,6 +6,7 @@ import TreeView from '../TreeView/TreeView';
 import FloatingSearch from '../SearchBar/FloatingSearch';
 import MemberFormModal from '../TreeView/MemberFormModal';
 import RelationshipPanel from '../TreeView/RelationshipPanel';
+import MemberDetailsPanel from '../TreeView/MemberDetailsPanel';
 import TourOverlay from '../Tour/TourOverlay';
 import { CONFIG } from '../../constants/config';
 import './Layout.css';
@@ -66,6 +67,7 @@ const Layout: React.FC = () => {
         </div>
         <TreeView />
         <RelationshipPanel />
+        <MemberDetailsPanel />
         <FloatingSearch />
       </main>
       <MemberFormModal />

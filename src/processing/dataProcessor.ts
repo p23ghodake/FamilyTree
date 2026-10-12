@@ -22,6 +22,13 @@ function enrichMembersFromRelationships(tree: RawFamilyTree): RawFamilyMember[] 
 
   if (!tree.relationships) return members;
 
+  members.forEach(member => {
+    member.parentIds = [];
+    member.childrenIds = [];
+    member.spouseIds = [];
+    delete member.spouseId;
+  });
+
   const memberMap = new Map(members.map(m => [m.id, m]));
 
   // Build spouseIds (all) and spouseId (first current spouse for backward compat)

@@ -20,6 +20,7 @@ import { ThemeName, applyTheme, loadSavedTheme } from '../theme/themeConfig';
 import familyDataJson from '../data/g_familyData.json';
 import { useAuth } from '../lib/AuthContext';
 import { isAdminUser } from '../lib/admin';
+import { useLanguage } from './LanguageContext';
 import { FamilyDataServiceError, getFamilyData, saveFamilyData } from '../services/familyDataService';
 
 import { CONFIG } from '../constants/config';
@@ -38,7 +39,7 @@ function loadSavedAvatarStyle(): AvatarStyle {
 }
 
 /** Strips computed/styling fields — produces raw format matching familyData.json */
-function buildRawExport(data: ProcessedFamilyData): RawFamilyData {
+export function buildRawExport(data: ProcessedFamilyData): RawFamilyData {
   return {
     familyTrees: data.familyTreesStyled.map(tree => ({
       familyTreeId: tree.familyTreeId,
@@ -106,11 +107,18 @@ export const DEFAULT_FILTERS: AdvancedFilters = {
   occupation: '',
   gender: 'all',
   marriageEligible: false,
-  hideFemale: false,
+  hideFemale: true,
 };
+
+export const NO_FILTERS: AdvancedFilters = { ...DEFAULT_FILTERS, hideFemale: false };
 
 export function isFiltersActive(f: AdvancedFilters): boolean {
   return f.livingOnly || f.location !== '' || f.occupation !== '' || f.gender !== 'all' || f.marriageEligible;
+}
+
+/** Number of filters the user has switched on, including Hide females. */
+export function countActiveFilters(f: AdvancedFilters): number {
+  return [f.livingOnly, f.hideFemale, f.marriageEligible, f.location !== '', f.occupation !== '', f.gender !== 'all'].filter(Boolean).length;
 }
 
 // ─── Undo/redo ───
@@ -201,6 +209,14 @@ const DATA_MUTATION_ACTIONS = new Set<Action['type']>([
 ]);
 
 function reducer(state: State, action: Action): State {
+  const nextState = reduceState(state, action);
+  if (nextState.data && nextState.data !== state.data && DATA_MUTATION_ACTIONS.has(action.type)) {
+    return { ...nextState, data: processAllFamilyData(buildRawExport(nextState.data)) };
+  }
+  return nextState;
+}
+
+function reduceState(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_DATA':
       return {
@@ -322,6 +338,10 @@ function reducer(state: State, action: Action): State {
         ) as typeof tree.relationships.parentChild;
         Object.assign(draft, withHistory(state));
         if (draft.selectedMemberId === memberId) draft.selectedMemberId = null;
+        if (draft.memberFormTargetId === memberId) {
+          draft.memberFormMode = null;
+          draft.memberFormTargetId = null;
+        }
       });
     }
 
@@ -373,7 +393,7 @@ function reducer(state: State, action: Action): State {
     }
 
     case 'CLEAR_ADVANCED_FILTERS':
-      return { ...state, advancedFilters: DEFAULT_FILTERS };
+      return { ...state, advancedFilters: NO_FILTERS };
 
     case 'TOGGLE_REL_MODE':
       return { ...state, relMode: !state.relMode, relSource: null, relTarget: null };
@@ -439,6 +459,7 @@ interface FamilyTreeContextValue {
   debouncedSearchQuery: string;
   exportData: () => void;
   importData: (jsonStr: string) => void;
+  loadSharedData: (jsonStr: string) => boolean;
   resetData: () => void;
   undo: () => void;
   redo: () => void;
@@ -454,6 +475,9 @@ const FamilyTreeContext = createContext<FamilyTreeContextValue | null>(null);
 export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const [state, reducerDispatch] = useReducer(reducer, initialState);
   const { session, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [cloudReady, setCloudReady] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -463,6 +487,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const cloudReadyRef = useRef(false);
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
   const conflictGenerationRef = useRef(0);
+  const savingRef = useRef(false);
+  const sharedPreviewRef = useRef(false);
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
   stateRef.current = state;
 
   const setCloudReadyState = useCallback((ready: boolean) => {
@@ -477,15 +505,30 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (savingRef.current) return;
+    if (!session) {
+      toast.error(tRef.current.saveSignInRequired, { id: 'family-save' });
+      return;
+    }
+    if (!canEditRef.current || sharedPreviewRef.current) {
+      toast.error(tRef.current.saveNoPermission, { id: 'family-save' });
+      return;
+    }
+    if (!cloudReadyRef.current || !shaRef.current) {
+      toast.error(tRef.current.saveNotReady, { id: 'family-save' });
+      return;
+    }
+    savingRef.current = true;
+    setIsSaving(true);
     const generation = conflictGenerationRef.current;
     mutationQueueRef.current = mutationQueueRef.current.then(async () => {
       if (generation !== conflictGenerationRef.current) return;
       if (!session) {
-        toast.error('Sign in before changing family data.', { id: 'family-save' });
+        toast.error(tRef.current.saveSignInRequired, { id: 'family-save' });
         return;
       }
       if (!cloudReadyRef.current || !shaRef.current) {
-        toast.error('Family data is not ready to save. Reload the latest data and try again.', { id: 'family-save' });
+        toast.error(tRef.current.saveNotReady, { id: 'family-save' });
         return;
       }
 
@@ -493,13 +536,14 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       const nextState = reducer(currentState, action);
       if (!nextState.data || nextState.data === currentState.data) return;
 
-      setIsSaving(true);
       try {
-        shaRef.current = await saveFamilyData(buildRawExport(nextState.data), shaRef.current);
-        stateRef.current = nextState;
+        const savedSha = await saveFamilyData(buildRawExport(nextState.data), shaRef.current);
+        if (generation !== conflictGenerationRef.current) return;
+        shaRef.current = savedSha;
+        stateRef.current = reducer(stateRef.current, action);
         reducerDispatch(action);
-        toast.success('Family data saved to GitHub.', { id: 'family-save' });
       } catch (error) {
+        if (generation !== conflictGenerationRef.current) return;
         if (error instanceof FamilyDataServiceError && error.status === 409) {
           conflictGenerationRef.current += 1;
           setCloudReadyState(false);
@@ -515,30 +559,23 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
             reducerDispatch({ type: 'SET_DATA', payload: refreshed });
             setCloudReadyState(true);
             setCloudError(null);
-            toast.error(`Another user saved changes first. The latest GitHub data has been loaded; reapply your change. (${error.message})`, {
-              id: 'family-save-conflict',
-              duration: 8000,
-            });
+            toast.error(tRef.current.saveConflict, { id: 'family-save-conflict', duration: 8000 });
           } catch (refreshError) {
             const message = refreshError instanceof Error ? refreshError.message : 'Unknown error';
             setCloudError(message);
-            toast.error(
-              `Save conflict detected, and the latest data could not be loaded: ${message}`,
-              { id: 'family-save-conflict', duration: 8000 }
-            );
+            toast.error(tRef.current.saveConflictReloadFailed(message), { id: 'family-save-conflict', duration: 8000 });
           }
         } else {
-          toast.error(
-            `Family data was not saved: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            { id: 'family-save' }
-          );
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          toast.error(tRef.current.saveFailed(message), { id: 'family-save' });
         }
-      } finally {
-        setIsSaving(false);
       }
     }).catch(error => {
       console.error('Family data save queue failed:', error);
-      toast.error('Family data could not be saved.', { id: 'family-save' });
+      toast.error(tRef.current.saveFailed(error instanceof Error ? error.message : 'Unknown error'), { id: 'family-save' });
+    }).finally(() => {
+      savingRef.current = false;
+      setIsSaving(false);
     });
   }, [session, setCloudReadyState]);
 
@@ -550,6 +587,8 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   // Load the GitHub file for signed-in users; use the bundled file for guests or on load errors.
   useEffect(() => {
     if (authLoading) return;
+    if (sharedPreviewRef.current) return;
+    conflictGenerationRef.current += 1;
     let active = true;
     const loadBundledData = () => {
       const result = validateRawFamilyData(familyDataJson);
@@ -575,7 +614,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     }
 
     getFamilyData().then(remote => {
-      if (!active) return;
+      if (!active || sharedPreviewRef.current) return;
       const result = validateRawFamilyData(remote.data);
       if (!result.ok || !result.data) {
         throw new Error(result.error ?? 'GitHub family data is invalid.');
@@ -588,15 +627,13 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       setCloudReadyState(true);
       setCloudError(null);
     }).catch(error => {
-      if (!active) return;
+      if (!active || sharedPreviewRef.current) return;
       console.error('Failed to load family data from GitHub:', error);
       try {
         loadBundledData();
-        setCloudError(error instanceof Error ? error.message : 'Unknown error loading GitHub family data.');
-        toast.error(
-          `Could not load the latest GitHub family data: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          { id: 'family-load' }
-        );
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        setCloudError(message);
+        toast.error(tRef.current.loadFailed(message), { id: 'family-load' });
       } catch (fallbackError) {
         reducerDispatch({
           type: 'SET_ERROR',
@@ -693,6 +730,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   }, [state.data, session]);
 
   const resetData = useCallback(() => {
+    if (!isAdminUser(session?.user) || !canEditRef.current || sharedPreviewRef.current) {
+      toast.error(tRef.current.resetAdminOnly, { id: 'family-save' });
+      return;
+    }
     try {
       const result = validateRawFamilyData(familyDataJson);
       if (!result.ok || !result.data) {
@@ -703,20 +744,45 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Failed to reset data' });
     }
-  }, [dispatch]);
+  }, [dispatch, session]);
+
+  const loadSharedData = useCallback((jsonStr: string): boolean => {
+    try {
+      let parsed: unknown = JSON.parse(jsonStr);
+      if (typeof parsed === 'object' && parsed !== null && 'familyTreesStyled' in parsed) {
+        parsed = buildRawExport(parsed as ProcessedFamilyData);
+      }
+      const result = validateRawFamilyData(parsed);
+      if (!result.ok || !result.data) throw new Error(result.error ?? 'Invalid shared family data.');
+      const processed = processAllFamilyData(result.data);
+      sharedPreviewRef.current = true;
+      conflictGenerationRef.current += 1;
+      canEditRef.current = false;
+      setCanEdit(false);
+      shaRef.current = null;
+      setCloudReadyState(false);
+      setCloudError(null);
+      stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload: processed });
+      reducerDispatch({ type: 'SET_DATA', payload: processed });
+      return true;
+    } catch (error) {
+      toast.error(tRef.current.shareOpenFailed(error instanceof Error ? error.message : 'Invalid data.'), { id: 'share-load' });
+      return false;
+    }
+  }, [setCloudReadyState]);
 
   const importData = useCallback((jsonStr: string) => {
     let parsed: unknown;
     try {
       parsed = JSON.parse(jsonStr);
     } catch {
-      toast.error('Import failed — the file is not valid JSON.', { id: 'import-error' });
+      toast.error(tRef.current.importInvalidJson, { id: 'import-error' });
       return;
     }
 
     const result = validateRawFamilyData(parsed);
     if (!result.ok || !result.data) {
-      toast.error(`Import failed — ${result.error ?? 'the data is not a valid family tree.'}`, { id: 'import-error' });
+      toast.error(tRef.current.importFailed(result.error ?? 'the data is not a valid family tree.'), { id: 'import-error' });
       return;
     }
 
@@ -724,14 +790,14 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       const processed = processAllFamilyData(result.data);
       dispatch({ type: 'IMPORT_DATA', payload: processed });
       if (result.warnings.length > 0) {
-        toast(`Imported data includes ${result.warnings.length} repaired item(s); the save is in progress.`, {
+        toast(tRef.current.importRepaired(result.warnings.length), {
           icon: '⚠️',
           id: 'import-warn',
         });
       }
     } catch (e) {
       console.error('Failed to process imported data:', e);
-      toast.error('Import failed — the data could not be processed.', { id: 'import-error' });
+      toast.error(tRef.current.importProcessFailed, { id: 'import-error' });
     }
   }, [dispatch]);
 
@@ -768,6 +834,8 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       gender: raw.gender,
       birthYear: raw.birthYear ?? null,
       deathYear: raw.deathYear ?? null,
+      birthDate: raw.birthDate ?? null,
+      deathDate: raw.deathDate ?? null,
       imageUrl: raw.imageUrl ?? null,
       isPrimaryInTree: raw.isPrimaryInTree ?? false,
       notes: raw.notes ?? null,
@@ -794,9 +862,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const canRedo = state.future.length > 0;
 
   const contextValue = useMemo<FamilyTreeContextValue>(
-    () => ({ state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember }),
+    () => ({ state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember],
+    [state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember],
   );
 
   return (

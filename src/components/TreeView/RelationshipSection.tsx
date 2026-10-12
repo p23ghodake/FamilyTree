@@ -1,92 +1,124 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { StyledFamilyMember } from '../../types/FamilyTypes';
-import { BabyIcon, HeartIcon, UserIcon, UsersIcon } from '../Icons';
+import { getAvatarFallback } from '../../processing/avatarFallback';
+import { memberMatchesQuery } from '../../processing/searchFilter';
+import { BabyIcon, CheckIcon, HeartIcon, SearchIcon, UserIcon, UsersIcon } from '../Icons';
+
+export type RelationshipType = 'none' | 'childOf' | 'spouseOf' | 'parentOf';
 
 interface RelationshipSectionProps {
   allMembers: StyledFamilyMember[];
-  relationType: 'none' | 'childOf' | 'spouseOf' | 'parentOf';
+  relationType: RelationshipType;
   relatedMemberId: string;
-  onRelationTypeChange: (type: 'none' | 'childOf' | 'spouseOf' | 'parentOf') => void;
+  error?: string;
+  onRelationTypeChange: (type: RelationshipType) => void;
   onRelatedMemberChange: (id: string) => void;
+}
+
+export function memberFullName(m: StyledFamilyMember, lang: string): string {
+  return lang === 'mr' && m.firstName_mr ? `${m.firstName_mr} ${m.lastName_mr ?? m.lastName}` : m.fullName;
 }
 
 export const RelationshipSection: React.FC<RelationshipSectionProps> = ({
   allMembers,
   relationType,
   relatedMemberId,
+  error,
   onRelationTypeChange,
   onRelatedMemberChange,
 }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const [query, setQuery] = useState('');
 
-  const candidates = relationType !== 'none' ? allMembers : [];
+  const people = useMemo(() => {
+    const matches = allMembers.filter(m => memberMatchesQuery(m, query));
+    const selected = allMembers.find(m => m.id === relatedMemberId);
+    return selected && !matches.includes(selected) ? [selected, ...matches] : matches;
+  }, [allMembers, query, relatedMemberId]);
+
+  const tiles = [
+    { value: 'childOf',  label: t.relTileChild,  icon: <BabyIcon size={22} /> },
+    { value: 'spouseOf', label: t.relTileSpouse, icon: <HeartIcon size={22} /> },
+    { value: 'parentOf', label: t.relTileParent, icon: <UsersIcon size={22} /> },
+    { value: 'none',     label: t.relTileNone,   icon: <UserIcon size={22} /> },
+  ] as const;
+
+  const pickLabel = relationType === 'childOf' ? t.relChildOf
+    : relationType === 'spouseOf' ? t.relSpouseOf
+    : t.relParentOf;
+
+  const chosen = relationType === 'spouseOf' ? allMembers.find(m => m.id === relatedMemberId) : undefined;
+  const chosenMinAge = chosen?.gender === 'female' ? 18 : 21;
+  const chosenUnderage = chosen && chosen.age !== null && chosen.age < chosenMinAge;
 
   return (
-    <div className="member-form__section member-form__section--rel">
-      <div className="member-form__rel-header">
-        <h3 className="member-form__section-title">{t.sectionRelationship}</h3>
-        <div className="member-form__rel-options">
-          {(
-            [
-              { value: 'none',     label: t.relNone,     icon: <UserIcon  size={12} /> },
-              { value: 'childOf',  label: t.relChildOf,  icon: <BabyIcon  size={12} /> },
-              { value: 'spouseOf', label: t.relSpouseOf, icon: <HeartIcon size={12} /> },
-              { value: 'parentOf', label: t.relParentOf, icon: <UsersIcon size={12} /> },
-            ] as const
-          ).map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`member-form__rel-chip ${relationType === opt.value ? 'member-form__rel-chip--active' : ''}`}
-              onClick={() => onRelationTypeChange(opt.value)}
-            >
-              {opt.icon}
-              {opt.label}
-            </button>
-          ))}
-        </div>
+    <div className="mf-rel">
+      <div className="mf-tiles" role="group" aria-label={t.sectionRelationship}>
+        {tiles.map(tile => (
+          <button
+            key={tile.value}
+            type="button"
+            className="mf-tile"
+            aria-pressed={relationType === tile.value}
+            data-autofocus={relationType === tile.value || undefined}
+            onClick={() => { setQuery(''); onRelationTypeChange(tile.value); }}
+          >
+            {tile.icon}
+            {tile.label}
+          </button>
+        ))}
       </div>
 
       {relationType !== 'none' && (
-        <div className="member-form__rel-select-row">
-          <label htmlFor="rel-member-select" className="member-form__rel-select-label">
-            {relationType === 'childOf' && t.labelParent}
-            {relationType === 'spouseOf' && t.labelSpouse}
-            {relationType === 'parentOf' && t.labelChild}
-          </label>
-          <div className="member-form__rel-select-wrap">
-            <select
-              id="rel-member-select"
-              value={relatedMemberId}
-              onChange={e => onRelatedMemberChange(e.target.value)}
-              className="member-form__input member-form__select"
-            >
-              <option value="">{t.chooseMember}</option>
-              {candidates.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.fullName}
-                  {m.birthYear ? ` (${t.bornAbbrev} ${m.birthYear})` : ''}
-                  {m.gender !== 'unknown' ? ` · ${m.gender === 'male' ? t.optionMale : t.optionFemale}` : ''}
-                </option>
-              ))}
-            </select>
-            {relationType === 'spouseOf' && relatedMemberId && (() => {
-              const chosen = allMembers.find(m => m.id === relatedMemberId);
-              if (!chosen) return null;
-              const minAge = chosen.gender === 'female' ? 18 : 21;
-              if (chosen.age !== null && chosen.age < minAge) {
-                return (
-                  <span className="member-form__err">
-                    {t.belowMarriageAge(chosen.fullName, chosen.age, minAge)}
-                  </span>
-                );
-              }
-              return null;
-            })()}
+        <>
+          <label htmlFor="mf-rel-search" className="mf-label">{pickLabel}…</label>
+          <div className="mf-search">
+            <SearchIcon size={15} />
+            <input
+              id="mf-rel-search"
+              type="search"
+              className="mf-search__input"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={t.relSearchLabel}
+              autoComplete="off"
+            />
           </div>
-        </div>
+          <div className="mf-people" role="group" aria-label={pickLabel}>
+            {people.map(m => {
+              const selected = m.id === relatedMemberId;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="mf-person"
+                  aria-pressed={selected}
+                  onClick={() => onRelatedMemberChange(m.id)}
+                >
+                  <img
+                    className="mf-person__avatar"
+                    src={m.imageConfig.finalImageUrl}
+                    alt=""
+                    onError={e => { (e.target as HTMLImageElement).src = getAvatarFallback(m.gender, m.ageCategory); }}
+                  />
+                  <span className="mf-person__name">{memberFullName(m, lang)}</span>
+                  <span className="mf-person__meta">
+                    {[m.birthYear ? `${t.bornAbbrev} ${m.birthYear}` : '', m.generationIndex !== null ? t.genFormat(m.generationIndex) : '']
+                      .filter(Boolean).join(' · ')}
+                  </span>
+                  {selected && <CheckIcon size={16} className="mf-person__check" />}
+                </button>
+              );
+            })}
+            {people.length === 0 && <p className="mf-people__empty">{t.relNoMatches}</p>}
+          </div>
+          {chosenUnderage && !error && (
+            <span className="mf-err">{t.belowMarriageAge(chosen.fullName, chosen.age!, chosenMinAge)}</span>
+          )}
+        </>
       )}
+      {error && <span className="mf-err" role="alert">{error}</span>}
     </div>
   );
 };

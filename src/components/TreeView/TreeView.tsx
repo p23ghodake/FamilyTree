@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
-import { useFamilyTree } from '../../context/FamilyTreeContext';
+import { isFiltersActive, useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { FocusIcon, Maximize2Icon } from '../Icons';
 import { buildTreeFromMembers, computeLineage } from '../../processing/treeBuilder';
@@ -495,6 +495,8 @@ const TreeView: React.FC = () => {
                 onSelect={handleSelect}
                 onMenuAction={canEdit ? handleMenuAction : undefined}
                 filterMatchedIds={effectiveFilterIds}
+                filterActive={(lineageModeActive && lineageIds.size > 0) || isFiltersActive(state.advancedFilters)}
+                marriageMatchedIds={advancedMatchedIds}
                 relSource={state.relSource}
                 relTarget={state.relTarget}
                 relPathSet={relPathSet}

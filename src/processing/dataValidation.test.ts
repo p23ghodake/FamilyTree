@@ -1,4 +1,5 @@
 import { validateRawFamilyData, sanitizeImageUrl } from './dataValidation';
+import { processAllFamilyData } from './dataProcessor';
 
 const validTree = {
   familyTreeId: 't1',
@@ -160,5 +161,28 @@ describe('validateRawFamilyData — success & repair', () => {
     const result = validateRawFamilyData(data);
     expect(result.ok).toBe(true);
     expect(result.data?.familyTrees[0].relationships!.spouses).toHaveLength(0);
+  });
+
+  it('normalizes legacy embedded relationships before rebuilding member fields', () => {
+    const data = validData();
+    delete data.familyTrees[0].relationships;
+    Object.assign(data.familyTrees[0].members[0], { spouseId: 'b', childrenIds: ['c', 'ghost'] });
+    Object.assign(data.familyTrees[0].members[1], { spouseId: 'a' });
+    Object.assign(data.familyTrees[0].members[2], { parentIds: ['a'] });
+    const result = validateRawFamilyData(data);
+    expect(result.ok).toBe(true);
+    expect(result.data?.familyTrees[0].relationships?.spouses).toHaveLength(1);
+    expect(result.data?.familyTrees[0].relationships?.parentChild).toEqual([{ parentId: 'a', childId: 'c' }]);
+    const processed = processAllFamilyData(result.data!);
+    expect(processed.familyTreesStyled[0].members[2].parentIds).toEqual(['a']);
+    expect(processed.familyTreesStyled[0].members[0].childrenIds).toEqual(['c']);
+  });
+
+  it('ignores stale embedded fields when canonical relationships are provided', () => {
+    const data = validData();
+    Object.assign(data.familyTrees[0].members[2], { parentIds: ['ghost'] });
+    const result = validateRawFamilyData(data);
+    const processed = processAllFamilyData(result.data!);
+    expect(processed.familyTreesStyled[0].members[2].parentIds).toEqual(['a']);
   });
 });

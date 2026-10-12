@@ -110,6 +110,30 @@ function validateTree(raw: unknown, index: number, warnings: string[]): RawFamil
   const rawRel = isObject(raw.relationships) ? raw.relationships : undefined;
   const spouses = Array.isArray(rawRel?.spouses) ? rawRel!.spouses : [];
   const parentChild = Array.isArray(rawRel?.parentChild) ? rawRel!.parentChild : [];
+  if (!rawRel) {
+    const seenSpouses = new Set<string>();
+    const seenParentChild = new Set<string>();
+    members.forEach(member => {
+      if (typeof member.spouseId === 'string') {
+        const key = JSON.stringify([member.id, member.spouseId].sort());
+        if (!seenSpouses.has(key)) {
+          seenSpouses.add(key);
+          spouses.push({ spouse1Id: member.id, spouse2Id: member.spouseId });
+        }
+      }
+      const edges = [
+        ...(Array.isArray(member.parentIds) ? member.parentIds.map(parentId => ({ parentId, childId: member.id })) : []),
+        ...(Array.isArray(member.childrenIds) ? member.childrenIds.map(childId => ({ parentId: member.id, childId })) : []),
+      ];
+      edges.forEach(edge => {
+        const key = JSON.stringify([edge.parentId, edge.childId]);
+        if (!seenParentChild.has(key)) {
+          seenParentChild.add(key);
+          parentChild.push(edge);
+        }
+      });
+    });
+  }
 
   const validSpouses = spouses.filter((s: unknown) => {
     if (!isObject(s)) return false;

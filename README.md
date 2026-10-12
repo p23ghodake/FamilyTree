@@ -27,7 +27,15 @@ npx supabase functions deploy family-data
 
 Set the `ALLOWED_GITHUB_USERS` Edge Function secret to a comma-separated list of GitHub usernames allowed to read/write data (for example `npx supabase secrets set ALLOWED_GITHUB_USERS=user1,user2`); other signed-in users get a 403. Entries may be GitHub usernames or emails (for email/password users created in Supabase Authentication → Users). Optionally set `READONLY_GITHUB_USERS` for users who can load data but not save changes.
 
+Authorization uses the verified GitHub provider identity or a confirmed email, not editable user metadata. Redeploy the `family-data` Edge Function after updating its authorization code.
+
 Set or update the `GITHUB_TOKEN` Edge Function secret in the Supabase Dashboard, or use the ignored `supabase/.env` method above. The function keeps JWT verification enabled; it also validates each access token with Supabase Auth. Its Contents API target is `src/data/g_familyData.json` in `p23ghodake/FamilyTree`.
+
+### Shared snapshots and reset
+
+Shared links open read-only snapshots without importing or saving them to GitHub. Keep the link's `tree` query parameter to reopen the same snapshot after a reload. Legacy links containing processed tree data are also supported.
+
+The Reset control is available only to administrators who have edit access. After explicit confirmation, it replaces **all shared family trees on GitHub** with the original bundled dataset, affecting every user. It is not a browser-only reset. Data-changing controls remain locked until the current save finishes.
 
 ### GitHub Pages deployment
 

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import LZString from 'lz-string';
-import { useFamilyTree } from '../../context/FamilyTreeContext';
+import { buildRawExport, useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { CONFIG } from '../../constants/config';
 import { XIcon } from '../Icons';
+import { useDialog } from '../useDialog';
 import './ShareModal.css';
 
 // QR v40 max ≈ 2953 bytes binary. Use CONFIG.share.QR_MAX_LENGTH as safe threshold.
@@ -12,6 +13,7 @@ const QR_MAX_LENGTH = CONFIG.share.QR_MAX_LENGTH;
 
 interface ShareModalProps {
   onClose: () => void;
+  returnFocus?: () => HTMLElement | null;
 }
 
 function buildShareUrl(jsonData: object): string {
@@ -19,15 +21,17 @@ function buildShareUrl(jsonData: object): string {
   return `${window.location.origin}${window.location.pathname}?tree=${compressed}`;
 }
 
-const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
+const ShareModal: React.FC<ShareModalProps> = ({ onClose, returnFocus }) => {
   const { state } = useFamilyTree();
   const { t } = useLanguage();
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef, onClose, true, returnFocus);
 
   useEffect(() => {
-    if (state.data) setShareUrl(buildShareUrl(state.data));
+    if (state.data) setShareUrl(buildShareUrl(buildRawExport(state.data)));
   }, [state.data]);
 
   const qrFits = shareUrl.length > 0 && shareUrl.length <= QR_MAX_LENGTH;
@@ -53,9 +57,9 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
 
   return (
     <div className="share-modal__backdrop" onClick={handleBackdropClick}>
-      <div className="share-modal">
+      <div ref={dialogRef} className="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
         <div className="share-modal__header">
-          <span className="share-modal__title">{t.shareTitle}</span>
+          <span id="share-modal-title" className="share-modal__title">{t.shareTitle}</span>
           <button className="share-modal__close" onClick={onClose} aria-label={t.close}>
             <XIcon size={16} />
           </button>

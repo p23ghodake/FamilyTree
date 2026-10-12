@@ -95,12 +95,17 @@ Deno.serve(async request => {
     .filter(Boolean);
   const editors = parseUsers('ALLOWED_GITHUB_USERS');
   const viewers = parseUsers('READONLY_GITHUB_USERS');
-  const metadata = (user as { user_metadata?: Record<string, unknown> }).user_metadata ?? {};
-  const login = [metadata.user_name, metadata.preferred_username]
+  const verifiedUser = user as {
+    identities?: Array<{ provider?: string; identity_data?: Record<string, unknown> }>;
+    email?: string;
+    email_confirmed_at?: string;
+  };
+  const githubIdentity = verifiedUser.identities?.find(identity => identity.provider === 'github');
+  const login = [githubIdentity?.identity_data?.user_name, githubIdentity?.identity_data?.preferred_username]
     .find((value): value is string => typeof value === 'string' && value.length > 0)
     ?.toLowerCase();
-  const email = typeof (user as { email?: unknown }).email === 'string'
-    ? (user as { email: string }).email.toLowerCase()
+  const email = verifiedUser.email_confirmed_at && typeof verifiedUser.email === 'string'
+    ? verifiedUser.email.toLowerCase()
     : undefined;
   const identities = [login, email].filter((value): value is string => !!value);
   const canEdit = identities.some(id => editors.includes(id));

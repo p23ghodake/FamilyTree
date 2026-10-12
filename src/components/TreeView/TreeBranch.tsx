@@ -13,6 +13,8 @@ export const TreeBranch = React.memo<{
   onSelect: (id: string) => void;
   onMenuAction?: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
   filterMatchedIds: Set<string>;
+  filterActive: boolean;
+  marriageMatchedIds: Set<string>;
   relSource: string | null;
   relTarget: string | null;
   relPathSet: Set<string>;
@@ -20,8 +22,7 @@ export const TreeBranch = React.memo<{
   marriageFilterActive: boolean;
   avatarStyle: AvatarStyle;
   relStep: 1 | 2 | null;
-}>(({ node, selectedId, isSearching, searchMatchedIds, onSelect, onMenuAction, filterMatchedIds, relSource, relTarget, relPathSet, bloodPathIds, marriageFilterActive, avatarStyle, relStep }) => {
-  const filterActive = filterMatchedIds.size > 0;
+}>(({ node, selectedId, isSearching, searchMatchedIds, onSelect, onMenuAction, filterMatchedIds, filterActive, marriageMatchedIds, relSource, relTarget, relPathSet, bloodPathIds, marriageFilterActive, avatarStyle, relStep }) => {
 
   const getHighlight = (id: string): boolean | null => {
     if (isSearching) {
@@ -44,7 +45,7 @@ export const TreeBranch = React.memo<{
 
   // Marriage badge: shown when filter is active + member is living + age-eligible (spouse check is in filter)
   const isBadgeEligible = (m: StyledFamilyMember): boolean => {
-    if (!marriageFilterActive) return false;
+    if (!marriageFilterActive || !marriageMatchedIds.has(m.id)) return false;
     if (m.deathYear !== null || m.age === null || m.gender === 'unknown') return false;
     return m.age >= (m.gender === 'female' ? 18 : 21);
   };
@@ -153,6 +154,8 @@ export const TreeBranch = React.memo<{
               onSelect={onSelect}
               onMenuAction={onMenuAction}
               filterMatchedIds={filterMatchedIds}
+              filterActive={filterActive}
+              marriageMatchedIds={marriageMatchedIds}
               relSource={relSource}
               relTarget={relTarget}
               relPathSet={relPathSet}

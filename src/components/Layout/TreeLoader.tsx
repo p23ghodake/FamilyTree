@@ -4,10 +4,11 @@
  */
 import React, { useEffect, useRef } from 'react';
 import LZString from 'lz-string';
+import toast from 'react-hot-toast';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 
 const TreeLoader: React.FC = () => {
-  const { importData } = useFamilyTree();
+  const { loadSharedData } = useFamilyTree();
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -19,15 +20,13 @@ const TreeLoader: React.FC = () => {
     try {
       const json = LZString.decompressFromEncodedURIComponent(encoded);
       if (json) {
-        importData(json);
-        // Clean the URL so reloads don't re-import
-        const clean = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, '', clean);
-      }
+        loadSharedData(json);
+      } else toast.error('Could not open shared tree: the link is invalid.', { id: 'share-load' });
     } catch (e) {
       console.warn('Failed to load tree from URL param:', e);
+      toast.error('Could not open shared tree: the link is invalid.', { id: 'share-load' });
     }
-  }, [importData]);
+  }, [loadSharedData]);
 
   return null;
 };

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import { useLanguage } from '../context/LanguageContext';
 import './YearPicker.css';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ export interface YearPickerProps {
   max?: number;               // latest selectable year (default currentYear + 10)
   hasError?: boolean;
   clearable?: boolean;        // show "Clear" button (for death year)
+  ariaLabel?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -45,6 +47,7 @@ const YearPickerPopup: React.FC<PopupProps> = ({
   onDecadeChange, onSelect, onClear, onClose,
 }) => {
   const popupRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
   const POPUP_H = 226;
 
   const [pos, setPos] = useState<{ top: number; left: number; width: number }>({
@@ -86,7 +89,11 @@ const YearPickerPopup: React.FC<PopupProps> = ({
 
   // Close on Escape
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      onClose();
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
@@ -110,7 +117,8 @@ const YearPickerPopup: React.FC<PopupProps> = ({
           className="year-picker__nav-btn"
           onClick={() => onDecadeChange(decade - 10)}
           disabled={!canPrev}
-          title="Previous decade"
+          title={t.yearPrevDecade}
+          aria-label={t.yearPrevDecade}
         >
           ‹
         </button>
@@ -125,7 +133,8 @@ const YearPickerPopup: React.FC<PopupProps> = ({
           className="year-picker__nav-btn"
           onClick={() => onDecadeChange(decade + 10)}
           disabled={!canNext}
-          title="Next decade"
+          title={t.yearNextDecade}
+          aria-label={t.yearNextDecade}
         >
           ›
         </button>
@@ -155,13 +164,13 @@ const YearPickerPopup: React.FC<PopupProps> = ({
           type="button"
           className="year-picker__jump-btn"
           onClick={() => onDecadeChange(toDecade(CURRENT_YEAR))}
-          title={`Jump to ${CURRENT_YEAR}`}
+          title={t.yearJumpTo(CURRENT_YEAR)}
         >
-          Today ({CURRENT_YEAR})
+          {t.yearToday(CURRENT_YEAR)}
         </button>
         {clearable && hasValue && (
           <button type="button" className="year-picker__clear-btn" onClick={onClear}>
-            Clear
+            {t.yearClear}
           </button>
         )}
       </div>
@@ -180,6 +189,7 @@ const YearPicker: React.FC<YearPickerProps> = ({
   max = CURRENT_YEAR + 10,
   hasError = false,
   clearable = false,
+  ariaLabel,
 }) => {
   const numVal = value && /^\d+$/.test(value) ? parseInt(value, 10) : null;
 
@@ -232,7 +242,8 @@ const YearPicker: React.FC<YearPickerProps> = ({
     if (e.key === 'ArrowDown' || e.key === 'Enter') {
       e.preventDefault();
       setOpen(true);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === 'Escape' && open) {
+      e.preventDefault();
       setOpen(false);
     }
   };
@@ -252,6 +263,7 @@ const YearPicker: React.FC<YearPickerProps> = ({
           onKeyDown={handleKeyDown}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
+          aria-label={ariaLabel ?? placeholder}
           onClick={e => e.stopPropagation()}
           maxLength={4}
         />
