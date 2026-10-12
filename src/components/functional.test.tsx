@@ -82,7 +82,7 @@ it('shows reset only for admins and confirms the shared GitHub impact', () => {
   const openSettings = () => fireEvent.click(screen.getByRole('button', { name: t.settingsTitle }));
   openSettings();
   expect(screen.queryByRole('button', { name: t.settingsResetShared })).toBeNull();
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true, canDelete: true });
   const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
   view.rerender(<TopBar />);
   fireEvent.click(screen.getByRole('button', { name: t.settingsResetShared }));
@@ -206,11 +206,14 @@ it('lets editors jump between steps and save from any of them', () => {
   expect(context.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'UPDATE_MEMBER' }));
 });
 
-it('shows member deletion only to administrators', () => {
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+it('shows member deletion only to the admin signed in with GitHub', () => {
+  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true, canDelete: false });
   context.state.memberFormMode = 'edit';
   context.state.memberFormTargetId = 'one';
-  render(<MemberFormModal />);
+  const view = render(<MemberFormModal />);
+  expect(screen.queryByRole('button', { name: t.btnDeleteMember })).toBeNull();
+  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true, canDelete: true });
+  view.rerender(<MemberFormModal />);
   fireEvent.click(screen.getByRole('button', { name: t.btnDeleteMember }));
   fireEvent.click(screen.getByRole('button', { name: t.btnYesDelete }));
   expect(context.dispatch).toHaveBeenCalledWith({ type: 'DELETE_MEMBER', payload: { treeId: 'test', memberId: 'one' } });

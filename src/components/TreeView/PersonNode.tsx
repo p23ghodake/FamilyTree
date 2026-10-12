@@ -34,7 +34,7 @@ export const PersonNode = React.memo<{
 }>(({ member, isSelected, isHighlighted, isHidden, isFormerSpouse, relRole, relStep, showMarriageBadge, avatarStyle, onClick, onMenuAction }) => {
   const { t, lang } = useLanguage();
   const { currentTree } = useFamilyTree();
-  const { isAdmin } = useAuth();
+  const { canDelete } = useAuth();
   const displayName = getDisplayFirstName(member, lang);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -273,7 +273,7 @@ export const PersonNode = React.memo<{
                   {t.menuAddSpouse}
                 </button>
           }
-          {!isAdmin ? null : confirmDelete ? (
+          {!canDelete ? null : confirmDelete ? (
             <div className="pnode__menu-confirm">
               <span className="pnode__menu-confirm__label">{t.confirmDeleteNode}</span>
               <button

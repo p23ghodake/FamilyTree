@@ -47,6 +47,17 @@ function githubErrorStatus(status: number): number {
 // Keep in sync with src/lib/admin.ts; the ADMIN_USERS secret overrides it.
 const DEFAULT_ADMINS = ['p23ghodake', 'ghodake.pankaj@gmail.com'];
 
+// The token was already validated by Supabase Auth; this only reads how the session signed in.
+function signedInWithOAuth(accessToken: string): boolean {
+  try {
+    const payload = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const claims = JSON.parse(atob(payload)) as { amr?: Array<{ method?: string }> };
+    return !!claims.amr?.some(entry => entry.method === 'oauth');
+  } catch {
+    return false;
+  }
+}
+
 type FamilyFile = { content: string; sha: string } | { error: Response };
 
 async function readFamilyFile(githubToken: string): Promise<FamilyFile> {
@@ -178,7 +189,11 @@ Deno.serve(async request => {
   const canView = canEdit || identities.some(id => viewers.includes(id));
   const configuredAdmins = parseUsers('ADMIN_USERS');
   const admins = configuredAdmins.length > 0 ? configuredAdmins : DEFAULT_ADMINS;
-  const isAdmin = canEdit && identities.some(id => admins.includes(id));
+  const githubEmail = githubIdentity?.identity_data?.email_verified === true && typeof githubIdentity.identity_data.email === 'string'
+    ? githubIdentity.identity_data.email.toLowerCase()
+    : undefined;
+  const canDelete = canEdit && signedInWithOAuth(token)
+    && [login, githubEmail].some(id => !!id && admins.includes(id));
   if (!canView) {
     return jsonResponse({ error: `Your account (${identities.join(' / ') || 'unknown'}) is not allowed to access family data.` }, 403);
   }
@@ -213,7 +228,7 @@ Deno.serve(async request => {
     return jsonResponse({ error: 'A family data object and current file SHA are required.' }, 400);
   }
 
-  if (!isAdmin) {
+  if (!canDelete) {
     const current = await readFamilyFile(githubToken);
     if ('error' in current) return current.error;
     let currentData: unknown;
@@ -224,7 +239,7 @@ Deno.serve(async request => {
     }
     const nextIds = memberIds(body.data);
     if ([...memberIds(currentData)].some(id => !nextIds.has(id))) {
-      return jsonResponse({ error: 'Only an administrator can delete family members.' }, 403);
+      return jsonResponse({ error: 'Only the family admin signed in with GitHub can delete members.' }, 403);
     }
   }
 

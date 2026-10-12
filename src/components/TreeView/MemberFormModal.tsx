@@ -120,7 +120,7 @@ const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 const MemberFormModal: React.FC = () => {
   const { state, dispatch, currentTree, styleNewMember, isSaving, canEdit } = useFamilyTree();
-  const { isAdmin } = useAuth();
+  const { canDelete } = useAuth();
   const { t } = useLanguage();
   const { memberFormMode, memberFormTargetId } = state;
 
@@ -332,7 +332,7 @@ const MemberFormModal: React.FC = () => {
   };
 
   const handleDelete = () => {
-    if (isSaving || !canEdit || !isAdmin || !isEdit || !editMember || !currentTree) return;
+    if (isSaving || !canEdit || !canDelete || !isEdit || !editMember || !currentTree) return;
     dispatch({ type: 'DELETE_MEMBER', payload: { treeId: currentTree.familyTreeId, memberId: editMember.id } });
   };
 
@@ -657,7 +657,7 @@ const MemberFormModal: React.FC = () => {
 
         <div className="member-form__footer">
           {isEdit ? (
-            !isAdmin ? null : confirmingDelete ? (
+            !canDelete ? null : confirmingDelete ? (
               <div className="member-form__delete-confirm">
                 <span className="member-form__delete-confirm__label">{t.confirmDeleteMember}</span>
                 <button className="member-form__btn member-form__btn--danger member-form__btn--sm" onClick={handleDelete} disabled={locked}>
@@ -682,7 +682,7 @@ const MemberFormModal: React.FC = () => {
             </button>
           )}
           <div className="member-form__footer-right">
-            {isEdit && (!isAdmin || !confirmingDelete) && (
+            {isEdit && (!canDelete || !confirmingDelete) && (
               <button className="member-form__btn member-form__btn--ghost" onClick={handleClose} disabled={isSaving}>{t.btnCancel}</button>
             )}
             {!isEdit && step === 'who' && !isLastStep && !isSaving && (

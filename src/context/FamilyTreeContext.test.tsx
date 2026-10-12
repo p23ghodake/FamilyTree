@@ -41,11 +41,12 @@ async function mountEditor() {
 
 const adminUser = { id: 'admin', identities: [{ provider: 'github', identity_data: { user_name: 'p23ghodake' } }] };
 const editorUser = { id: 'editor', identities: [{ provider: 'github', identity_data: { user_name: 'cousin' } }] };
+const githubToken = `h.${btoa(JSON.stringify({ amr: [{ method: 'oauth' }] }))}.s`;
 
 beforeEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
-  (useAuth as jest.Mock).mockReturnValue({ session: { user: adminUser }, loading: false });
+  (useAuth as jest.Mock).mockReturnValue({ session: { user: adminUser, access_token: githubToken }, loading: false });
   (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: 'original', canEdit: true });
   (saveFamilyData as jest.Mock).mockResolvedValue('saved');
 });
@@ -60,7 +61,7 @@ it('starts with Hide females on and lets Clear switch every filter off', async (
 });
 
 it('lets only administrators delete members, including through undo', async () => {
-  (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser }, loading: false });
+  (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser, access_token: githubToken }, loading: false });
   await mountEditor();
   act(() => context.dispatch({ type: 'DELETE_MEMBER', payload: { treeId: 'test-tree', memberId: 'child' } }));
   await waitFor(() => expect(context.isSaving).toBe(false));
@@ -198,7 +199,7 @@ it('loads the built-in copy for guests without contacting GitHub', async () => {
 });
 
 it('allows an authorized admin to reset shared data', async () => {
-  (useAuth as jest.Mock).mockReturnValue({ session: { user: {
+  (useAuth as jest.Mock).mockReturnValue({ session: { access_token: githubToken, user: {
     id: 'admin', identities: [{ provider: 'github', identity_data: { user_name: 'p23ghodake' } }],
   } }, loading: false });
   await mountEditor();

@@ -26,7 +26,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
     exportData, resetData, undo, redo, canUndo, canRedo,
     canEdit, cloudReady, isSaving,
   } = useFamilyTree();
-  const { session, loading: authLoading, signOut, isAdmin } = useAuth();
+  const { session, loading: authLoading, signOut, isAdmin, canDelete } = useAuth();
   const { t, lang } = useLanguage();
 
   const [showLogin, setShowLogin] = useState(false);
@@ -160,9 +160,9 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   }, [currentTree, t, isAdmin]);
 
   const handleReset = useCallback(() => {
-    if (!isAdmin || !canEdit || !cloudReady || isSaving) return;
+    if (!isAdmin || !canDelete || !canEdit || !cloudReady || isSaving) return;
     if (window.confirm(t.confirmReset)) resetData();
-  }, [resetData, t, isAdmin, canEdit, cloudReady, isSaving]);
+  }, [resetData, t, isAdmin, canDelete, canEdit, cloudReady, isSaving]);
 
   const handleSignOut = useCallback(async () => {
     try {
@@ -190,7 +190,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
     signedIn: !!session,
     accountName,
     isExporting,
-    canReset: canEdit && cloudReady && !isSaving,
+    canReset: canDelete && canEdit && cloudReady && !isSaving,
     onStartTour,
     onExportJson: exportData,
     onExportImage: handleExportImage,

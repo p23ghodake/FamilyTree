@@ -19,7 +19,7 @@ import { memberMatchesQuery } from '../processing/searchFilter';
 import { ThemeName, applyTheme, loadSavedTheme } from '../theme/themeConfig';
 import familyDataJson from '../data/g_familyData.json';
 import { useAuth } from '../lib/AuthContext';
-import { isAdminUser } from '../lib/admin';
+import { canDeleteMembers, isAdminUser } from '../lib/admin';
 import { useLanguage } from './LanguageContext';
 import { FamilyDataServiceError, getFamilyData, saveFamilyData } from '../services/familyDataService';
 
@@ -541,7 +541,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       const currentState = stateRef.current;
       const nextState = reducer(currentState, action);
       if (!nextState.data || nextState.data === currentState.data) return;
-      if (currentState.data && !isAdminUser(session.user) && removesMembers(currentState.data, nextState.data)) {
+      if (currentState.data && !canDeleteMembers(session) && removesMembers(currentState.data, nextState.data)) {
         toast.error(tRef.current.deleteAdminOnly, { id: 'family-save' });
         return;
       }
