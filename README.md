@@ -12,6 +12,18 @@ An interactive family tree in English and Marathi, published on GitHub Pages at 
 - **Sharing:** share links open a read-only snapshot of the tree (see below).
 - **Accessibility:** dialogs trap keyboard focus, close with Escape and return focus to where you were. All text is available in English and Marathi.
 
+## Demo
+
+The recordings below use a fictional family (the Deshmukhs) and a demo editor account; no real family data is shown.
+
+| Tree, zoom and person details | Search and filters |
+|---|---|
+| ![Browsing the tree, opening a person's details and zooming](docs/demo/overview.gif) | ![Searching by name and changing filters](docs/demo/search-filters.gif) |
+| **Trace a relationship** | **Add a member** |
+| ![Tracing how two people are related](docs/demo/trace.gif) | ![Adding a child with the step-by-step form](docs/demo/add-member.gif) |
+| **English ↔ Marathi** | **Phone layout** |
+| ![Switching the interface to Marathi](docs/demo/marathi.gif) | ![Using the app on a phone](docs/demo/phone.gif) |
+
 ## Roles and permissions
 
 | Who | Browse | Add / edit members | Delete members | Reset shared data | Export JSON / PNG, Print |

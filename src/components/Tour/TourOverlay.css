@@ -37,6 +37,9 @@
   position: fixed;
   z-index: 9003;
   width: 290px;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
   background: #ffffff;
   color: #1e293b;
   border-radius: 12px;
@@ -92,6 +95,26 @@
 }
 
 /* ─── Content ─── */
+.tour-tooltip--media {
+  width: 340px;
+}
+
+.tour-tooltip__media {
+  margin: 0 0 12px;
+  aspect-ratio: 456 / 288;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tour-tooltip__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .tour-tooltip__title {
   font-size: 15px;
   font-weight: 700;
@@ -202,6 +225,8 @@
   .tour-spotlight { transition: none; }
   .tour-tooltip   { animation: none; }
   .tour-tooltip__next:hover { transform: none; }
+  .tour-tooltip__media { display: none; }
+  .tour-tooltip--media { width: 290px; }
 }
 
 /* The tour positions the tooltip inline; keep it inside narrow viewports. */

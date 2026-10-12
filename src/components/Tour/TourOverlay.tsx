@@ -138,9 +138,9 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
   const noTarget = step.placement === 'center' || !bounds;
 
   if (noTarget) {
-    tooltipStyle.top       = '50%';
-    tooltipStyle.left      = '50%';
-    tooltipStyle.transform = 'translate(-50%, -50%)';
+    // Centre with measured size: the card's entrance animation overrides any CSS transform.
+    tooltipStyle.top  = Math.max(8, (window.innerHeight - tipSize.h) / 2);
+    tooltipStyle.left = Math.max(8, (window.innerWidth - tipSize.w) / 2);
   } else {
     const { top, left, width, height } = bounds;
     const cx   = left + width / 2;
@@ -196,7 +196,7 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
       )}
 
       {/* Tooltip card — key forces remount (re-triggers animation) on step change */}
-      <div ref={tipRef} className="tour-tooltip" style={tooltipStyle} key={stepIndex} role="document">
+      <div ref={tipRef} className={`tour-tooltip${step.media ? ' tour-tooltip--media' : ''}`} style={tooltipStyle} key={stepIndex} role="document">
         <div className="tour-tooltip__header">
           <span className="tour-tooltip__counter">
             {stepIndex + 1} / {totalSteps}
@@ -210,6 +210,11 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
           </button>
         </div>
 
+        {step.media && (
+          <div className="tour-tooltip__media">
+            <img src={`${process.env.PUBLIC_URL}/tour/${step.media}`} alt="" width={456} height={288} />
+          </div>
+        )}
         <h3 className="tour-tooltip__title">{titles[stepIndex]}</h3>
         <p className="tour-tooltip__body">{bodies[stepIndex]}</p>
 

@@ -11,6 +11,7 @@ import ShareModal from './Layout/ShareModal';
 import TopBar from './Layout/TopBar';
 import MemberFormModal from './TreeView/MemberFormModal';
 import { PhotoUploadSection } from './TreeView/PhotoUploadSection';
+import TourOverlay from './Tour/TourOverlay';
 
 jest.mock('../context/FamilyTreeContext', () => ({
   ...jest.requireActual('../context/FamilyTreeContext'), useFamilyTree: jest.fn(),
@@ -369,6 +370,18 @@ describe('sign-in dialog', () => {
     expect(screen.getByLabelText(en.loginPassword).getAttribute('aria-invalid')).toBe('true');
     fireEvent.change(screen.getByLabelText(en.loginPassword), { target: { value: 'right' } });
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('feature tour', () => {
+  it('shows a demo clip only on steps that have one', () => {
+    render(<TourOverlay active onClose={jest.fn()} />);
+    const tour = screen.getByRole('dialog', { name: en.tourTitle });
+    expect(tour.querySelector('.tour-tooltip__media img')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: en.tourNext }));
+    fireEvent.click(screen.getByRole('button', { name: en.tourNext }));
+    expect(screen.getByText(en.tourStepTitles[2])).toBeTruthy();
+    expect(tour.querySelector('.tour-tooltip__media img')?.getAttribute('src')).toBe('/tour/details.gif');
   });
 });
 
