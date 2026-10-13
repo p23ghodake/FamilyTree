@@ -9,9 +9,10 @@ import ShareModal from './ShareModal';
 import HeaderMenu from './HeaderMenu';
 import StatsPanel from '../SearchBar/StatsPanel';
 import TimelineModal from '../Timeline/TimelineModal';
+import PosterModal from '../Poster/PosterModal';
 import { useDialog } from '../useDialog';
 import {
-  BarChart2Icon, GitBranchIcon, HelpCircleIcon, MenuIcon, PlusIcon, Redo2Icon, SettingsIcon,
+  BarChart2Icon, GitBranchIcon, HelpCircleIcon, ImageIcon, MenuIcon, PlusIcon, Redo2Icon, SettingsIcon,
   ShareIcon, TimelineIcon, TreeIcon, Undo2Icon, UserPlusIcon,
 } from '../Icons';
 import './TopBar.css';
@@ -33,6 +34,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const [showStats, setShowStats] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [showPoster, setShowPoster] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -184,7 +186,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const openAddMember = () => dispatch({ type: 'OPEN_MEMBER_FORM', payload: { mode: 'add' } });
   const fromSheet = (action: () => void) => () => { setSheetOpen(false); action(); };
 
-  const treeActive = !state.relMode && !showStats && !showTimeline;
+  const treeActive = !state.relMode && !showStats && !showTimeline && !(showPoster && isAdmin);
   const menuProps = {
     isAdmin,
     signedIn: !!session,
@@ -220,6 +222,11 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         <button type="button" className="top-bar__view" aria-pressed={showTimeline} onClick={() => setShowTimeline(true)}>
           <TimelineIcon size={15} /><span className="top-bar__label">{t.menuTimeline}</span>
         </button>
+        {isAdmin && (
+          <button type="button" className="top-bar__view" aria-pressed={showPoster} onClick={() => setShowPoster(true)} title={t.posterTitle}>
+            <ImageIcon size={15} /><span className="top-bar__label">{t.viewPoster}</span>
+          </button>
+        )}
         <button ref={statsBtnRef} type="button" className="top-bar__view" aria-pressed={showStats} onClick={() => setShowStats(v => !v)} title={t.tooltipStats}>
           <BarChart2Icon size={15} /><span className="top-bar__label">{t.viewStats}</span>
         </button>
@@ -314,6 +321,11 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
               <button type="button" className="hdr-sheet__tile" onClick={fromSheet(() => setShowTimeline(true))}>
                 <TimelineIcon size={20} />{t.menuTimeline}
               </button>
+              {isAdmin && (
+                <button type="button" className="hdr-sheet__tile" onClick={fromSheet(() => setShowPoster(true))}>
+                  <ImageIcon size={20} />{t.viewPoster}
+                </button>
+              )}
               <button type="button" className="hdr-sheet__tile" onClick={fromSheet(() => setShowStats(true))}>
                 <BarChart2Icon size={20} />{t.viewStats}
               </button>
@@ -347,6 +359,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
       {showLogin && !session && <LoginModal onClose={() => setShowLogin(false)} />}
       {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} returnFocus={focusMenuTrigger} />}
       {showTimeline && <TimelineModal onClose={() => setShowTimeline(false)} returnFocus={focusMenuTrigger} />}
+      {showPoster && isAdmin && <PosterModal onClose={() => setShowPoster(false)} returnFocus={focusMenuTrigger} />}
     </header>
   );
 };

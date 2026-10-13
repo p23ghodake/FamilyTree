@@ -341,6 +341,15 @@ type Translations = {
   viewTree: string;
   viewTrace: string;
   viewStats: string;
+  viewPoster: string;
+  posterTitle: string;
+  posterNoRelatives: string;
+  posterStartFrom: string;
+  posterGenerations: string;
+  posterFit: string;
+  posterDownload: string;
+  posterDownloadHint: (width: number, height: number) => string;
+  posterFamilyName: (surname: string) => string;
   headerViews: string;
   headerAddMember: string;
   headerShareTree: string;
@@ -729,6 +738,15 @@ export const translations: Record<'en' | 'mr', Translations> = {
     viewTree: 'Tree',
     viewTrace: 'Trace',
     viewStats: 'Statistics',
+    viewPoster: 'Poster',
+    posterTitle: 'Family poster',
+    posterNoRelatives: 'No parents or children are recorded for this person yet.',
+    posterStartFrom: 'Start from',
+    posterGenerations: 'Generations',
+    posterFit: 'Fit to screen',
+    posterDownload: 'Download image',
+    posterDownloadHint: (width, height) => `High-resolution PNG (${width} × ${height} px)`,
+    posterFamilyName: surname => (surname ? `The ${surname} Family` : 'Our Family'),
     headerViews: 'Views',
     headerAddMember: 'Add member',
     headerShareTree: 'Share tree',
@@ -1116,6 +1134,15 @@ export const translations: Record<'en' | 'mr', Translations> = {
     viewTree: 'वृक्ष',
     viewTrace: 'नाते शोधा',
     viewStats: 'आकडेवारी',
+    viewPoster: 'पोस्टर',
+    posterTitle: 'कुटुंब पोस्टर',
+    posterNoRelatives: 'या व्यक्तीच्या पालकांची किंवा मुलांची अजून नोंद नाही.',
+    posterStartFrom: 'यांच्यापासून',
+    posterGenerations: 'पिढ्या',
+    posterFit: 'स्क्रीनवर बसवा',
+    posterDownload: 'प्रतिमा डाउनलोड करा',
+    posterDownloadHint: (width, height) => `उच्च रिझोल्यूशन PNG (${width} × ${height} px)`,
+    posterFamilyName: surname => (surname ? `${surname} परिवार` : 'आमचा परिवार'),
     headerViews: 'दृश्ये',
     headerAddMember: 'सदस्य जोडा',
     headerShareTree: 'वृक्ष शेअर करा',

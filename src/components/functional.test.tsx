@@ -95,6 +95,14 @@ it('shows reset only for admins and confirms the shared GitHub impact', () => {
   expect(context.resetData).toHaveBeenCalledTimes(1);
 });
 
+it('shows the poster view only to admins', () => {
+  const view = render(<TopBar />);
+  expect(screen.queryByRole('button', { name: t.viewPoster })).toBeNull();
+  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+  view.rerender(<TopBar />);
+  expect(screen.getByRole('button', { name: t.viewPoster })).toBeTruthy();
+});
+
 it('restores tree and viewport styles when PNG export fails', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
   (toPng as jest.Mock).mockRejectedValue(new Error('Image failed'));
