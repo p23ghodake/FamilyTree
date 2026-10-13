@@ -31,11 +31,11 @@ function loadSavedAvatarStyle(): AvatarStyle {
   try {
     const saved = localStorage.getItem(AVATAR_STYLE_KEY);
     if (
-      saved === 'initials' || saved === 'emoji' ||
+      saved === 'initials' || saved === 'emoji' || saved === 'silhouette' ||
       saved === 'silhouette-flat' || saved === 'silhouette-bold'
     ) return saved as AvatarStyle;
   } catch {}
-  return 'silhouette';
+  return 'emoji';
 }
 
 /** Strips computed/styling fields — produces raw format matching familyData.json */

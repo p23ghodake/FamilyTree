@@ -302,6 +302,7 @@ describe('header', () => {
   });
 
   it('groups display settings in one menu and hides admin tools from viewers', () => {
+    localStorage.setItem('app-lang', 'en');
     render(<LanguageProvider><TopBar /></LanguageProvider>);
     fireEvent.click(screen.getByRole('button', { name: en.settingsTitle }));
     const menu = screen.getByRole('dialog', { name: en.settingsTitle });
@@ -332,8 +333,7 @@ describe('header', () => {
 });
 
 describe('Marathi interface', () => {
-  it('translates sign-in and the login dialog', () => {
-    localStorage.setItem('app-lang', 'mr');
+  it('is the default and translates sign-in and the login dialog', () => {
     render(<LanguageProvider><TopBar /></LanguageProvider>);
     expect(screen.queryByText('Sign in')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: mr.authSignIn }));
