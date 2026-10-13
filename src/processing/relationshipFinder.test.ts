@@ -603,12 +603,37 @@ describe('Marathi labels — distant relatives', () => {
     });
   });
 
-  it('keeps cousins two or more generations apart as Cousin', () => {
-    const all = [m('k_ca'), m('k_a1'), m('k_a2'), m('k_a3'), m('k_src', 'male'), m('k_b1'), m('k_tgt')];
+  it('names cousins two generations apart by generation', () => {
+    const all = [m('k_ca'), m('k_a1'), m('k_a2'), m('k_a3'), m('k_src', 'male'), m('k_b1'), m('k_tgt', 'female')];
     const rels = parentChildRels([
       ['k_ca', 'k_a1'], ['k_a1', 'k_a2'], ['k_a2', 'k_a3'], ['k_a3', 'k_src'], ['k_ca', 'k_b1'], ['k_b1', 'k_tgt'],
     ]);
-    expect(computeRelationship('k_src', 'k_tgt', all, rels)).toMatchObject({ label: 'Cousin', labelMr: 'चुलत भाऊ' });
+    expect(computeRelationship('k_src', 'k_tgt', all, rels)).toMatchObject({ label: 'Great-nephew', labelMr: 'चुलत नातू' });
+    expect(computeRelationship('k_tgt', 'k_src', all, rels)).toMatchObject({ label: 'Great-aunt', labelMr: 'चुलत आजी' });
+  });
+
+  describe('cousin line two generations apart, through a marriage (Nirved / Priyanka shape)', () => {
+    // ca → s1 → s2 → s3 → s4 → nirved;  ca → t1 → t2 → yash ♡ priyanka
+    const all = [
+      m('v_ca', 'male'), m('v_s1', 'male'), m('v_s2', 'male'), m('v_s3', 'male'), m('v_s4', 'male'), m('nirved', 'male'),
+      m('v_t1', 'male'), m('v_t2', 'male'), m('yash', 'male'), m('priyanka', 'female'),
+    ];
+    const rels = combinedRels(
+      [['v_ca', 'v_s1'], ['v_s1', 'v_s2'], ['v_s2', 'v_s3'], ['v_s3', 'v_s4'], ['v_s4', 'nirved'],
+       ['v_ca', 'v_t1'], ['v_t1', 'v_t2'], ['v_t2', 'yash']],
+      [['yash', 'priyanka']],
+    );
+    const r = (a: string, b: string) => computeRelationship(a, b, all, rels);
+
+    it('names the blood tie great-uncle / great-nephew', () => {
+      expect(r('yash', 'nirved')).toMatchObject({ label: 'Great-uncle', labelMr: 'चुलत आजोबा' });
+      expect(r('nirved', 'yash')).toMatchObject({ label: 'Great-nephew', labelMr: 'चुलत नातू' });
+    });
+
+    it('names the spouse great-aunt by marriage instead of cousin-in-law', () => {
+      expect(r('priyanka', 'nirved')).toMatchObject({ label: 'Great-aunt by marriage', labelMr: 'चुलत आजी' });
+      expect(r('nirved', 'priyanka')).toMatchObject({ label: 'Great-nephew by marriage', labelMr: 'चुलत नातू' });
+    });
   });
 
   it('3rd cousin is a plain cousin (same level, unknown gender)', () => {
