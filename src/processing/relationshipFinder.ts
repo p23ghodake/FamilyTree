@@ -439,8 +439,10 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
         const uncle = uncleMr(genderAt(after, 0), g);
         if (uncle && word) return `${word}${FEMININE_ELDERS.has(uncle) ? 'ची' : 'चे'} ${uncle}`;
       }
-      if (a.up === 2 && a.down === 2 && word && g !== 'unknown') {
-        const cousin = `${cousinPrefix(genderAt(after, 0), genderAt(after, 2))} ${pick(g, 'भाऊ', 'बहीण', '')}`;
+      if (a.up === a.down && a.up >= 2 && word && g !== 'unknown') {
+        // Only first cousins carry the side-specific prefix; wider cousins are plain चुलत, as in bloodMr.
+        const prefix = a.up === 2 ? cousinPrefix(genderAt(after, 0), genderAt(after, 2)) : 'चुलत';
+        const cousin = `${prefix} ${pick(g, 'भाऊ', 'बहीण', '')}`;
         return `${word}${pick(g, 'चा', 'ची', '')} ${cousin}`;
       }
       return BY_MARRIAGE_MR;
@@ -481,8 +483,8 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
         return RELATIVE_MR;
       }
       if (b.down >= 2 && b.up >= b.down + 2) return distantMr(b.up - b.down, g);
-      if (b.up === 2 && b.down === 2) {
-        const prefix = cousinPrefix(genderAt(before, 0), genderAt(before, 2));
+      if (b.up === b.down && b.up >= 2) {
+        const prefix = b.up === 2 ? cousinPrefix(genderAt(before, 0), genderAt(before, 2)) : 'चुलत';
         if (X === 'male' && g === 'female') return `${prefix} वहिनी`;
         if (X === 'female' && g === 'male') return `${prefix} मेव्हणा`;
       }

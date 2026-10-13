@@ -634,6 +634,11 @@ describe('Marathi labels — distant relatives', () => {
       expect(r('priyanka', 'nirved')).toMatchObject({ label: 'Great-aunt by marriage', labelMr: 'चुलत आजी' });
       expect(r('nirved', 'priyanka')).toMatchObject({ label: 'Great-nephew by marriage', labelMr: 'चुलत नातू' });
     });
+
+    it('names a wider same-generation cousin\'s wife चुलत वहिनी', () => {
+      expect(r('priyanka', 'v_s3')).toMatchObject({ label: 'Cousin-in-law', labelMr: 'चुलत वहिनी' });
+      expect(r('v_s3', 'priyanka')).toMatchObject({ label: 'Cousin-in-law', labelMr: 'पतीचा चुलत भाऊ' });
+    });
   });
 
   it('3rd cousin is a plain cousin (same level, unknown gender)', () => {
