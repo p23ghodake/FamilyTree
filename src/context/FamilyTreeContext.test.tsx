@@ -157,6 +157,14 @@ it('opens raw and legacy processed shared snapshots without saving', async () =>
   expect(context.currentTree?.members).toHaveLength(2);
 });
 
+it('shows share links in the limited view to visitors who are not signed in', async () => {
+  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false });
+  (getFamilyData as jest.Mock).mockReturnValue(new Promise(() => {}));
+  render(<FamilyTreeProvider><Probe /></FamilyTreeProvider>);
+  act(() => expect(context.loadSharedData(JSON.stringify(rawData))).toBe(true));
+  expect(context.limitedView).toBe(true);
+});
+
 it('does not replace a shared snapshot with a late cloud response', async () => {
   let finishLoad!: (response: unknown) => void;
   (getFamilyData as jest.Mock).mockReturnValue(new Promise(resolve => { finishLoad = resolve; }));

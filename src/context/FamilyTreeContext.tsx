@@ -600,7 +600,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   // Everyone loads through the family-data function; visitors receive a limited, read-only view.
   useEffect(() => {
     if (authLoading) return;
-    if (sharedPreviewRef.current) return;
+    if (sharedPreviewRef.current) {
+      setLimitedView(!session);
+      return;
+    }
     conflictGenerationRef.current += 1;
     let active = true;
 
@@ -744,6 +747,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       conflictGenerationRef.current += 1;
       canEditRef.current = false;
       setCanEdit(false);
+      setLimitedView(!session);
       shaRef.current = null;
       setCloudReadyState(false);
       setCloudError(null);
@@ -754,7 +758,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       toast.error(tRef.current.shareOpenFailed(error instanceof Error ? error.message : 'Invalid data.'), { id: 'share-load' });
       return false;
     }
-  }, [setCloudReadyState]);
+  }, [session, setCloudReadyState]);
 
   const importData = useCallback((jsonStr: string) => {
     let parsed: unknown;
