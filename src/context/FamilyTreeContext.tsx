@@ -107,10 +107,10 @@ export const DEFAULT_FILTERS: AdvancedFilters = {
   occupation: '',
   gender: 'all',
   marriageEligible: false,
-  hideFemale: true,
+  hideFemale: false,
 };
 
-export const NO_FILTERS: AdvancedFilters = { ...DEFAULT_FILTERS, hideFemale: false };
+export const NO_FILTERS: AdvancedFilters = DEFAULT_FILTERS;
 
 export function isFiltersActive(f: AdvancedFilters): boolean {
   return f.livingOnly || f.location !== '' || f.occupation !== '' || f.gender !== 'all' || f.marriageEligible;

@@ -51,10 +51,10 @@ beforeEach(() => {
   (saveFamilyData as jest.Mock).mockResolvedValue('saved');
 });
 
-it('starts with Hide females on and lets Clear switch every filter off', async () => {
+it('starts with Hide females off and lets Clear switch every filter off', async () => {
   await mountEditor();
-  expect(context.state.advancedFilters.hideFemale).toBe(true);
-  act(() => context.dispatch({ type: 'SET_ADVANCED_FILTER', payload: { livingOnly: true } }));
+  expect(context.state.advancedFilters.hideFemale).toBe(false);
+  act(() => context.dispatch({ type: 'SET_ADVANCED_FILTER', payload: { livingOnly: true, hideFemale: true } }));
   act(() => context.dispatch({ type: 'CLEAR_ADVANCED_FILTERS' }));
   expect(context.state.advancedFilters).toEqual(NO_FILTERS);
   expect(NO_FILTERS.hideFemale).toBe(false);
