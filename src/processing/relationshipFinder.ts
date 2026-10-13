@@ -264,13 +264,15 @@ function labelEn(dirs: StepType[], g: Gender): { label: string; kind: LabelKind 
       // Source is married to Y, a blood relative of the target.
       if (b.up === 0) return { label: stepLabel(bloodLabelEn(0, b.down, g)), kind: 'step' };
       const rel = bloodLabelEn(b.up, b.down, g);
-      return { label: b.up === 1 && b.down >= 2 ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
+      const uncle = (b.up === 1 && b.down >= 2) || (b.up >= 2 && b.down === b.up + 1);
+      return { label: uncle ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
     }
     if (isEmpty(b)) {
       // The target is married to X, a blood relative of the source.
       if (a.down === 0) return { label: stepLabel(bloodLabelEn(a.up, 0, g)), kind: 'step' };
       const rel = bloodLabelEn(a.up, a.down, g);
-      return { label: a.up >= 2 && a.down === 1 ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
+      const nephew = (a.up >= 2 && a.down === 1) || (a.down >= 2 && a.up === a.down + 1);
+      return { label: nephew ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
     }
     if (a.down === 0 || b.up === 0) {
       return { label: stepLabel(bloodLabelEn(a.up + b.up, a.down + b.down, g)), kind: 'step' };
@@ -416,7 +418,8 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
         if (Y === 'female') return pick(g, 'मेव्हणा', 'मेव्हणी', RELATIVE_MR);
         return pick(g, 'दीर/मेव्हणा', 'नणंद/मेव्हणी', RELATIVE_MR);
       }
-      if (a.up === 1 && a.down === 2) return nephewMr(Y, genderAt(after, 1), g);
+      // Spouse's nephew/niece, or spouse's cousin's child.
+      if (a.up >= 1 && a.down === a.up + 1) return nephewMr(Y, genderAt(after, a.up + a.down - 2), g);
       const word = spouseWord(Y);
       if (a.up === 2 && a.down === 1) {
         const uncle = uncleMr(genderAt(after, 0), g);
@@ -444,7 +447,8 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
         const SPOUSE_OF: Record<string, string> = { 'पुतण्या': 'पुतणसून', 'पुतणी': 'पुतणजावई', 'भाचा': 'भाचेसून', 'भाची': 'भाचेजावई' };
         return SPOUSE_OF[nephewMr(tg, genderAt(before, 1), X)] ?? BY_MARRIAGE_MR;
       }
-      if (b.up === 2 && b.down === 1) {
+      // Spouse of the target's uncle/aunt, or of a parent's cousin.
+      if (b.down >= 1 && b.up === b.down + 1) {
         const parent = genderAt(before, 0);
         if (parent === 'male') {
           if (X === 'male') return g === 'female' ? 'काकू' : g === 'male' ? 'काकूंचे पती' : 'काकू';

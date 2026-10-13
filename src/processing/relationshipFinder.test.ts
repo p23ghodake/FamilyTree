@@ -743,7 +743,7 @@ describe('Relationship audit fixes', () => {
     m('mama', 'male'), m('late', 'female'),
     m('me', 'male'), m('me_f', 'female'), m('bro', 'male'), m('sis', 'female'), m('ex', 'female'),
     m('bro_son', 'male'), m('bro_son_w', 'female'), m('bro_son_son', 'male'), m('sis_son', 'male'),
-    m('cousin', 'male'), m('cousin_w', 'female'),
+    m('cousin', 'male'), m('cousin_w', 'female'), m('cousin_son', 'male'),
     m('w', 'female'), m('wp', 'male'), m('wgp', 'male'),
     m('son', 'male'), m('dil', 'female'), m('dilp', 'male'), m('dilm', 'female'),
     m('stepgm', 'female'), m('half', 'male'), m('mom2', 'female'),
@@ -754,7 +754,7 @@ describe('Relationship audit fixes', () => {
     ['gp', 'dad'], ['gm', 'dad'], ['gp', 'kaka'], ['gm', 'kaka'], ['gp', 'aatya'], ['gm', 'aatya'],
     ['mgp', 'mom'], ['mgp', 'mama'],
     ['dad', 'me'], ['mom', 'me'], ['dad', 'me_f'], ['mom', 'me_f'], ['dad', 'bro'], ['mom', 'bro'], ['dad', 'sis'], ['mom', 'sis'],
-    ['bro', 'bro_son'], ['bro_son', 'bro_son_son'], ['sis', 'sis_son'], ['kaka', 'cousin'], ['kaku', 'cousin'],
+    ['bro', 'bro_son'], ['bro_son', 'bro_son_son'], ['sis', 'sis_son'], ['kaka', 'cousin'], ['kaku', 'cousin'], ['cousin', 'cousin_son'],
     ['wgp', 'wp'], ['wp', 'w'], ['me', 'son'], ['w', 'son'], ['dilp', 'dil'], ['dilm', 'dil'],
     ['dad', 'half'], ['mom2', 'half'], ['lonely', 'kid'], ['solo', 'kid'],
   ];
@@ -777,6 +777,11 @@ describe('Relationship audit fixes', () => {
     expect(r('atoba', 'me')).toMatchObject({ label: 'Uncle by marriage', labelMr: 'आतोबा' });
     expect(r('me', 'kaku')).toMatchObject({ label: 'Nephew by marriage', labelMr: 'पुतण्या' });
     expect(r('me', 'atoba')).toMatchObject({ label: 'Nephew by marriage', labelMr: 'भाचा' });
+  });
+
+  it('names a cousin\'s child and the cousin\'s uncle\'s wife by marriage', () => {
+    expect(r('w', 'cousin_son')).toMatchObject({ label: 'Aunt by marriage', labelMr: 'काकू' });
+    expect(r('cousin_son', 'w')).toMatchObject({ label: 'Nephew by marriage', labelMr: 'पुतण्या' });
   });
 
   it('names co-parents-in-law व्याही and विहीण', () => {
