@@ -201,14 +201,11 @@
   gap: 8px;
 }
 
-.relationship-panel__names {
-  font-size: 0.825rem;
+.relationship-panel__sentence {
+  margin: -4px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
   color: var(--text-secondary);
-}
-
-.relationship-panel__is {
-  color: var(--text-muted);
-  margin: 0 2px;
 }
 
 .relationship-panel__label {

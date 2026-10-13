@@ -12,6 +12,8 @@ import TopBar from './Layout/TopBar';
 import MemberFormModal from './TreeView/MemberFormModal';
 import { PhotoUploadSection } from './TreeView/PhotoUploadSection';
 import TourOverlay from './Tour/TourOverlay';
+import RelationshipPanel from './TreeView/RelationshipPanel';
+import { computeRelationship } from '../processing/relationshipFinder';
 
 jest.mock('../context/FamilyTreeContext', () => ({
   ...jest.requireActual('../context/FamilyTreeContext'), useFamilyTree: jest.fn(),
@@ -370,6 +372,18 @@ describe('sign-in dialog', () => {
     expect(screen.getByLabelText(en.loginPassword).getAttribute('aria-invalid')).toBe('true');
     fireEvent.change(screen.getByLabelText(en.loginPassword), { target: { value: 'right' } });
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('relationship tracer', () => {
+  it('states the result as a sentence', () => {
+    const tree = context.currentTree!;
+    context.state = { ...context.state, relMode: true, relSource: 'parent', relTarget: 'child' };
+    context.relResult = computeRelationship('parent', 'child', tree.members, tree.relationships);
+    render(<RelationshipPanel />);
+    expect(screen.getByText('Father')).toBeTruthy();
+    expect(screen.getByText("Ravi is Anil's father.")).toBeTruthy();
+    expect(screen.getByText(en.tracerHops(1))).toBeTruthy();
   });
 });
 

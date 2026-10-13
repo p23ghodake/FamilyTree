@@ -1,5 +1,7 @@
 import { StyledFamilyMember, StyledRelationships } from '../types/FamilyTypes';
 
+type Gender = 'male' | 'female' | 'unknown';
+
 // ─── Build bidirectional adjacency map ───
 
 function buildAdjacency(
@@ -63,14 +65,7 @@ export function findRelationshipPath(
   return bloodPath(sourceId, targetId, members, relationships) ?? bfsPath(sourceId, targetId, full);
 }
 
-// Shortest true blood path: climb to a common ancestor, then descend.
-// Paths that go down and back up (e.g. through a shared child) are not blood ties.
-function bloodPath(
-  sourceId: string,
-  targetId: string,
-  members: StyledFamilyMember[],
-  relationships: StyledRelationships
-): string[] | null {
+function parentChildMaps(members: StyledFamilyMember[], relationships: StyledRelationships) {
   const parentsOf = new Map<string, Set<string>>();
   const childrenOf = new Map<string, Set<string>>();
   const link = (p: string, c: string) => {
@@ -84,6 +79,18 @@ function bloodPath(
     (mb.parentIds ?? []).forEach(pid => link(pid, mb.id));
     (mb.childrenIds ?? []).forEach(cid => link(mb.id, cid));
   });
+  return { parentsOf, childrenOf };
+}
+
+// Shortest true blood path: climb to a common ancestor, then descend.
+// Paths that go down and back up (e.g. through a shared child) are not blood ties.
+function bloodPath(
+  sourceId: string,
+  targetId: string,
+  members: StyledFamilyMember[],
+  relationships: StyledRelationships
+): string[] | null {
+  const { parentsOf, childrenOf } = parentChildMaps(members, relationships);
 
   // State key: id + phase (0 = may still climb, 1 = descending only)
   const key = (id: string, phase: number) => `${id}|${phase}`;
@@ -168,188 +175,121 @@ function getStepType(
   return 'spouse';
 }
 
-// ─── Build hop metadata ───
+// ─── Shared helpers ───
+//
+// Every label answers "SOURCE is TARGET's ___", so gendered words use the source's gender.
 
-function buildHopsMeta(
-  path: string[],
-  directions: StepType[],
-  memberMap: Map<string, StyledFamilyMember>
-): HopMeta[] {
-  return directions.map((dir, i) => ({
-    fromId: path[i],
-    toId: path[i + 1],
-    dir,
-    fromGender: memberMap.get(path[i])?.gender ?? 'unknown',
-    toGender: memberMap.get(path[i + 1])?.gender ?? 'unknown',
-  }));
+const pick = (g: Gender, male: string, female: string, other: string) =>
+  g === 'male' ? male : g === 'female' ? female : other;
+
+const countSteps = (dirs: StepType[]) => ({
+  up: dirs.filter(d => d === 'up').length,
+  down: dirs.filter(d => d === 'down').length,
+});
+
+/** Blood ties climb to a common ancestor and then descend; going down and back up is not one. */
+function isBloodShape(dirs: StepType[]): boolean {
+  const firstDown = dirs.indexOf('down');
+  return firstDown === -1 || !dirs.slice(firstDown).includes('up');
 }
 
-// ─── Ordinal helper ───
+function splitAtSpouses(dirs: StepType[]): StepType[][] {
+  const segments: StepType[][] = [[]];
+  dirs.forEach(d => (d === 'spouse' ? segments.push([]) : segments[segments.length - 1].push(d)));
+  return segments;
+}
+
+// ─── English labels ───
+
+type LabelKind = 'blood' | 'spouse' | 'step' | 'inLaw' | 'other';
+
+const BY_MARRIAGE_EN = 'Relative by marriage';
 
 function ordinal(n: number): string {
-  if (n === 1) return '1st';
-  if (n === 2) return '2nd';
-  if (n === 3) return '3rd';
-  return `${n}th`;
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 }
 
-// ─── Blood relationship label ───
-
-function bloodRelationship(ups: number, downs: number, male: boolean, female: boolean): string {
-  if (ups === 0 && downs === 0) return 'Same person';
-
-  if (downs === 0) {
-    if (ups === 1) return male ? 'Father' : female ? 'Mother' : 'Parent';
-    if (ups === 2) return male ? 'Grandfather' : female ? 'Grandmother' : 'Grandparent';
-    const prefix = Array(ups - 2).fill('Great-').join('');
-    return `${prefix}${male ? 'Grandfather' : female ? 'Grandmother' : 'Grandparent'}`;
-  }
-
-  if (ups === 0) {
-    if (downs === 1) return male ? 'Son' : female ? 'Daughter' : 'Child';
-    if (downs === 2) return male ? 'Grandson' : female ? 'Granddaughter' : 'Grandchild';
-    const prefix = Array(downs - 2).fill('Great-').join('');
-    return `${prefix}${male ? 'Grandson' : female ? 'Granddaughter' : 'Grandchild'}`;
-  }
-
-  if (ups === 1 && downs === 1) return male ? 'Brother' : female ? 'Sister' : 'Sibling';
-  if (ups === 2 && downs === 1) return male ? 'Uncle' : female ? 'Aunt' : 'Uncle/Aunt';
-  if (ups === 1 && downs === 2) return male ? 'Nephew' : female ? 'Niece' : 'Nephew/Niece';
-  if (ups === 3 && downs === 1) return male ? 'Great-uncle' : female ? 'Great-aunt' : 'Great-uncle/Aunt';
-  if (ups === 1 && downs === 3) return male ? 'Great-nephew' : female ? 'Great-niece' : 'Great-nephew/Niece';
-
-  // Cousin calculation
-  const min = Math.min(ups, downs);
-  const max = Math.max(ups, downs);
-  if (min >= 2) {
-    const level = min - 1;
-    const removed = max - min;
-    const ord = ordinal(level);
-    return removed === 0 ? `${ord} cousin` : `${ord} cousin ${removed}x removed`;
-  }
-
-  return `Relative (${ups}↑ ${downs}↓)`;
+/** "", "great-", "great-great-", then "3rd great-", "4th great-" … */
+function greats(n: number): string {
+  if (n <= 0) return '';
+  if (n <= 2) return 'great-'.repeat(n);
+  return `${ordinal(n)} great-`;
 }
 
-// ─── Full label from direction sequence ───
-//
-// The display reads "Source is Target's [label]", so every gender-specific
-// term must reflect SOURCE's gender, not the target's.
-//
-// bloodRelationship(ups, downs) treats:
-//   ups   = generations SOURCE is ABOVE target  → path direction is DOWN
-//   downs = generations SOURCE is BELOW target  → path direction is UP
-// so the raw path UP/DOWN counts must be swapped when passed to bloodRelationship.
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const lowerFirst = (s: string) => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
 
-function labelFromDirections(
-  directions: StepType[],
-  sourceGender: 'male' | 'female' | 'unknown'
-): string {
-  const m = sourceGender === 'male';
-  const f = sourceGender === 'female';
-
-  // ── Direct spouse ──────────────────────────────────────────────────────────
-  if (directions.length === 1 && directions[0] === 'spouse') {
-    return m ? 'Husband' : f ? 'Wife' : 'Spouse';
-  }
-
-  const hasSpouse = directions.includes('spouse');
-
-  // ── Pure blood (no marriage step in path) ─────────────────────────────────
-  if (!hasSpouse) {
-    const pathUps   = directions.filter(d => d === 'up').length;
-    const pathDowns = directions.filter(d => d === 'down').length;
-    // Swap: path-downs = source above target, path-ups = source below target
-    return bloodRelationship(pathDowns, pathUps, m, f);
-  }
-
-  // ── Path contains a marriage step ─────────────────────────────────────────
-  //
-  // Split at the FIRST spouse step:
-  //   before = blood path from source to the "bridge" person
-  //   after  = steps from bridge's spouse onward to target
-  //
-  // A trailing spouse in 'after' means the target is the blood-relative's
-  // spouse (e.g. [spouse, up, spouse] = son/daughter-in-law).
-  // This is semantically different from [spouse, down, spouse] = parent-in-law,
-  // so we track the trailing spouse separately rather than stripping it blindly.
-  const spouseIdx = directions.findIndex(d => d === 'spouse');
-  const before = directions.slice(0, spouseIdx);
-  const after  = directions.slice(spouseIdx + 1);
-
-  const bU = before.filter(d => d === 'up').length;
-  const bD = before.filter(d => d === 'down').length;
-  const beforeHasSpouse = before.includes('spouse');
-
-  const trailingSpouse = after.length > 0 && after[after.length - 1] === 'spouse';
-  const afterCore = trailingSpouse ? after.slice(0, -1) : after;
-  const aU = afterCore.filter(d => d === 'up').length;
-  const aD = afterCore.filter(d => d === 'down').length;
-  const afterCoreHasSpouse = afterCore.includes('spouse');
-
-  // Handle clean patterns (no additional spouse hops mid-path)
-  if (!beforeHasSpouse && !afterCoreHasSpouse) {
-
-    // ── Spouse at end: Source → blood → [spouse] → Target ─────────────────
-    // 'after' is empty (target is directly the person married to the bridge).
-    if (aU === 0 && aD === 0 && !trailingSpouse) {
-      // [down, spouse]   → source's child's spouse   → Father/Mother-in-law
-      if (bU === 0 && bD === 1) return m ? 'Father-in-law' : f ? 'Mother-in-law' : 'Parent-in-law';
-      // [up, spouse]     → source's parent's spouse  → source is step-child
-      if (bU === 1 && bD === 0) return m ? 'Step-son'       : f ? 'Step-daughter'  : 'Step-child';
-      // [up, down, spouse] → source's sibling's spouse → sibling-in-law
-      if (bU === 1 && bD === 1) return m ? 'Brother-in-law' : f ? 'Sister-in-law'   : 'Sibling-in-law';
-      // [down, down, spouse] → grandchild's spouse
-      if (bU === 0 && bD === 2) return m ? 'Grandfather-in-law' : f ? 'Grandmother-in-law' : 'Grandparent-in-law';
-      // Generic fallback
-      const base = bloodRelationship(bD, bU, false, false);
-      return `${base}'s ${m ? 'Husband' : f ? 'Wife' : 'Spouse'}`;
-    }
-
-    // ── Spouse at start: Source → [spouse] → blood → Target ───────────────
-    // Source connects via their own spouse; 'afterCore' is the blood path from
-    // source's spouse to target (trailing spouse already stripped above).
-    if (bU === 0 && bD === 0) {
-      // [spouse, up] / [spouse, up, spouse]
-      // Source's spouse's parent → source is child-in-law
-      if (aU === 1 && aD === 0) return m ? 'Son-in-law'   : f ? 'Daughter-in-law' : 'Child-in-law';
-      // [spouse, down, spouse]
-      // Source's spouse's child's spouse → source is parent-in-law
-      if (trailingSpouse && aU === 0 && aD === 1) return m ? 'Father-in-law' : f ? 'Mother-in-law' : 'Parent-in-law';
-      // [spouse, down]
-      // Source's spouse's child (no further hop) → source is step-parent
-      if (!trailingSpouse && aU === 0 && aD === 1) return m ? 'Step-father' : f ? 'Step-mother' : 'Step-parent';
-      // [spouse, up, up] / [spouse, up, up, spouse] → grandchild-in-law
-      if (aU === 2 && aD === 0) return m ? 'Grandson-in-law' : f ? 'Granddaughter-in-law' : 'Grandchild-in-law';
-      // [spouse, up, down] / [spouse, up, down, spouse]
-      // Source's spouse's sibling → sibling-in-law
-      if (aU === 1 && aD === 1) return m ? 'Brother-in-law' : f ? 'Sister-in-law' : 'Sibling-in-law';
-      // Generic fallback
-      const rel = bloodRelationship(aD, aU, m, f);
-      return `Spouse's ${rel}`;
-    }
-
-    // ── Spouse in middle: blood → [spouse] → blood ─────────────────────────
-    // [up, spouse, down] → step-sibling (source's parent's new-spouse's child)
-    if (bU === 1 && bD === 0 && aU === 0 && aD === 1 && !trailingSpouse) {
-      return m ? 'Step-brother' : f ? 'Step-sister' : 'Step-sibling';
-    }
-    // [down, spouse, up] → source's child-in-law's parent → no common term, fall through
-  }
-
-  // Generic in-law fallback
-  const baseRel = bloodRelationship(bD + aD, bU + aU, m, f);
-  return `${baseRel}-in-law`;
+function removedText(n: number): string {
+  return n === 1 ? 'once removed' : n === 2 ? 'twice removed' : `${n} times removed`;
 }
 
-// ─── Marathi ordinal helper ───
+/** What the source is when it climbs `up` generations to a common ancestor and the target is `down` below it. */
+function bloodLabelEn(up: number, down: number, g: Gender): string {
+  if (up === 0 && down === 0) return 'Same person';
+  if (up === 0) {
+    return down === 1
+      ? pick(g, 'Father', 'Mother', 'Parent')
+      : capitalize(greats(down - 2) + pick(g, 'grandfather', 'grandmother', 'grandparent'));
+  }
+  if (down === 0) {
+    return up === 1
+      ? pick(g, 'Son', 'Daughter', 'Child')
+      : capitalize(greats(up - 2) + pick(g, 'grandson', 'granddaughter', 'grandchild'));
+  }
+  if (up === 1 && down === 1) return pick(g, 'Brother', 'Sister', 'Sibling');
+  if (up === 1) return capitalize(greats(down - 2) + pick(g, 'uncle', 'aunt', 'uncle/aunt'));
+  if (down === 1) return capitalize(greats(up - 2) + pick(g, 'nephew', 'niece', 'nephew/niece'));
+  const level = Math.min(up, down) - 1;
+  const removed = Math.abs(up - down);
+  return `${ordinal(level)} cousin${removed ? ` ${removedText(removed)}` : ''}`;
+}
 
-function marathiOrdinal(n: number): string {
-  const map: Record<number, string> = {
-    1: 'पहिले', 2: 'दुसरे', 3: 'तिसरे', 4: 'चौथे', 5: 'पाचवे',
-    6: 'सहावे', 7: 'सातवे', 8: 'आठवे', 9: 'नववे', 10: 'दहावे',
-  };
-  return map[n] ?? `${n}वे`;
+function stepLabel(label: string): string {
+  return /^(Father|Mother|Parent|Son|Daughter|Child|Brother|Sister|Sibling)$/.test(label)
+    ? `Step${label.toLowerCase()}`
+    : `Step-${lowerFirst(label)}`;
+}
+
+function labelEn(dirs: StepType[], g: Gender): { label: string; kind: LabelKind } {
+  const segments = splitAtSpouses(dirs);
+  if (!segments.every(isBloodShape)) return { label: 'Relative', kind: 'other' };
+  const counts = segments.map(countSteps);
+  const isEmpty = (c: { up: number; down: number }) => c.up + c.down === 0;
+
+  if (segments.length === 1) return { label: bloodLabelEn(counts[0].up, counts[0].down, g), kind: 'blood' };
+
+  if (segments.length === 2) {
+    const [a, b] = counts; // a: source → X, then X is married to Y, b: Y → target
+    if (isEmpty(a) && isEmpty(b)) return { label: pick(g, 'Husband', 'Wife', 'Spouse'), kind: 'spouse' };
+    if (isEmpty(a)) {
+      // Source is married to Y, a blood relative of the target.
+      if (b.up === 0) return { label: stepLabel(bloodLabelEn(0, b.down, g)), kind: 'step' };
+      const rel = bloodLabelEn(b.up, b.down, g);
+      return { label: b.up === 1 && b.down >= 2 ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
+    }
+    if (isEmpty(b)) {
+      // The target is married to X, a blood relative of the source.
+      if (a.down === 0) return { label: stepLabel(bloodLabelEn(a.up, 0, g)), kind: 'step' };
+      const rel = bloodLabelEn(a.up, a.down, g);
+      return { label: a.up >= 2 && a.down === 1 ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
+    }
+    if (a.down === 0 || b.up === 0) {
+      return { label: stepLabel(bloodLabelEn(a.up + b.up, a.down + b.down, g)), kind: 'step' };
+    }
+    if (a.up === 0 && a.down === 1 && b.up === 1 && b.down === 0) {
+      return { label: pick(g, 'Co-father-in-law', 'Co-mother-in-law', 'Co-parent-in-law'), kind: 'inLaw' };
+    }
+  }
+
+  if (segments.length === 3 && isEmpty(counts[0]) && isEmpty(counts[2])) {
+    const mid = counts[1]; // source's spouse → mid → target's spouse
+    if (mid.up === 1 && mid.down === 1) return { label: `${pick(g, 'Brother', 'Sister', 'Sibling')}-in-law`, kind: 'inLaw' };
+    if (mid.up === 0 && mid.down === 1) return { label: `${pick(g, 'Father', 'Mother', 'Parent')}-in-law`, kind: 'inLaw' };
+  }
+
+  return { label: BY_MARRIAGE_EN, kind: 'other' };
 }
 
 // ─── Exported Marathi kinship types ───
@@ -358,8 +298,8 @@ export type HopMeta = {
   fromId: string;
   toId: string;
   dir: 'up' | 'down' | 'spouse';
-  fromGender: 'male' | 'female' | 'unknown';
-  toGender: 'male' | 'female' | 'unknown';
+  fromGender: Gender;
+  toGender: Gender;
 };
 
 export interface MarathiKinshipConfig {
@@ -372,196 +312,215 @@ export const DEFAULT_MARATHI_CONFIG: MarathiKinshipConfig = {
   useMaavsaForMaavshiHusband: true,
 };
 
-// ─── Marathi label from reversed hop sequence (target→source perspective) ───
+// ─── Marathi labels ───
+//
+// Marathi terms depend on the target's side of the family, so they are worked out from the
+// reversed hops (target → source); the word itself still describes the source.
 
-function labelFromDirectionsMr(
-  hopsReversed: HopMeta[],
-  sourceGender: 'male' | 'female' | 'unknown',
-  config: MarathiKinshipConfig = DEFAULT_MARATHI_CONFIG
-): string {
-  const m = sourceGender === 'male';
-  const f = sourceGender === 'female';
-  const dirs = hopsReversed.map(h => h.dir);
-  const key = dirs.join(',');
+const RELATIVE_MR = 'नातेवाईक';
+const BY_MARRIAGE_MR = 'लग्नामुळे नातेवाईक';
+const FEMININE_ELDERS = new Set(['आत्या', 'मावशी']);
 
+function marathiOrdinal(n: number, g: Gender): string {
+  const stems = ['पहिल', 'दुसर', 'तिसर', 'चौथ', 'पाचव', 'सहाव', 'सातव', 'आठव', 'नवव', 'दहाव'];
+  return (stems[n - 1] ?? `${n}व`) + pick(g, 'ा', 'ी', 'े');
+}
+
+/** Source's term as an uncle/aunt, given the gender of the parent they are a sibling of. */
+function uncleMr(siblingOfGender: Gender, g: Gender): string | null {
+  if (g === 'unknown') return null;
+  if (siblingOfGender === 'male') return pick(g, 'काका', 'आत्या', '');
+  if (siblingOfGender === 'female') return pick(g, 'मामा', 'मावशी', '');
+  return null;
+}
+
+/** Source's term as a nephew/niece of `elder`, through the elder's sibling. */
+function nephewMr(elder: Gender, sibling: Gender, g: Gender): string {
+  if (sibling === 'male' && elder === 'male') return pick(g, 'पुतण्या', 'पुतणी', 'पुतण्या/पुतणी');
+  if (sibling === 'female' || elder === 'female') return pick(g, 'भाचा', 'भाची', 'भाचा/भाची');
+  return pick(g, 'पुतण्या/भाचा', 'पुतणी/भाची', RELATIVE_MR);
+}
+
+function cousinPrefix(targetParent: Gender, auntOrUncle: Gender): string {
+  if (targetParent === 'female') return auntOrUncle === 'female' ? 'मावस' : 'मामे';
+  if (targetParent === 'male' && auntOrUncle === 'female') return 'आत्ये';
+  return 'चुलत';
+}
+
+const genderAt = (hops: HopMeta[], i: number): Gender => hops[i]?.toGender ?? 'unknown';
+const spouseWord = (g: Gender) => (g === 'male' ? 'पती' : g === 'female' ? 'पत्नी' : null);
+
+function bloodMr(hr: HopMeta[], g: Gender, tg: Gender): string {
+  const { up: U, down: D } = countSteps(hr.map(h => h.dir));
+
+  if (D === 0) {
+    if (U === 1) return pick(g, 'वडील', 'आई', 'पालक');
+    if (U === 2) return pick(g, 'आजोबा', 'आजी', 'आजोबा/आजी');
+    if (U === 3) return pick(g, 'पणजोबा', 'पणजी', 'पणजोबा/पणजी');
+    if (U === 4) return pick(g, 'खापरपणजोबा', 'खापरपणजी', 'खापरपणजोबा/खापरपणजी');
+    return 'पूर्वज';
+  }
+  if (U === 0) {
+    if (D === 1) return pick(g, 'मुलगा', 'मुलगी', 'मूल');
+    if (D === 2) return pick(g, 'नातू', 'नात', 'नातवंड');
+    if (D === 3) return pick(g, 'पणतू', 'पणती', 'पणतवंड');
+    if (D === 4) return pick(g, 'खापरपणतू', 'खापरपणती', 'खापरपणतवंड');
+    return 'वंशज';
+  }
+  if (U === 1 && D === 1) return pick(g, 'भाऊ', 'बहीण', 'भावंड');
+  if (U === 2 && D === 1) return uncleMr(genderAt(hr, 0), g) ?? RELATIVE_MR;
+  if (U === 1 && D === 2) return nephewMr(tg, genderAt(hr, 1), g);
+  if (U === 2 && D === 2) {
+    return `${cousinPrefix(genderAt(hr, 0), genderAt(hr, 2))} ${pick(g, 'भाऊ', 'बहीण', 'भावंड')}`;
+  }
+  if (U === 3 && D === 1) {
+    // Sibling of a grandparent: the uncle/aunt of the target's parent.
+    const parent = genderAt(hr, 0);
+    const uncle = uncleMr(genderAt(hr, 1), g);
+    if (!uncle || parent === 'unknown') return RELATIVE_MR;
+    if (parent === 'male' && uncle === 'काका') return 'चुलत आजोबा';
+    return `${parent === 'male' ? 'वडिलां' : 'आई'}${FEMININE_ELDERS.has(uncle) ? 'ची' : 'चे'} ${uncle}`;
+  }
+  if (U === 1 && D === 3) {
+    // Child of the target's nephew or niece.
+    const OBLIQUE: Record<string, string> = { 'पुतण्या': 'पुतण्या', 'पुतणी': 'पुतणी', 'भाचा': 'भाच्या', 'भाची': 'भाची' };
+    const via = OBLIQUE[nephewMr(tg, genderAt(hr, 1), genderAt(hr, 2))];
+    if (!via || g === 'unknown') return RELATIVE_MR;
+    return `${via}${pick(g, 'चा', 'ची', 'चे')} ${pick(g, 'मुलगा', 'मुलगी', 'मूल')}`;
+  }
+  if (U >= 2 && D >= 2) {
+    const removed = Math.abs(U - D);
+    const ord = marathiOrdinal(Math.min(U, D) - 1, g);
+    return `${ord} चुलत ${pick(g, 'भाऊ', 'बहीण', 'भावंड')}${removed ? ` (${removed} पिढी दूर)` : ''}`;
+  }
+  return RELATIVE_MR;
+}
+
+function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipConfig): string {
+  const dirs = hr.map(h => h.dir);
   if (dirs.length === 0) return 'तीच व्यक्ती';
+  const segments = splitAtSpouses(dirs);
+  if (!segments.every(isBloodShape)) return RELATIVE_MR;
+  if (segments.length === 1) return bloodMr(hr, g, tg);
 
-  // ── Single hop ────────────────────────────────────────────────────────────
-  if (dirs.length === 1) {
-    if (dirs[0] === 'up')     return m ? 'वडील' : f ? 'आई' : 'पालक';
-    if (dirs[0] === 'down')   return m ? 'मुलगा' : f ? 'मुलगी' : 'मूल';
-    return m ? 'पती' : f ? 'पत्नी' : 'जोडीदार';
-  }
+  const key = dirs.join(',');
+  const spouseIdx = dirs.indexOf('spouse');
+  const before = hr.slice(0, spouseIdx);   // target → X
+  const after = hr.slice(spouseIdx + 1);   // Y (X's spouse) → source
+  const X = hr[spouseIdx].fromGender;
+  const Y = hr[spouseIdx].toGender;
+  const b = countSteps(before.map(h => h.dir));
+  const a = countSteps(after.map(h => h.dir));
 
-  const hasSpouse = dirs.includes('spouse');
-
-  // ── Pure blood (no marriage step) ─────────────────────────────────────────
-  if (!hasSpouse) {
-    const ups   = dirs.filter(d => d === 'up').length;
-    const downs = dirs.filter(d => d === 'down').length;
-
-    if (downs === 0) {
-      if (ups === 2) {
-        // hopsReversed[0].toGender is the target's parent, which decides the side
-        const side = hopsReversed[0].toGender;
-        if (side === 'female') return m ? 'नाना' : f ? 'नानी' : 'नाना/नानी';
-        if (side === 'male')   return m ? 'आजोबा' : f ? 'आजी' : 'आजोबा/आजी';
-        return m ? 'आजोबा/नाना' : f ? 'आजी/नानी' : 'आजोबा/आजी/नाना/नानी';
+  if (segments.length === 2) {
+    // ── The target's own spouse leads to the source ──
+    if (b.up + b.down === 0) {
+      if (a.up + a.down === 0) return pick(g, 'पती', 'पत्नी', 'जोडीदार');
+      if (a.down === 0 && a.up === 1) return pick(g, 'सासरे', 'सासू', 'सासू/सासरे');
+      if (a.down === 0 && a.up === 2) return pick(g, 'आजेसासरे', 'आजेसासू', 'आजेसासू/आजेसासरे');
+      if (a.up === 0 && a.down === 1) return pick(g, 'सावत्र मुलगा', 'सावत्र मुलगी', 'सावत्र मूल');
+      if (a.up === 0 && a.down === 2) return pick(g, 'सावत्र नातू', 'सावत्र नात', 'सावत्र नातवंड');
+      if (a.up === 1 && a.down === 1) {
+        if (Y === 'male') return pick(g, 'दीर', 'नणंद', RELATIVE_MR);
+        if (Y === 'female') return pick(g, 'मेव्हणा', 'मेव्हणी', RELATIVE_MR);
+        return pick(g, 'दीर/मेव्हणा', 'नणंद/मेव्हणी', RELATIVE_MR);
       }
-      if (ups === 3) return m ? 'पणजोबा' : f ? 'पणजी' : 'पणजोबा/पणजी';
-      if (ups >= 4) return 'पूर्वज';
-    }
-
-    if (ups === 0) {
-      if (downs === 2) return m ? 'नातू' : f ? 'नात' : 'नातवंड';
-      if (downs === 3) return m ? 'पणतू' : f ? 'पणती' : 'पणतवंड';
-      if (downs >= 4) return 'वंशज';
-    }
-
-    if (key === 'up,down') return m ? 'भाऊ' : f ? 'बहीण' : 'भावंड';
-
-    if (key === 'up,up,down') {
-      const parentGender = hopsReversed[0].toGender;
-      if (parentGender === 'male')   return m ? 'काका' : f ? 'आत्या' : 'नातेवाईक';
-      if (parentGender === 'female') return m ? 'मामा' : f ? 'मावशी' : 'नातेवाईक';
-      return 'नातेवाईक';
-    }
-
-    if (key === 'up,down,down') {
-      const siblingGender = hopsReversed[1].toGender;
-      if (siblingGender === 'male') return m ? 'पुतण्या' : f ? 'पुतणी' : 'पुतण्या/पुतणी';
-      return m ? 'भाचा' : f ? 'भाची' : 'भाचा/भाची';
-    }
-
-    if (key === 'up,up,down,down') {
-      const targetParentGender = hopsReversed[0].toGender;
-      const sourceParentGender = hopsReversed[2].toGender;
-      if (targetParentGender === 'male') {
-        if (sourceParentGender === 'male')   return m ? 'चुलत भाऊ' : f ? 'चुलत बहीण' : 'चुलत भावंड';
-        if (sourceParentGender === 'female') return m ? 'आत्ये भाऊ' : f ? 'आत्ये बहीण' : 'आत्ये भावंड';
-        return m ? 'चुलत भाऊ' : f ? 'चुलत बहीण' : 'चुलत भावंड';
+      if (a.up === 1 && a.down === 2) return nephewMr(Y, genderAt(after, 1), g);
+      const word = spouseWord(Y);
+      if (a.up === 2 && a.down === 1) {
+        const uncle = uncleMr(genderAt(after, 0), g);
+        if (uncle && word) return `${word}${FEMININE_ELDERS.has(uncle) ? 'ची' : 'चे'} ${uncle}`;
       }
-      if (targetParentGender === 'female') {
-        if (sourceParentGender === 'male')   return m ? 'मामे भाऊ' : f ? 'मामे बहीण' : 'मामे भावंड';
-        if (sourceParentGender === 'female') return m ? 'मावस भाऊ' : f ? 'मावस बहीण' : 'मावस भावंड';
-        return m ? 'मामे भाऊ' : f ? 'मामे बहीण' : 'मामे भावंड';
+      if (a.up === 2 && a.down === 2 && word && g !== 'unknown') {
+        const cousin = `${cousinPrefix(genderAt(after, 0), genderAt(after, 2))} ${pick(g, 'भाऊ', 'बहीण', '')}`;
+        return `${word}${pick(g, 'चा', 'ची', '')} ${cousin}`;
       }
-      return m ? 'चुलत भाऊ' : f ? 'चुलत बहीण' : 'चुलत भावंड';
+      return BY_MARRIAGE_MR;
     }
 
-    // Great-uncle / great-aunt (sibling of a grandparent)
-    if (ups === 3 && downs === 1) {
-      return 'नातेवाईक';
-    }
-
-    // Great-nephew / great-niece (child of a nephew or niece)
-    if (ups === 1 && downs === 3) {
-      return 'नातेवाईक';
-    }
-
-    // 2nd+ cousins — and any 1st cousins not caught by the key check above
-    if (ups >= 2 && downs >= 2) {
-      const minVal  = Math.min(ups, downs);
-      const maxVal  = Math.max(ups, downs);
-      const level   = minVal - 1;
-      const removed = maxVal - minVal;
-      const ord     = marathiOrdinal(level);
-      const sibling = m ? 'भाऊ' : f ? 'बहीण' : 'भावंड';
-      return removed === 0
-        ? `${ord} चुलत ${sibling}`
-        : `${ord} चुलत ${sibling}, ${removed} पिढी दूर`;
-    }
-
-    return 'नातेवाईक';
-  }
-
-  // ── Path contains a marriage step ─────────────────────────────────────────
-  const spouseIdx         = dirs.indexOf('spouse');
-  const before            = hopsReversed.slice(0, spouseIdx);
-  const after             = hopsReversed.slice(spouseIdx + 1);
-  const bU                = before.filter(h => h.dir === 'up').length;
-  const bD                = before.filter(h => h.dir === 'down').length;
-  const bHasSpouse        = before.some(h => h.dir === 'spouse');
-  const aU                = after.filter(h => h.dir === 'up').length;
-  const aD                = after.filter(h => h.dir === 'down').length;
-  const aHasSpouse        = after.some(h => h.dir === 'spouse');
-  const spouseHop         = hopsReversed[spouseIdx];
-  const targetSpouseGender = spouseHop.toGender;
-
-  if (!bHasSpouse && !aHasSpouse) {
-
-    // ── Spouse at start (before is empty) ──────────────────────────────────
-    if (bU === 0 && bD === 0) {
-      if (aU === 1 && aD === 0) return m ? 'सासरे' : f ? 'सासू' : 'सासू/सासरे';
-      if (aD === 1 && aU === 0) return m ? 'सावत्र मुलगा' : f ? 'सावत्र मुलगी' : 'सावत्र मूल';
-      if (aU === 1 && aD === 1) {
-        if (targetSpouseGender === 'male')   return m ? 'दीर' : f ? 'नणंद' : 'नातेवाईक';
-        if (targetSpouseGender === 'female') return m ? 'मेव्हणा' : f ? 'मेव्हणी' : 'नातेवाईक';
-        return m ? 'दीर/मेव्हणा' : f ? 'नणंद/मेव्हणी' : 'नातेवाईक';
+    // ── The source is married to the target's relative X ──
+    if (a.up + a.down === 0) {
+      if (b.up === 0 && b.down === 1) return pick(g, 'जावई', 'सून', 'जावई/सून');
+      if (b.up === 0 && b.down === 2) return pick(g, 'नातजावई', 'नातसून', RELATIVE_MR);
+      if (b.down === 0 && b.up === 1) return pick(g, 'सावत्र वडील', 'सावत्र आई', 'सावत्र पालक');
+      if (b.down === 0 && b.up === 2) return pick(g, 'सावत्र आजोबा', 'सावत्र आजी', 'सावत्र आजोबा/आजी');
+      if (b.up === 1 && b.down === 1) {
+        if (X === 'male') return g === 'female' ? 'वहिनी' : RELATIVE_MR;
+        if (X === 'female') return g === 'male' ? 'मेव्हणा' : RELATIVE_MR;
+        return RELATIVE_MR;
       }
-      if (aU === 2 && aD === 0) return m ? 'सासरेचे वडील' : f ? 'सासूची आई' : 'नातेवाईक';
-    }
-
-    // ── Spouse at end (after is empty) ─────────────────────────────────────
-    if (aU === 0 && aD === 0) {
-      if (bD === 1 && bU === 0) return m ? 'जावई' : f ? 'सून' : 'जावई/सून';
-      if (bU === 1 && bD === 0) return m ? 'सावत्र वडील' : f ? 'सावत्र आई' : 'सावत्र पालक';
-      if (bU === 1 && bD === 1) {
-        const sibGender = before[1]?.toGender;
-        if (sibGender === 'male')   return f ? 'वहिनी' : 'नातेवाईक';
-        if (sibGender === 'female') return m ? 'मेव्हणा' : 'नातेवाईक';
-        return 'नातेवाईक';
+      if (b.up === 1 && b.down === 2) {
+        const SPOUSE_OF: Record<string, string> = { 'पुतण्या': 'पुतणसून', 'पुतणी': 'पुतणजावई', 'भाचा': 'भाचेसून', 'भाची': 'भाचेजावई' };
+        return SPOUSE_OF[nephewMr(tg, genderAt(before, 1), X)] ?? BY_MARRIAGE_MR;
       }
-      if (bD === 2 && bU === 0) return m ? 'नातजावई' : f ? 'नातसून' : 'नातेवाईक';
-      if (bU === 2 && bD === 1) {
-        const tParentGender = before[0]?.toGender;
-        const uaGender      = before[2]?.toGender;
-        if (tParentGender === 'male') {
-          if (uaGender === 'male')   return f ? 'काकू' : m ? 'काकूंचे पती' : 'काकू';
-          if (uaGender === 'female') return config.useAtobaForAatyaHusband
-            ? (m ? 'आतोबा' : 'नातेवाईक')
-            : (m ? 'आत्याचे पती' : 'नातेवाईक');
+      if (b.up === 2 && b.down === 1) {
+        const parent = genderAt(before, 0);
+        if (parent === 'male') {
+          if (X === 'male') return g === 'female' ? 'काकू' : g === 'male' ? 'काकूंचे पती' : 'काकू';
+          if (X === 'female') {
+            if (g !== 'male') return RELATIVE_MR;
+            return config.useAtobaForAatyaHusband ? 'आतोबा' : 'आत्याचे पती';
+          }
         }
-        if (tParentGender === 'female') {
-          if (uaGender === 'male')   return f ? 'मामी' : m ? 'मामींचे पती' : 'मामी';
-          if (uaGender === 'female') return config.useMaavsaForMaavshiHusband
-            ? (m ? 'मावसा' : 'नातेवाईक')
-            : (m ? 'मावशीचे पती' : 'नातेवाईक');
+        if (parent === 'female') {
+          if (X === 'male') return g === 'female' ? 'मामी' : g === 'male' ? 'मामींचे पती' : 'मामी';
+          if (X === 'female') {
+            if (g !== 'male') return RELATIVE_MR;
+            return config.useMaavsaForMaavshiHusband ? 'मावसा' : 'मावशीचे पती';
+          }
         }
-        return 'नातेवाईक';
+        return RELATIVE_MR;
       }
+      if (b.up === 2 && b.down === 2) {
+        const prefix = cousinPrefix(genderAt(before, 0), genderAt(before, 2));
+        if (X === 'male' && g === 'female') return `${prefix} वहिनी`;
+        if (X === 'female' && g === 'male') return `${prefix} मेव्हणा`;
+      }
+      return BY_MARRIAGE_MR;
     }
 
-    // ── Spouse in middle ────────────────────────────────────────────────────
-    if (bU === 1 && bD === 0 && aU === 0 && aD === 1) {
-      return m ? 'सावत्र भाऊ' : f ? 'सावत्र बहीण' : 'सावत्र भावंड';
+    // ── Marriage in the middle ──
+    if (b.up === 1 && b.down === 0 && a.up === 0 && a.down === 1) {
+      return pick(g, 'सावत्र भाऊ', 'सावत्र बहीण', 'सावत्र भावंड');
     }
+    if (b.up === 0 && b.down === 1 && a.up === 1 && a.down === 0) {
+      return pick(g, 'व्याही', 'विहीण', 'व्याही/विहीण');
+    }
+    return BY_MARRIAGE_MR;
   }
 
-  // ── Multi-spouse: spouse,up,down,spouse (जाऊ / साडू etc.) ─────────────────
+  // ── Two marriages: जाऊ / साडू, child's spouse through the target's spouse ──
   if (key === 'spouse,up,down,spouse') {
-    const sibGender = hopsReversed[2].toGender;
-    if (targetSpouseGender === 'male') {
-      if (sibGender === 'male')   return f ? 'जाऊ' : 'नातेवाईक';
-      if (sibGender === 'female') return m ? 'नणंदेचे पती' : 'नातेवाईक';
+    const sibling = genderAt(hr, 2);
+    if (Y === 'male') {
+      if (sibling === 'male') return g === 'female' ? 'जाऊ' : RELATIVE_MR;
+      if (sibling === 'female') return g === 'male' ? 'नणंदेचे पती' : RELATIVE_MR;
     }
-    if (targetSpouseGender === 'female') {
-      if (sibGender === 'male')   return f ? 'मेव्हण्याची बायको' : 'नातेवाईक';
-      if (sibGender === 'female') return m ? 'साडू' : 'नातेवाईक';
+    if (Y === 'female') {
+      if (sibling === 'male') return g === 'female' ? 'मेव्हण्याची बायको' : RELATIVE_MR;
+      if (sibling === 'female') return g === 'male' ? 'साडू' : RELATIVE_MR;
     }
   }
-
-  return 'लग्नातील नाते';
+  if (key === 'spouse,down,spouse') return pick(g, 'जावई', 'सून', 'जावई/सून');
+  return BY_MARRIAGE_MR;
 }
 
 // ─── Public result type ───
 
 export interface RelationshipResult {
   path: string[];          // member IDs from source → target
-  label: string;           // English label
-  labelMr: string;         // Marathi label
+  label: string;           // English: what the source is to the target
+  labelMr: string;         // Marathi: what the source is to the target
   directions: StepType[];  // 'up' | 'down' | 'spouse' per step
   hops: number;
+}
+
+/** A marriage that ended other than by death (death leaves "late husband/wife", not "ex"). */
+function isEndedMarriage(a: string, b: string, relationships: StyledRelationships): boolean {
+  const marriage = relationships.spouses.find(
+    s => (s.spouse1Id === a && s.spouse2Id === b) || (s.spouse1Id === b && s.spouse2Id === a),
+  );
+  return marriage?.status === 'former' && marriage.endReason !== 'death';
 }
 
 // ─── Main export ───
@@ -581,34 +540,82 @@ export function computeRelationship(
   }
 
   const memberMap = new Map(members.map(mb => [mb.id, mb]));
-  const source = memberMap.get(sourceId);
+  const genderOf = (id: string): Gender => memberMap.get(id)?.gender ?? 'unknown';
+  const sourceGender = genderOf(sourceId);
   const directions: StepType[] = [];
   for (let i = 0; i < path.length - 1; i++) {
     directions.push(getStepType(path[i], path[i + 1], relationships, members));
   }
 
-  const hopsMeta = buildHopsMeta(path, directions, memberMap);
-  const hopsReversed: HopMeta[] = [...hopsMeta].reverse().map(h => ({
-    fromId: h.toId,
-    toId: h.fromId,
-    dir: h.dir === 'up' ? 'down' : h.dir === 'down' ? 'up' : 'spouse',
-    fromGender: h.toGender,
-    toGender: h.fromGender,
-  }));
+  const hopsReversed: HopMeta[] = directions.map((dir, i) => ({
+    fromId: path[i + 1],
+    toId: path[i],
+    dir: (dir === 'up' ? 'down' : dir === 'down' ? 'up' : 'spouse') as StepType,
+    fromGender: genderOf(path[i + 1]),
+    toGender: genderOf(path[i]),
+  })).reverse();
 
-  let label   = labelFromDirections(directions, source?.gender ?? 'unknown');
-  const labelMr = labelFromDirectionsMr(hopsReversed, source?.gender ?? 'unknown', config);
+  const english = labelEn(directions, sourceGender);
+  let label = english.label;
+  let labelMarathi = labelMr(hopsReversed, sourceGender, genderOf(targetId), config);
+  const dirKey = directions.join(',');
+
+  // Half-siblings share exactly one of their two known parents.
+  if (dirKey === 'up,down') {
+    const { parentsOf } = parentChildMaps(members, relationships);
+    const ps = parentsOf.get(sourceId) ?? new Set<string>();
+    const pt = parentsOf.get(targetId) ?? new Set<string>();
+    const shared = Array.from(ps).filter(p => pt.has(p)).length;
+    if (ps.size >= 2 && pt.size >= 2 && shared === 1) {
+      label = pick(sourceGender, 'Half-brother', 'Half-sister', 'Half-sibling');
+      labelMarathi = pick(sourceGender, 'सावत्र भाऊ', 'सावत्र बहीण', 'सावत्र भावंड');
+    }
+  }
 
   // Name the side (paternal/maternal) when the connecting parent's gender is known
-  const sideOf = (id: string) => {
-    const g = memberMap.get(id)?.gender;
-    return g === 'male' ? 'Paternal' : g === 'female' ? 'Maternal' : '';
-  };
-  const dirKey = directions.join(',');
   const sideId = dirKey === 'down,down' ? path[1] : dirKey === 'up,down,down' ? path[2] : null;
   if (sideId && /^(Grandfather|Grandmother|Uncle|Aunt)$/.test(label)) {
-    const side = sideOf(sideId);
+    const g = genderOf(sideId);
+    const side = g === 'male' ? 'Paternal' : g === 'female' ? 'Maternal' : '';
     if (side) label = `${side} ${label.toLowerCase()}`;
   }
-  return { path, label, labelMr, directions, hops: path.length - 1 };
+
+  const ended = directions.some((d, i) => d === 'spouse' && isEndedMarriage(path[i], path[i + 1], relationships));
+  if (ended && english.kind === 'spouse') {
+    label = pick(sourceGender, 'Ex-husband', 'Ex-wife', 'Ex-spouse');
+    labelMarathi = pick(sourceGender, 'माजी पती', 'माजी पत्नी', 'माजी जोडीदार');
+  } else if (ended && english.kind === 'inLaw') {
+    label = `Former ${lowerFirst(label)}`;
+    if (labelMarathi !== BY_MARRIAGE_MR && labelMarathi !== RELATIVE_MR) labelMarathi = `माजी ${labelMarathi}`;
+  }
+
+  return { path, label, labelMr: labelMarathi, directions, hops: path.length - 1 };
+}
+
+// ─── Sentence for display ───
+
+// Marathi relation words that take the respectful plural ("…चे … आहेत").
+const HONORIFIC_MR = new Set([
+  'वडील', 'आजोबा', 'पणजोबा', 'खापरपणजोबा', 'काका', 'मामा', 'आतोबा', 'मावसा', 'सासरे', 'आजेसासरे',
+  'व्याही', 'पती', 'नातेवाईक', 'पालक', 'पूर्वज',
+]);
+
+/** "Ravi is Amit's father." / "रवी अमितचे वडील आहेत." */
+export function describeRelationship(
+  result: RelationshipResult,
+  sourceName: string,
+  targetName: string,
+  lang: 'en' | 'mr',
+  sourceGender: Gender,
+): string {
+  if (result.hops === 0) return lang === 'mr' ? result.labelMr : result.label;
+  if (lang === 'en') return `${sourceName} is ${targetName}'s ${lowerFirst(result.label)}.`;
+
+  const core = result.labelMr.replace(/\s*\(.*\)$/, '');
+  const lastWord = core.split(' ').pop() ?? '';
+  const honorific = lastWord.split('/').some(word => HONORIFIC_MR.has(word));
+  const possessive = /(चे|ची|चा) /.test(core) ? 'च्या'
+    : honorific ? 'चे'
+    : pick(sourceGender, 'चा', 'ची', 'चे');
+  return `${sourceName} ${targetName}${possessive} ${result.labelMr} ${honorific ? 'आहेत' : 'आहे'}.`;
 }

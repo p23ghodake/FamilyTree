@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { getDisplayFirstName } from '../../processing/displayName';
+import { describeRelationship } from '../../processing/relationshipFinder';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   AlertCircleIcon,
@@ -30,9 +31,6 @@ const RelationshipPanel: React.FC = () => {
   // Mirror PersonNode's display-name logic: use Marathi fields when lang=mr
   const displayName = (m: NonNullable<ReturnType<typeof memberMap.get>>) =>
     getDisplayFirstName(m, lang);
-
-  const displayFirst = (m: NonNullable<ReturnType<typeof memberMap.get>>) =>
-    lang === 'mr' && m.firstName_mr ? m.firstName_mr : m.firstName;
 
   const sourceMember = relSource ? memberMap.get(relSource) : null;
   const targetMember = relTarget ? memberMap.get(relTarget) : null;
@@ -99,13 +97,15 @@ const RelationshipPanel: React.FC = () => {
         relResult ? (
           <div className="relationship-panel__result">
             <div className="relationship-panel__label-row">
-              <span className="relationship-panel__names">
-                {sourceMember && displayName(sourceMember)} <span className="relationship-panel__is">→</span> {targetMember && displayName(targetMember)}
-              </span>
               <span className="relationship-panel__label">
                 {lang === 'mr' ? relResult.labelMr : relResult.label}
               </span>
             </div>
+            {sourceMember && targetMember && (
+              <p className="relationship-panel__sentence">
+                {describeRelationship(relResult, displayName(sourceMember), displayName(targetMember), lang, sourceMember.gender)}
+              </p>
+            )}
             <div className="relationship-panel__hops">{t.tracerHops(relResult.hops)}</div>
 
             <div className="relationship-panel__chain">
@@ -126,7 +126,7 @@ const RelationshipPanel: React.FC = () => {
                       <div className="relationship-panel__chain-avatar">
                         <MemberAvatar member={m!} avatarStyle={avatarStyle} displayName={displayName(m!)} />
                       </div>
-                      <span>{displayFirst(m!)}</span>
+                      <span>{displayName(m!)}</span>
                     </button>
                     {i < pathMembers.length - 1 && (
                       <span
