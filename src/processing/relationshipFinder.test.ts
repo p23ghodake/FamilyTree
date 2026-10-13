@@ -547,35 +547,68 @@ describe('Marathi labels — distant relatives', () => {
     expect(r?.labelMr).toBe('चुलत बहीण');
   });
 
-  it('4th cousin once removed is a plain cousin — male source', () => {
-    // source 5 levels from CA, target 6 levels
+  it('parent\'s cousin is an uncle on the father\'s side — male source', () => {
+    // source 5 levels from CA, target 6 levels; the target's father is the source's cousin
     const all = [
       m('f_ca'),
       m('f_a1'), m('f_a2'), m('f_a3'), m('f_a4'), m('f_src', 'male'),
-      m('f_b1'), m('f_b2'), m('f_b3'), m('f_b4'), m('f_b5'), m('f_tgt'),
+      m('f_b1'), m('f_b2'), m('f_b3'), m('f_b4'), m('f_b5', 'male'), m('f_tgt'),
     ];
     const rels = parentChildRels([
       ['f_ca', 'f_a1'], ['f_a1', 'f_a2'], ['f_a2', 'f_a3'], ['f_a3', 'f_a4'], ['f_a4', 'f_src'],
       ['f_ca', 'f_b1'], ['f_b1', 'f_b2'], ['f_b2', 'f_b3'], ['f_b3', 'f_b4'], ['f_b4', 'f_b5'], ['f_b5', 'f_tgt'],
     ]);
     const r = computeRelationship('f_src', 'f_tgt', all, rels);
-    expect(r?.label).toBe('Cousin');
-    expect(r?.labelMr).toBe('चुलत भाऊ');
+    expect(r?.label).toBe('Uncle');
+    expect(r?.labelMr).toBe('काका');
   });
 
-  it('4th cousin once removed is a plain cousin — female source', () => {
+  it('parent\'s cousin is an aunt on the mother\'s side — female source', () => {
     const all = [
       m('g_ca'),
       m('g_a1'), m('g_a2'), m('g_a3'), m('g_a4'), m('g_src', 'female'),
-      m('g_b1'), m('g_b2'), m('g_b3'), m('g_b4'), m('g_b5'), m('g_tgt'),
+      m('g_b1'), m('g_b2'), m('g_b3'), m('g_b4'), m('g_b5', 'female'), m('g_tgt'),
     ];
     const rels = parentChildRels([
       ['g_ca', 'g_a1'], ['g_a1', 'g_a2'], ['g_a2', 'g_a3'], ['g_a3', 'g_a4'], ['g_a4', 'g_src'],
       ['g_ca', 'g_b1'], ['g_b1', 'g_b2'], ['g_b2', 'g_b3'], ['g_b3', 'g_b4'], ['g_b4', 'g_b5'], ['g_b5', 'g_tgt'],
     ]);
     const r = computeRelationship('g_src', 'g_tgt', all, rels);
-    expect(r?.label).toBe('Cousin');
-    expect(r?.labelMr).toBe('चुलत बहीण');
+    expect(r?.label).toBe('Aunt');
+    expect(r?.labelMr).toBe('मावशी');
+  });
+
+  describe('cousin one generation apart (Durgesh / Yash shape)', () => {
+    // CA → a1 → a2 → cousin → kid;  CA → b1 → b2 → elder   (cousin and elder share a great-grandparent)
+    const all = [
+      m('n_ca', 'male'), m('n_a1', 'male'), m('n_a2', 'male'), m('n_cousin', 'male'), m('n_kid', 'male'),
+      m('n_b1', 'male'), m('n_b2', 'male'), m('n_elder', 'male'), m('n_sis', 'female'), m('n_sis_kid', 'female'),
+      m('n_aunt', 'female'),
+    ];
+    const rels = parentChildRels([
+      ['n_ca', 'n_a1'], ['n_a1', 'n_a2'], ['n_a2', 'n_cousin'], ['n_cousin', 'n_kid'], ['n_a2', 'n_sis'], ['n_sis', 'n_sis_kid'],
+      ['n_ca', 'n_b1'], ['n_b1', 'n_b2'], ['n_b2', 'n_elder'], ['n_b2', 'n_aunt'],
+    ]);
+    const r = (a: string, b: string) => computeRelationship(a, b, all, rels);
+
+    it('names the cousin\'s son a nephew and the elder his uncle', () => {
+      expect(r('n_kid', 'n_elder')).toMatchObject({ label: 'Nephew', labelMr: 'पुतण्या' });
+      expect(r('n_elder', 'n_kid')).toMatchObject({ label: 'Uncle', labelMr: 'काका' });
+    });
+
+    it('uses भाचा/भाची through a female cousin or for a female elder', () => {
+      expect(r('n_sis_kid', 'n_elder')).toMatchObject({ label: 'Niece', labelMr: 'भाची' });
+      expect(r('n_kid', 'n_aunt')).toMatchObject({ label: 'Nephew', labelMr: 'भाचा' });
+      expect(r('n_aunt', 'n_kid')).toMatchObject({ label: 'Aunt', labelMr: 'आत्या' });
+    });
+  });
+
+  it('keeps cousins two or more generations apart as Cousin', () => {
+    const all = [m('k_ca'), m('k_a1'), m('k_a2'), m('k_a3'), m('k_src', 'male'), m('k_b1'), m('k_tgt')];
+    const rels = parentChildRels([
+      ['k_ca', 'k_a1'], ['k_a1', 'k_a2'], ['k_a2', 'k_a3'], ['k_a3', 'k_src'], ['k_ca', 'k_b1'], ['k_b1', 'k_tgt'],
+    ]);
+    expect(computeRelationship('k_src', 'k_tgt', all, rels)).toMatchObject({ label: 'Cousin', labelMr: 'चुलत भाऊ' });
   });
 
   it('3rd cousin is a plain cousin (same level, unknown gender)', () => {

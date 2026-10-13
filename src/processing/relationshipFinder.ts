@@ -237,7 +237,9 @@ function bloodLabelEn(up: number, down: number, g: Gender): string {
   if (up === 1 && down === 1) return pick(g, 'Brother', 'Sister', 'Sibling');
   if (up === 1) return capitalize(greats(down - 2) + pick(g, 'uncle', 'aunt', 'uncle/aunt'));
   if (down === 1) return capitalize(greats(up - 2) + pick(g, 'nephew', 'niece', 'nephew/niece'));
-  // Cousins of every degree are simply "Cousin" (no 2nd/3rd or "removed").
+  // A cousin's child is a nephew/niece and a parent's cousin an uncle/aunt; wider gaps stay "Cousin".
+  if (up === down + 1) return pick(g, 'Nephew', 'Niece', 'Nephew/niece');
+  if (down === up + 1) return pick(g, 'Uncle', 'Aunt', 'Uncle/aunt');
   return 'Cousin';
 }
 
@@ -378,6 +380,9 @@ function bloodMr(hr: HopMeta[], g: Gender, tg: Gender): string {
     if (!via || g === 'unknown') return RELATIVE_MR;
     return `${via}${pick(g, 'चा', 'ची', 'चे')} ${pick(g, 'मुलगा', 'मुलगी', 'मूल')}`;
   }
+  // Cousin's child (पुतण्या/भाचा) and parent's cousin (काका/आत्या/मामा/मावशी) follow the sibling rules.
+  if (U >= 2 && D === U + 1) return nephewMr(tg, genderAt(hr, U + D - 2), g);
+  if (D >= 2 && U === D + 1) return uncleMr(genderAt(hr, 0), g) ?? RELATIVE_MR;
   if (U >= 2 && D >= 2) return `चुलत ${pick(g, 'भाऊ', 'बहीण', 'भावंड')}`;
   return RELATIVE_MR;
 }
