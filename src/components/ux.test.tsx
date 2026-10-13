@@ -52,7 +52,7 @@ beforeEach(() => {
       theme: 'light', avatarStyle: 'initials',
     },
     currentTree: data.familyTreesStyled[0],
-    canEdit: true, cloudReady: true, cloudError: null, isSaving: false,
+    canEdit: true, cloudReady: true, limitedView: false, cloudError: null, isSaving: false,
     canUndo: false, canRedo: false,
     filteredMembers: data.familyTreesStyled[0].members,
     matchedMemberIds: new Set(), advancedMatchedIds: new Set(), relResult: null,

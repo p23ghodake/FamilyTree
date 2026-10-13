@@ -501,8 +501,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     menuShare: 'Share',
     menuTimeline: 'Timeline',
     menuPrint: 'Print',
-    tooltipReset: 'Replace all shared family trees on GitHub with the original bundled data',
-    confirmReset: 'Replace ALL shared family trees on GitHub with the original bundled data? This affects every user and removes changes made since that snapshot.',
+    tooltipReset: 'Reload the latest shared family data from GitHub',
+    confirmReset: 'Reload the latest shared family data from GitHub? The tree on screen is replaced with the saved copy. Nothing on GitHub is changed.',
     alertExportFailed: 'Export failed. Try zooming out then retry.',
     alertImageInvalidUrl: 'Invalid photo URL. Use https://, http://, or upload a file.',
     // FilterPanel
@@ -897,8 +897,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     menuShare: 'शेअर करा',
     menuTimeline: 'टाइमलाइन',
     menuPrint: 'प्रिंट',
-    tooltipReset: 'GitHub वरील सर्व सामायिक कुटुंब वृक्ष मूळ डेटाने बदला',
-    confirmReset: 'GitHub वरील सर्व सामायिक कुटुंब वृक्ष मूळ डेटाने बदलायचे? याचा सर्व वापरकर्त्यांवर परिणाम होईल आणि मूळ डेटानंतरचे बदल हटवले जातील.',
+    tooltipReset: 'GitHub वरून नवीनतम सामायिक कुटुंब माहिती पुन्हा लोड करा',
+    confirmReset: 'GitHub वरून नवीनतम सामायिक कुटुंब माहिती पुन्हा लोड करायची? स्क्रीनवरील वृक्ष जतन केलेल्या प्रतीने बदलला जाईल. GitHub वर काहीही बदलणार नाही.',
     alertExportFailed: 'निर्यात अयशस्वी. झूम आउट करून पुन्हा प्रयत्न करा.',
     alertImageInvalidUrl: 'अवैध फोटो URL. https://, http:// वापरा किंवा फाइल अपलोड करा.',
     // FilterPanel

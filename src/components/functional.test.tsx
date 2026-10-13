@@ -45,7 +45,7 @@ beforeEach(() => {
       theme: 'light', avatarStyle: 'initials',
     },
     currentTree: data.familyTreesStyled[0],
-    canEdit: true, cloudReady: true, cloudError: null, isSaving: false,
+    canEdit: true, cloudReady: true, limitedView: false, cloudError: null, isSaving: false,
     canUndo: true, canRedo: true,
     filteredMembers: data.familyTreesStyled[0].members,
     matchedMemberIds: new Set(), advancedMatchedIds: new Set(), relResult: null,
@@ -87,12 +87,20 @@ it('shows reset only for admins and confirms the shared GitHub impact', () => {
   view.rerender(<TopBar />);
   fireEvent.click(screen.getByRole('button', { name: t.settingsResetShared }));
   expect(confirm).toHaveBeenCalledWith(t.confirmReset);
-  expect(t.confirmReset).toContain('ALL shared family trees on GitHub');
+  expect(t.confirmReset).toContain('Nothing on GitHub is changed');
   expect(context.resetData).not.toHaveBeenCalled();
   confirm.mockReturnValue(true);
   openSettings();
   fireEvent.click(screen.getByRole('button', { name: t.settingsResetShared }));
   expect(context.resetData).toHaveBeenCalledTimes(1);
+});
+
+it('hides Share from visitors in the limited view', () => {
+  const view = render(<TopBar />);
+  expect(screen.getByRole('button', { name: t.headerShareTree })).toBeTruthy();
+  context.limitedView = true;
+  view.rerender(<TopBar />);
+  expect(screen.queryByRole('button', { name: t.headerShareTree })).toBeNull();
 });
 
 it('shows the poster view only to admins', () => {

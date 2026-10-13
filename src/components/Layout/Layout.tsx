@@ -12,7 +12,7 @@ import { CONFIG } from '../../constants/config';
 import './Layout.css';
 
 const Layout: React.FC = () => {
-  const { state, currentTree } = useFamilyTree();
+  const { state, currentTree, limitedView } = useFamilyTree();
   const { t, lang } = useLanguage();
   const [tourActive, setTourActive] = useState(false);
 
@@ -67,7 +67,7 @@ const Layout: React.FC = () => {
         </div>
         <TreeView />
         <RelationshipPanel />
-        <MemberDetailsPanel />
+        {!limitedView && <MemberDetailsPanel />}
         <FloatingSearch />
       </main>
       <MemberFormModal />

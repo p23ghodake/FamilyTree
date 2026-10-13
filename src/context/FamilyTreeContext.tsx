@@ -17,7 +17,6 @@ import { getImageConfig } from '../processing/imageRules';
 import { computeRelationship, RelationshipResult } from '../processing/relationshipFinder';
 import { memberMatchesQuery } from '../processing/searchFilter';
 import { ThemeName, applyTheme, loadSavedTheme } from '../theme/themeConfig';
-import familyDataJson from '../data/g_familyData.json';
 import { useAuth } from '../lib/AuthContext';
 import { canDeleteMembers, isAdminUser } from '../lib/admin';
 import { useLanguage } from './LanguageContext';
@@ -455,6 +454,8 @@ interface FamilyTreeContextValue {
   dispatch: React.Dispatch<Action>;
   cloudReady: boolean;
   canEdit: boolean;
+  /** Visitor view: fewer details and features, read-only. */
+  limitedView: boolean;
   cloudError: string | null;
   isSaving: boolean;
   currentTree: StyledFamilyTree | null;
@@ -486,6 +487,8 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   tRef.current = t;
   const [cloudReady, setCloudReady] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
+  const [limitedView, setLimitedView] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const stateRef = useRef(state);
@@ -594,34 +597,17 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     applyTheme(state.theme);
   }, [state.theme]);
 
-  // Load the GitHub file for signed-in users; use the bundled file for guests or on load errors.
+  // Everyone loads through the family-data function; visitors receive a limited, read-only view.
   useEffect(() => {
     if (authLoading) return;
     if (sharedPreviewRef.current) return;
     conflictGenerationRef.current += 1;
     let active = true;
-    const loadBundledData = () => {
-      const result = validateRawFamilyData(familyDataJson);
-      if (!result.ok || !result.data) {
-        throw new Error(result.error ?? 'Bundled family data is invalid.');
-      }
-      const processed = processAllFamilyData(result.data);
-      stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload: processed });
-      reducerDispatch({ type: 'SET_DATA', payload: processed });
-    };
 
     shaRef.current = null;
     setCanEdit(false);
     setCloudReadyState(false);
     setCloudError(null);
-    if (!session) {
-      try {
-        loadBundledData();
-      } catch (error) {
-        reducerDispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to load family data' });
-      }
-      return () => { active = false; };
-    }
 
     getFamilyData().then(remote => {
       if (!active || sharedPreviewRef.current) return;
@@ -630,30 +616,28 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
         throw new Error(result.error ?? 'GitHub family data is invalid.');
       }
       const processed = processAllFamilyData(result.data);
-      shaRef.current = remote.sha;
-      setCanEdit(remote.canEdit === true);
+      const limited = remote.limited === true;
+      shaRef.current = limited ? null : remote.sha;
+      setLimitedView(limited);
+      setCanEdit(!limited && remote.canEdit === true);
       stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload: processed });
       reducerDispatch({ type: 'SET_DATA', payload: processed });
-      setCloudReadyState(true);
+      setCloudReadyState(!limited);
       setCloudError(null);
     }).catch(error => {
       if (!active || sharedPreviewRef.current) return;
-      console.error('Failed to load family data from GitHub:', error);
-      try {
-        loadBundledData();
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        setCloudError(message);
+      console.error('Failed to load family data:', error);
+      const message = error instanceof Error ? error.message : 'Failed to load family data';
+      setCloudError(message);
+      if (stateRef.current.data) {
         toast.error(tRef.current.loadFailed(message), { id: 'family-load' });
-      } catch (fallbackError) {
-        reducerDispatch({
-          type: 'SET_ERROR',
-          payload: fallbackError instanceof Error ? fallbackError.message : 'Failed to load family data',
-        });
+      } else {
+        reducerDispatch({ type: 'SET_ERROR', payload: message });
       }
     });
 
     return () => { active = false; };
-  }, [authLoading, session, setCloudReadyState]);
+  }, [authLoading, session, reloadKey, setCloudReadyState]);
 
   // Debounced search query — used for filtering to avoid O(n) scan on every keystroke
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(state.searchQuery);
@@ -744,17 +728,8 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       toast.error(tRef.current.resetAdminOnly, { id: 'family-save' });
       return;
     }
-    try {
-      const result = validateRawFamilyData(familyDataJson);
-      if (!result.ok || !result.data) {
-        throw new Error(result.error ?? 'Bundled family data is invalid.');
-      }
-      const processed = processAllFamilyData(result.data);
-      dispatch({ type: 'IMPORT_DATA', payload: processed });
-    } catch (err) {
-      dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Failed to reset data' });
-    }
-  }, [dispatch, session]);
+    setReloadKey(key => key + 1);
+  }, [session]);
 
   const loadSharedData = useCallback((jsonStr: string): boolean => {
     try {
@@ -872,9 +847,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const canRedo = state.future.length > 0;
 
   const contextValue = useMemo<FamilyTreeContextValue>(
-    () => ({ state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember }),
+    () => ({ state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, dispatch, cloudReady, canEdit, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember],
+    [state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember],
   );
 
   return (

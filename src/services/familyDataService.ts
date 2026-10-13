@@ -12,6 +12,8 @@ interface FamilyDataResponse {
   data: RawFamilyData;
   sha: string;
   canEdit?: boolean;
+  /** Visitor view: some details are removed and the data cannot be saved. */
+  limited?: boolean;
 }
 
 interface SaveFamilyDataResponse {

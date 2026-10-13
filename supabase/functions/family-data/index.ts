@@ -6,8 +6,8 @@ const corsHeaders = {
 };
 
 const GITHUB_OWNER = 'p23ghodake';
-const GITHUB_REPO = 'FamilyTree';
-const GITHUB_FILE_PATH = 'src/data/g_familyData.json';
+const GITHUB_REPO = Deno.env.get('DATA_REPO') ?? 'FamilyTree-Data';
+const GITHUB_FILE_PATH = Deno.env.get('DATA_FILE_PATH') ?? 'g_familyData.json';
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -56,6 +56,34 @@ function signedInWithOAuth(accessToken: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Visitors send the public project key instead of a user session; only user sessions carry a subject.
+function isUserSession(token: string | undefined): token is string {
+  if (!token) return false;
+  try {
+    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const claims = JSON.parse(atob(payload)) as { sub?: unknown };
+    return typeof claims.sub === 'string' && claims.sub.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** What visitors may see: everything except the exact birth day and month. */
+function limitedView(data: unknown): unknown {
+  const copy = JSON.parse(JSON.stringify(data)) as { familyTrees?: Array<{ members?: Array<Record<string, unknown>> }> };
+  for (const tree of copy.familyTrees ?? []) {
+    for (const member of tree.members ?? []) {
+      const birthDate = member.birthDate;
+      if (typeof birthDate === 'string' && member.birthYear == null) {
+        const year = Number.parseInt(birthDate.slice(0, 4), 10);
+        if (Number.isFinite(year)) member.birthYear = year;
+      }
+      delete member.birthDate;
+    }
+  }
+  return copy;
 }
 
 type FamilyFile = { content: string; sha: string } | { error: Response };
@@ -132,7 +160,31 @@ Deno.serve(async request => {
 
   const authorization = request.headers.get('Authorization');
   const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!token) return jsonResponse({ error: 'A valid Supabase access token is required.' }, 401);
+
+  const githubToken = Deno.env.get('GITHUB_TOKEN') ?? '';
+  if (!githubToken) {
+    console.error('GITHUB_TOKEN is not configured for the family-data function.');
+    return jsonResponse({ error: 'Server configuration error.' }, 500);
+  }
+
+  const sendFamilyData = async (limited: boolean, canEdit: boolean): Promise<Response> => {
+    const file = await readFamilyFile(githubToken);
+    if ('error' in file) return file.error;
+    try {
+      const data = JSON.parse(file.content);
+      return limited
+        ? jsonResponse({ data: limitedView(data), sha: '', canEdit: false, limited: true })
+        : jsonResponse({ data, sha: file.sha, canEdit, limited: false });
+    } catch (error) {
+      console.error('The family data file is not valid UTF-8 JSON:', error);
+      return jsonResponse({ error: 'The family data file is not valid JSON.' }, 500);
+    }
+  };
+
+  if (!isUserSession(token)) {
+    if (request.method === 'GET') return sendFamilyData(true, false);
+    return jsonResponse({ error: 'Sign in to change family data.' }, 401);
+  }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -195,28 +247,14 @@ Deno.serve(async request => {
   const canDelete = canEdit && signedInWithOAuth(token)
     && [login, githubEmail].some(id => !!id && admins.includes(id));
   if (!canView) {
-    return jsonResponse({ error: `Your account (${identities.join(' / ') || 'unknown'}) is not allowed to access family data.` }, 403);
+    if (request.method === 'GET') return sendFamilyData(true, false);
+    return jsonResponse({ error: `Your account (${identities.join(' / ') || 'unknown'}) is not allowed to change family data.` }, 403);
   }
   if (request.method === 'PUT' && !canEdit) {
     return jsonResponse({ error: 'Your GitHub account has read-only access to family data.' }, 403);
   }
 
-  const githubToken = Deno.env.get('GITHUB_TOKEN');
-  if (!githubToken) {
-    console.error('GITHUB_TOKEN is not configured for the family-data function.');
-    return jsonResponse({ error: 'Server configuration error.' }, 500);
-  }
-
-  if (request.method === 'GET') {
-    const file = await readFamilyFile(githubToken);
-    if ('error' in file) return file.error;
-    try {
-      return jsonResponse({ data: JSON.parse(file.content), sha: file.sha, canEdit });
-    } catch (error) {
-      console.error('The family data file is not valid UTF-8 JSON:', error);
-      return jsonResponse({ error: 'The family data file is not valid JSON.' }, 500);
-    }
-  }
+  if (request.method === 'GET') return sendFamilyData(false, canEdit);
 
   let body: { data?: unknown; sha?: unknown };
   try {

@@ -1,2 +1,3 @@
 [functions.family-data]
-verify_jwt = true
+# Visitors call without a session (publishable key); the function validates user sessions itself.
+verify_jwt = false

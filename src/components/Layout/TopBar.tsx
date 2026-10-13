@@ -25,7 +25,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const {
     state, dispatch, currentTree,
     exportData, resetData, undo, redo, canUndo, canRedo,
-    canEdit, cloudReady, isSaving,
+    canEdit, cloudReady, isSaving, limitedView,
   } = useFamilyTree();
   const { session, loading: authLoading, signOut, isAdmin, canDelete } = useAuth();
   const { t, lang } = useLanguage();
@@ -254,9 +254,11 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
             <HelpCircleIcon size={16} />
           </button>
         )}
-        <button type="button" className="top-bar__icon" onClick={() => setShowShareModal(true)} title={t.headerShareTree} aria-label={t.headerShareTree}>
-          <ShareIcon size={16} />
-        </button>
+        {!limitedView && (
+          <button type="button" className="top-bar__icon" onClick={() => setShowShareModal(true)} title={t.headerShareTree} aria-label={t.headerShareTree}>
+            <ShareIcon size={16} />
+          </button>
+        )}
         <div className="top-bar__menu-wrap" ref={menuWrapRef}>
           {session ? (
             <button
@@ -329,9 +331,11 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
               <button type="button" className="hdr-sheet__tile" onClick={fromSheet(() => setShowStats(true))}>
                 <BarChart2Icon size={20} />{t.viewStats}
               </button>
-              <button type="button" className="hdr-sheet__tile" onClick={fromSheet(() => setShowShareModal(true))}>
-                <ShareIcon size={20} />{t.menuShare}
-              </button>
+              {!limitedView && (
+                <button type="button" className="hdr-sheet__tile" onClick={fromSheet(() => setShowShareModal(true))}>
+                  <ShareIcon size={20} />{t.menuShare}
+                </button>
+              )}
               {canEdit && (
                 <>
                   <button type="button" className="hdr-sheet__tile" disabled={isSaving} onClick={fromSheet(openAddMember)}>
@@ -357,7 +361,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         </div>
       )}
       {showLogin && !session && <LoginModal onClose={() => setShowLogin(false)} />}
-      {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} returnFocus={focusMenuTrigger} />}
+      {showShareModal && !limitedView && <ShareModal onClose={() => setShowShareModal(false)} returnFocus={focusMenuTrigger} />}
       {showTimeline && <TimelineModal onClose={() => setShowTimeline(false)} returnFocus={focusMenuTrigger} />}
       {showPoster && isAdmin && <PosterModal onClose={() => setShowPoster(false)} returnFocus={focusMenuTrigger} />}
     </header>

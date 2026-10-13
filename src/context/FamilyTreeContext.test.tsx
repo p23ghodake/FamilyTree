@@ -175,34 +175,41 @@ it('rejects malformed shared data without changing the current tree', async () =
 });
 
 it('prevents non-admin editors from resetting shared data', async () => {
+  (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser, access_token: githubToken }, loading: false });
   await mountEditor();
   act(() => context.resetData());
+  expect(getFamilyData).toHaveBeenCalledTimes(1);
   expect(saveFamilyData).not.toHaveBeenCalled();
 });
 
-it('falls back to the built-in copy when loading fails', async () => {
+it('shows an error when the first load fails', async () => {
   (getFamilyData as jest.Mock).mockRejectedValueOnce(new Error('Network down'));
   jest.spyOn(console, 'error').mockImplementation(() => {});
   render(<FamilyTreeProvider><Probe /></FamilyTreeProvider>);
   await waitFor(() => expect(context.cloudError).toBe('Network down'));
-  expect(context.state.data).not.toBeNull();
+  expect(context.state.error).toBe('Network down');
+  expect(context.state.data).toBeNull();
   expect(context.canEdit).toBe(false);
   expect(context.cloudReady).toBe(false);
   (console.error as jest.Mock).mockRestore();
 });
 
-it('loads the built-in copy for guests without contacting GitHub', async () => {
+it('loads the limited, read-only view for visitors', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false });
+  (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: '', canEdit: false, limited: true });
   render(<FamilyTreeProvider><Probe /></FamilyTreeProvider>);
-  await waitFor(() => expect(context.state.data).not.toBeNull());
-  expect(getFamilyData).not.toHaveBeenCalled();
+  await waitFor(() => expect(context.limitedView).toBe(true));
+  expect(context.state.data).not.toBeNull();
+  expect(context.canEdit).toBe(false);
+  expect(context.cloudReady).toBe(false);
 });
 
-it('allows an authorized admin to reset shared data', async () => {
+it('lets an authorized admin reload the latest data without saving', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: { access_token: githubToken, user: {
     id: 'admin', identities: [{ provider: 'github', identity_data: { user_name: 'p23ghodake' } }],
   } }, loading: false });
   await mountEditor();
   act(() => context.resetData());
-  await waitFor(() => expect(saveFamilyData).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(getFamilyData).toHaveBeenCalledTimes(2));
+  expect(saveFamilyData).not.toHaveBeenCalled();
 });
