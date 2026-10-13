@@ -636,8 +636,8 @@ describe('Marathi labels — distant relatives', () => {
     });
 
     it('names a wider same-generation cousin\'s wife चुलत वहिनी', () => {
-      expect(r('priyanka', 'v_s3')).toMatchObject({ label: 'Cousin-in-law', labelMr: 'चुलत वहिनी' });
-      expect(r('v_s3', 'priyanka')).toMatchObject({ label: 'Cousin-in-law', labelMr: 'पतीचा चुलत भाऊ' });
+      expect(r('priyanka', 'v_s3')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'चुलत वहिनी' });
+      expect(r('v_s3', 'priyanka')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'चुलत दीर' });
     });
   });
 
@@ -838,7 +838,13 @@ describe('Relationship audit fixes', () => {
     expect(r('bro_son_son', 'me_f')?.labelMr).toBe('भाच्याचा मुलगा');
     expect(r('wgp', 'me')).toMatchObject({ label: 'Grandfather-in-law', labelMr: 'आजेसासरे' });
     expect(r('bro_son_w', 'me')).toMatchObject({ label: 'Niece-in-law', labelMr: 'पुतणसून' });
-    expect(r('cousin_w', 'me')).toMatchObject({ label: 'Cousin-in-law', labelMr: 'चुलत वहिनी' });
+    expect(r('cousin_w', 'me')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'चुलत वहिनी' });
+  });
+
+  it('names a husband\'s cousin चुलत दीर / चुलत नणंद', () => {
+    expect(r('cousin', 'w')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'चुलत दीर' });
+    expect(r('me', 'cousin_w')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'चुलत दीर' });
+    expect(r('me_f', 'cousin_w')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'चुलत नणंद' });
   });
 
   it('names step-grandparents and step-grandchildren', () => {

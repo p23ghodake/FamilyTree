@@ -243,6 +243,9 @@ function bloodLabelEn(up: number, down: number, g: Gender): string {
   return 'Cousin';
 }
 
+const cousinSibling = (label: string, g: Gender) =>
+  label === 'Cousin' && g !== 'unknown' ? `Cousin ${pick(g, 'brother', 'sister', '')}` : label;
+
 function stepLabel(label: string): string {
   return /^(Father|Mother|Parent|Son|Daughter|Child|Brother|Sister|Sibling)$/.test(label)
     ? `Step${label.toLowerCase()}`
@@ -263,13 +266,13 @@ function labelEn(dirs: StepType[], g: Gender): { label: string; kind: LabelKind 
     if (isEmpty(a)) {
       // Source is married to Y, a blood relative of the target.
       if (b.up === 0) return { label: stepLabel(bloodLabelEn(0, b.down, g)), kind: 'step' };
-      const rel = bloodLabelEn(b.up, b.down, g);
+      const rel = cousinSibling(bloodLabelEn(b.up, b.down, g), g);
       return { label: b.down > b.up ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
     }
     if (isEmpty(b)) {
       // The target is married to X, a blood relative of the source.
       if (a.down === 0) return { label: stepLabel(bloodLabelEn(a.up, 0, g)), kind: 'step' };
-      const rel = bloodLabelEn(a.up, a.down, g);
+      const rel = cousinSibling(bloodLabelEn(a.up, a.down, g), g);
       return { label: a.up > a.down ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
     }
     if (a.down === 0 || b.up === 0) {
@@ -439,11 +442,10 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
         const uncle = uncleMr(genderAt(after, 0), g);
         if (uncle && word) return `${word}${FEMININE_ELDERS.has(uncle) ? 'ची' : 'चे'} ${uncle}`;
       }
-      if (a.up === a.down && a.up >= 2 && word && g !== 'unknown') {
+      if (a.up === a.down && a.up >= 2 && Y !== 'unknown' && g !== 'unknown') {
         // Only first cousins carry the side-specific prefix; wider cousins are plain चुलत, as in bloodMr.
         const prefix = a.up === 2 ? cousinPrefix(genderAt(after, 0), genderAt(after, 2)) : 'चुलत';
-        const cousin = `${prefix} ${pick(g, 'भाऊ', 'बहीण', '')}`;
-        return `${word}${pick(g, 'चा', 'ची', '')} ${cousin}`;
+        return `${prefix} ${Y === 'male' ? pick(g, 'दीर', 'नणंद', '') : pick(g, 'मेव्हणा', 'मेव्हणी', '')}`;
       }
       return BY_MARRIAGE_MR;
     }
