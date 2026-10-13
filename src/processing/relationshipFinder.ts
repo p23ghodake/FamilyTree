@@ -235,11 +235,12 @@ function bloodLabelEn(up: number, down: number, g: Gender): string {
       : capitalize(greats(up - 2) + pick(g, 'grandson', 'granddaughter', 'grandchild'));
   }
   if (up === 1 && down === 1) return pick(g, 'Brother', 'Sister', 'Sibling');
-  if (up === 1) return capitalize(greats(down - 2) + pick(g, 'uncle', 'aunt', 'uncle/aunt'));
-  if (down === 1) return capitalize(greats(up - 2) + pick(g, 'nephew', 'niece', 'nephew/niece'));
-  // Across a cousin line the generation gap decides: one older is an uncle/aunt, two a great-uncle/aunt.
-  if (down > up) return capitalize(greats(down - up - 1) + pick(g, 'uncle', 'aunt', 'uncle/aunt'));
-  if (up > down) return capitalize(greats(up - down - 1) + pick(g, 'nephew', 'niece', 'nephew/niece'));
+  // Side-branch relatives are named by generation gap, like the Marathi चुलत आजोबा / चुलत नातू.
+  const gap = down - up;
+  if (gap >= 2) return capitalize(greats(gap - 2) + pick(g, 'grandfather', 'grandmother', 'grandparent'));
+  if (gap <= -2) return capitalize(greats(-gap - 2) + pick(g, 'grandson', 'granddaughter', 'grandchild'));
+  if (gap === 1) return pick(g, 'Uncle', 'Aunt', 'Uncle/aunt');
+  if (gap === -1) return pick(g, 'Nephew', 'Niece', 'Nephew/niece');
   return 'Cousin';
 }
 
@@ -266,15 +267,12 @@ function labelEn(dirs: StepType[], g: Gender): { label: string; kind: LabelKind 
     if (isEmpty(a)) {
       // Source is married to Y, a blood relative of the target.
       if (b.up === 0) return { label: stepLabel(bloodLabelEn(0, b.down, g)), kind: 'step' };
-      // The spouse of an ancestor's sibling is named like that ancestor's own spouse (family preference).
-      if (b.up === 1 && b.down >= 3) return { label: bloodLabelEn(0, b.down - 1, g), kind: 'inLaw' };
       const rel = cousinSibling(bloodLabelEn(b.up, b.down, g), g);
       return { label: b.down > b.up ? rel : `${rel}-in-law`, kind: 'inLaw' };
     }
     if (isEmpty(b)) {
       // The target is married to X, a blood relative of the source.
       if (a.down === 0) return { label: stepLabel(bloodLabelEn(a.up, 0, g)), kind: 'step' };
-      if (a.down === 1 && a.up >= 3) return { label: bloodLabelEn(a.up - 1, 0, g), kind: 'inLaw' };
       const rel = cousinSibling(bloodLabelEn(a.up, a.down, g), g);
       return { label: a.up > a.down ? rel : `${rel}-in-law`, kind: 'inLaw' };
     }
@@ -349,8 +347,10 @@ function cousinPrefix(targetParent: Gender, auntOrUncle: Gender): string {
 const DISTANT_MR: Record<number, [string, string]> = {
   2: ['चुलत आजोबा', 'चुलत आजी'],
   3: ['चुलत पणजोबा', 'चुलत पणजी'],
+  4: ['चुलत खापरपणजोबा', 'चुलत खापरपणजी'],
   [-2]: ['चुलत नातू', 'चुलत नात'],
   [-3]: ['चुलत पणतू', 'चुलत पणती'],
+  [-4]: ['चुलत खापरपणतू', 'चुलत खापरपणती'],
 };
 
 function distantMr(gap: number, g: Gender): string {
@@ -403,7 +403,7 @@ function bloodMr(hr: HopMeta[], g: Gender, tg: Gender): string {
   // Cousin's child (पुतण्या/भाचा) and parent's cousin (काका/आत्या/मामा/मावशी) follow the sibling rules.
   if (U >= 2 && D === U + 1) return nephewMr(tg, genderAt(hr, U + D - 2), g);
   if (D >= 2 && U === D + 1) return uncleMr(genderAt(hr, 0), g) ?? RELATIVE_MR;
-  if (U >= 2 && D >= 2 && U !== D) return distantMr(U - D, g);
+  if (U >= 1 && D >= 1 && Math.abs(U - D) >= 2) return distantMr(U - D, g);
   if (U >= 2 && D >= 2) return `चुलत ${pick(g, 'भाऊ', 'बहीण', 'भावंड')}`;
   return RELATIVE_MR;
 }
@@ -439,8 +439,7 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
       }
       // Spouse's nephew/niece, or spouse's cousin's child.
       if (a.up >= 1 && a.down === a.up + 1) return nephewMr(Y, genderAt(after, a.up + a.down - 2), g);
-      if (a.up >= 2 && a.down >= a.up + 2) return distantMr(a.up - a.down, g);
-      if (a.up === 1 && a.down >= 3) return distantMr(a.up - a.down, g);
+      if (a.up >= 1 && a.down >= a.up + 2) return distantMr(a.up - a.down, g);
       const word = spouseWord(Y);
       if (a.up === 2 && a.down === 1) {
         const uncle = uncleMr(genderAt(after, 0), g);
@@ -488,8 +487,7 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
         }
         return RELATIVE_MR;
       }
-      if (b.down >= 2 && b.up >= b.down + 2) return distantMr(b.up - b.down, g);
-      if (b.down === 1 && b.up >= 3) return distantMr(b.up - b.down, g);
+      if (b.down >= 1 && b.up >= b.down + 2) return distantMr(b.up - b.down, g);
       if (b.up === b.down && b.up >= 2) {
         const prefix = b.up === 2 ? cousinPrefix(genderAt(before, 0), genderAt(before, 2)) : 'चुलत';
         if (X === 'male' && g === 'female') return `${prefix} वहिनी`;
@@ -505,7 +503,7 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
     if (b.up === 0 && b.down === 1 && a.up === 1 && a.down === 0) {
       return pick(g, 'व्याही', 'विहीण', 'व्याही/विहीण');
     }
-    return BY_MARRIAGE_MR;
+    return linkedMr(hr, spouseIdx, g, tg, config);
   }
 
   // ── Two marriages: जाऊ / साडू, child's spouse through the target's spouse ──
@@ -522,6 +520,30 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
   }
   if (key === 'spouse,down,spouse') return pick(g, 'जावई', 'सून', 'जावई/सून');
   return BY_MARRIAGE_MR;
+}
+
+// Oblique (possessive) stem of relation words whose form changes before चा/ची/चे.
+const OBLIQUE_MR: Record<string, string> = {
+  'भाऊ': 'भावा', 'बहीण': 'बहिणी', 'वडील': 'वडिलां', 'आजोबा': 'आजोबां', 'पणजोबा': 'पणजोबां',
+  'खापरपणजोबा': 'खापरपणजोबां', 'काका': 'काकां', 'मामा': 'मामां', 'आतोबा': 'आतोबां', 'मुलगा': 'मुला', 'नातू': 'नातवा',
+  'नात': 'नाती', 'सून': 'सुने', 'जावई': 'जावया', 'दीर': 'दिरा', 'नणंद': 'नणंदे', 'मेव्हणा': 'मेव्हण्या', 'भाचा': 'भाच्या',
+  'सासरे': 'सासऱ्यां', 'आजेसासरे': 'आजेसासऱ्यां', 'व्याही': 'व्याह्यां',
+};
+
+/** Across a mid-path marriage: the linking spouse's term, then the source's term to them ("चुलत आजीचा भाऊ"). */
+function linkedMr(hr: HopMeta[], spouseIdx: number, g: Gender, tg: Gender, config: MarathiKinshipConfig): string {
+  const Y = hr[spouseIdx].toGender;
+  const link = labelMr(hr.slice(0, spouseIdx + 1), Y, tg, config);
+  const own = bloodMr(hr.slice(spouseIdx + 1), g, Y);
+  const vague = (t: string) => t === RELATIVE_MR || t === BY_MARRIAGE_MR || t.includes('/');
+  if (vague(link) || vague(own) || /(चा|ची|चे) /.test(link)) return BY_MARRIAGE_MR;
+
+  const words = link.split(' ');
+  const last = words.pop()!;
+  const possessive = /(चा|ची|चे) /.test(own) ? 'च्या'
+    : HONORIFIC_MR.has(own.split(' ').pop()!) ? 'चे'
+    : pick(g, 'चा', 'ची', 'चे');
+  return `${[...words, OBLIQUE_MR[last] ?? last].join(' ')}${possessive} ${own}`;
 }
 
 // ─── Public result type ───

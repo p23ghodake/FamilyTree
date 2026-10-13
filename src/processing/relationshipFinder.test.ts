@@ -608,8 +608,8 @@ describe('Marathi labels — distant relatives', () => {
     const rels = parentChildRels([
       ['k_ca', 'k_a1'], ['k_a1', 'k_a2'], ['k_a2', 'k_a3'], ['k_a3', 'k_src'], ['k_ca', 'k_b1'], ['k_b1', 'k_tgt'],
     ]);
-    expect(computeRelationship('k_src', 'k_tgt', all, rels)).toMatchObject({ label: 'Great-nephew', labelMr: 'चुलत नातू' });
-    expect(computeRelationship('k_tgt', 'k_src', all, rels)).toMatchObject({ label: 'Great-aunt', labelMr: 'चुलत आजी' });
+    expect(computeRelationship('k_src', 'k_tgt', all, rels)).toMatchObject({ label: 'Grandson', labelMr: 'चुलत नातू' });
+    expect(computeRelationship('k_tgt', 'k_src', all, rels)).toMatchObject({ label: 'Grandmother', labelMr: 'चुलत आजी' });
   });
 
   describe('cousin line two generations apart, through a marriage (Nirved / Priyanka shape)', () => {
@@ -625,14 +625,21 @@ describe('Marathi labels — distant relatives', () => {
     );
     const r = (a: string, b: string) => computeRelationship(a, b, all, rels);
 
-    it('names the blood tie great-uncle / great-nephew', () => {
-      expect(r('yash', 'nirved')).toMatchObject({ label: 'Great-uncle', labelMr: 'चुलत आजोबा' });
-      expect(r('nirved', 'yash')).toMatchObject({ label: 'Great-nephew', labelMr: 'चुलत नातू' });
+    it('names the blood tie by generation: grandfather / grandson', () => {
+      expect(r('yash', 'nirved')).toMatchObject({ label: 'Grandfather', labelMr: 'चुलत आजोबा' });
+      expect(r('nirved', 'yash')).toMatchObject({ label: 'Grandson', labelMr: 'चुलत नातू' });
     });
 
-    it('names the spouse great-aunt instead of cousin-in-law', () => {
-      expect(r('priyanka', 'nirved')).toMatchObject({ label: 'Great-aunt', labelMr: 'चुलत आजी' });
-      expect(r('nirved', 'priyanka')).toMatchObject({ label: 'Great-nephew', labelMr: 'चुलत नातू' });
+    it('names the spouse grandmother instead of cousin-in-law', () => {
+      expect(r('priyanka', 'nirved')).toMatchObject({ label: 'Grandmother', labelMr: 'चुलत आजी' });
+      expect(r('nirved', 'priyanka')).toMatchObject({ label: 'Grandson', labelMr: 'चुलत नातू' });
+    });
+
+    it('names four generations up a side branch चुलत खापरपणजोबा / खापरपणजी', () => {
+      expect(r('v_t1', 'nirved')).toMatchObject({ label: 'Great-great-grandfather', labelMr: 'चुलत खापरपणजोबा' });
+      expect(r('nirved', 'v_t1')).toMatchObject({ label: 'Great-great-grandson', labelMr: 'चुलत खापरपणतू' });
+      expect(r('kesar', 'nirved')).toMatchObject({ label: 'Great-great-grandmother', labelMr: 'चुलत खापरपणजी' });
+      expect(r('nirved', 'kesar')).toMatchObject({ label: 'Great-great-grandson', labelMr: 'चुलत खापरपणतू' });
     });
 
     it('names a wider same-generation cousin\'s wife चुलत वहिनी', () => {
@@ -647,6 +654,37 @@ describe('Marathi labels — distant relatives', () => {
       expect(r('kesar', 'v_s3')).toMatchObject({ label: 'Grandmother', labelMr: 'चुलत आजी' });
       expect(r('v_s2', 'kesar')).toMatchObject({ label: 'Nephew', labelMr: 'पुतण्या' });
       expect(r('kesar', 'v_s2')).toMatchObject({ label: 'Aunt', labelMr: 'काकू' });
+    });
+  });
+
+  describe('relatives across a marriage in the middle are named through the linking spouse', () => {
+    // me → bro ♡ bro_w ← bw_dad → bw_bro;  me → son ♡ dil ← dil_dad → dil_bro;  cu (grandfather's cousin) ♡ cu_w ← cw_dad → cw_bro
+    const all = [
+      m('me', 'male'), m('dad', 'male'), m('bro', 'male'), m('bro_w', 'female'), m('bw_dad', 'male'), m('bw_bro', 'male'),
+      m('son', 'male'), m('dil', 'female'), m('dil_dad', 'male'), m('dil_bro', 'male'),
+      m('gp', 'male'), m('ggp', 'male'), m('gggp', 'male'), m('gu', 'male'), m('cu', 'male'), m('cu_w', 'female'),
+      m('cw_dad', 'male'), m('cw_bro', 'male'), m('cw_sis', 'female'),
+    ];
+    const rels = combinedRels(
+      [['dad', 'me'], ['dad', 'bro'], ['bw_dad', 'bro_w'], ['bw_dad', 'bw_bro'], ['me', 'son'], ['dil_dad', 'dil'], ['dil_dad', 'dil_bro'],
+       ['gp', 'dad'], ['ggp', 'gp'], ['gggp', 'ggp'], ['gggp', 'gu'], ['gu', 'cu'], ['cw_dad', 'cu_w'], ['cw_dad', 'cw_bro'], ['cw_dad', 'cw_sis']],
+      [['bro', 'bro_w'], ['son', 'dil'], ['cu', 'cu_w']],
+    );
+    const r = (a: string, b: string) => computeRelationship(a, b, all, rels);
+
+    it('names a sibling\'s or child\'s in-laws', () => {
+      expect(r('bw_dad', 'me')?.labelMr).toBe('वहिनीचे वडील');
+      expect(r('bw_bro', 'me')?.labelMr).toBe('वहिनीचा भाऊ');
+      expect(r('me', 'bw_dad')?.labelMr).toBe('जावयाचा भाऊ');
+      expect(r('dil_bro', 'me')?.labelMr).toBe('सुनेचा भाऊ');
+      expect(r('me', 'dil_bro')?.labelMr).toBe('मेव्हण्याचे वडील');
+    });
+
+    it('names a distant relative\'s wife\'s family (Ayush\'s मामा / मावशी shape)', () => {
+      expect(r('cw_bro', 'me')?.labelMr).toBe('चुलत आजीचा भाऊ');
+      expect(r('cw_sis', 'me')?.labelMr).toBe('चुलत आजीची बहीण');
+      expect(r('me', 'cw_bro')?.labelMr).toBe('मेव्हण्याचा चुलत नातू');
+      expect(describeRelationship(r('cw_bro', 'me')!, 'अमोल', 'निर्वेद', 'mr', 'male')).toBe('अमोल निर्वेदच्या चुलत आजीचा भाऊ आहे.');
     });
   });
 
@@ -744,7 +782,7 @@ describe('Relationship reference rules', () => {
   it('names a grandfather\'s brother चुलत आजोबा', () => {
     const pp = [m('a', 'male'), m('b', 'male'), m('c', 'male'), m('d', 'male'), m('e', 'male')];
     const rr = parentChildRels([['a', 'b'], ['a', 'c'], ['b', 'd'], ['d', 'e']]);
-    expect(computeRelationship('c', 'e', pp, rr)).toMatchObject({ label: 'Great-uncle', labelMr: 'चुलत आजोबा' });
+    expect(computeRelationship('c', 'e', pp, rr)).toMatchObject({ label: 'Grandfather', labelMr: 'चुलत आजोबा' });
   });
 
   it('missing parent gender: side is not guessed', () => {
@@ -835,15 +873,15 @@ describe('Relationship audit fixes', () => {
   });
 
   it('names great-great relatives instead of showing arrows', () => {
-    expect(r('gggu', 'me')?.label).toBe('Great-great-uncle');
-    expect(r('me', 'gggu')?.label).toBe('Great-great-nephew');
+    expect(r('gggu', 'me')).toMatchObject({ label: 'Great-grandfather', labelMr: 'चुलत पणजोबा' });
+    expect(r('me', 'gggu')).toMatchObject({ label: 'Great-grandson', labelMr: 'चुलत पणतू' });
     expect(r('gggp', 'me')).toMatchObject({ label: 'Great-great-grandfather', labelMr: 'खापरपणजोबा' });
   });
 
   it('uses Marathi terms for great-uncles, great-nephews and in-laws', () => {
-    expect(r('ggu', 'me')).toMatchObject({ label: 'Great-uncle', labelMr: 'चुलत आजोबा' });
+    expect(r('ggu', 'me')).toMatchObject({ label: 'Grandfather', labelMr: 'चुलत आजोबा' });
     expect(r('mgu', 'me')?.labelMr).toBe('आईचे काका');
-    expect(r('bro_son_son', 'me')).toMatchObject({ label: 'Great-nephew', labelMr: 'पुतण्याचा मुलगा' });
+    expect(r('bro_son_son', 'me')).toMatchObject({ label: 'Grandson', labelMr: 'पुतण्याचा मुलगा' });
     expect(r('bro_son_son', 'me_f')?.labelMr).toBe('भाच्याचा मुलगा');
     expect(r('wgp', 'me')).toMatchObject({ label: 'Grandfather-in-law', labelMr: 'आजेसासरे' });
     expect(r('bro_son_w', 'me')).toMatchObject({ label: 'Niece-in-law', labelMr: 'पुतणसून' });
