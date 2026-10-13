@@ -266,14 +266,17 @@ function labelEn(dirs: StepType[], g: Gender): { label: string; kind: LabelKind 
     if (isEmpty(a)) {
       // Source is married to Y, a blood relative of the target.
       if (b.up === 0) return { label: stepLabel(bloodLabelEn(0, b.down, g)), kind: 'step' };
+      // The spouse of an ancestor's sibling is named like that ancestor's own spouse (family preference).
+      if (b.up === 1 && b.down >= 3) return { label: bloodLabelEn(0, b.down - 1, g), kind: 'inLaw' };
       const rel = cousinSibling(bloodLabelEn(b.up, b.down, g), g);
-      return { label: b.down > b.up ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
+      return { label: b.down > b.up ? rel : `${rel}-in-law`, kind: 'inLaw' };
     }
     if (isEmpty(b)) {
       // The target is married to X, a blood relative of the source.
       if (a.down === 0) return { label: stepLabel(bloodLabelEn(a.up, 0, g)), kind: 'step' };
+      if (a.down === 1 && a.up >= 3) return { label: bloodLabelEn(a.up - 1, 0, g), kind: 'inLaw' };
       const rel = cousinSibling(bloodLabelEn(a.up, a.down, g), g);
-      return { label: a.up > a.down ? `${rel} by marriage` : `${rel}-in-law`, kind: 'inLaw' };
+      return { label: a.up > a.down ? rel : `${rel}-in-law`, kind: 'inLaw' };
     }
     if (a.down === 0 || b.up === 0) {
       return { label: stepLabel(bloodLabelEn(a.up + b.up, a.down + b.down, g)), kind: 'step' };
@@ -437,6 +440,7 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
       // Spouse's nephew/niece, or spouse's cousin's child.
       if (a.up >= 1 && a.down === a.up + 1) return nephewMr(Y, genderAt(after, a.up + a.down - 2), g);
       if (a.up >= 2 && a.down >= a.up + 2) return distantMr(a.up - a.down, g);
+      if (a.up === 1 && a.down >= 3) return distantMr(a.up - a.down, g);
       const word = spouseWord(Y);
       if (a.up === 2 && a.down === 1) {
         const uncle = uncleMr(genderAt(after, 0), g);
@@ -485,6 +489,7 @@ function labelMr(hr: HopMeta[], g: Gender, tg: Gender, config: MarathiKinshipCon
         return RELATIVE_MR;
       }
       if (b.down >= 2 && b.up >= b.down + 2) return distantMr(b.up - b.down, g);
+      if (b.down === 1 && b.up >= 3) return distantMr(b.up - b.down, g);
       if (b.up === b.down && b.up >= 2) {
         const prefix = b.up === 2 ? cousinPrefix(genderAt(before, 0), genderAt(before, 2)) : 'चुलत';
         if (X === 'male' && g === 'female') return `${prefix} वहिनी`;
