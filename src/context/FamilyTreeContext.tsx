@@ -35,7 +35,7 @@ function loadSavedAvatarStyle(): AvatarStyle {
       saved === 'silhouette-flat' || saved === 'silhouette-bold'
     ) return saved as AvatarStyle;
   } catch {}
-  return 'emoji';
+  return 'silhouette-flat';
 }
 
 /** Strips computed/styling fields — produces raw format matching familyData.json */

@@ -967,6 +967,13 @@
   }
 }
 
+/* The expanded search panel shows the tracer steps; the centred banner would sit on top of it. */
+@media (max-width: 960px) {
+  .tree-view__rel-banner {
+    display: none;
+  }
+}
+
 /* ═══════════════════════════════════════════
    Connector lines — gradient, glow, rounded elbows,
    node dots and hover trace (styling only)

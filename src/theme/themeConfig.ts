@@ -73,7 +73,5 @@ export function loadSavedTheme(): ThemeName {
   } catch {
     // ignore
   }
-  // Auto-detect OS dark mode preference
-  if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark';
   return DEFAULT_THEME;
 }
