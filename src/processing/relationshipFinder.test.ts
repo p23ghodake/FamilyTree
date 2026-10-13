@@ -518,7 +518,7 @@ describe('Marathi labels — computeRelationship', () => {
 // ─── Marathi labels — distant relatives (cousins beyond 1st) ───
 
 describe('Marathi labels — distant relatives', () => {
-  it('2nd cousin (male source)', () => {
+  it('2nd cousin is a plain cousin (male source)', () => {
     // CA → A1 → A2 → source;  CA → B1 → B2 → target  (both 3 levels from CA)
     const all = [
       m('d_ca'), m('d_a1'), m('d_a2'), m('d_src', 'male'),
@@ -529,11 +529,11 @@ describe('Marathi labels — distant relatives', () => {
       ['d_ca', 'd_b1'], ['d_b1', 'd_b2'], ['d_b2', 'd_tgt'],
     ]);
     const r = computeRelationship('d_src', 'd_tgt', all, rels);
-    expect(r?.label).toBe('2nd cousin');
-    expect(r?.labelMr).toBe('दुसरा चुलत भाऊ');
+    expect(r?.label).toBe('Cousin');
+    expect(r?.labelMr).toBe('चुलत भाऊ');
   });
 
-  it('2nd cousin (female source)', () => {
+  it('2nd cousin is a plain cousin (female source)', () => {
     const all = [
       m('d2_ca'), m('d2_a1'), m('d2_a2'), m('d2_src', 'female'),
       m('d2_b1'), m('d2_b2'), m('d2_tgt'),
@@ -543,12 +543,12 @@ describe('Marathi labels — distant relatives', () => {
       ['d2_ca', 'd2_b1'], ['d2_b1', 'd2_b2'], ['d2_b2', 'd2_tgt'],
     ]);
     const r = computeRelationship('d2_src', 'd2_tgt', all, rels);
-    expect(r?.label).toBe('2nd cousin');
-    expect(r?.labelMr).toBe('दुसरी चुलत बहीण');
+    expect(r?.label).toBe('Cousin');
+    expect(r?.labelMr).toBe('चुलत बहीण');
   });
 
-  it('4th cousin 1x removed — male source (the reported bug)', () => {
-    // source 5 levels from CA, target 6 levels → "4th cousin 1x removed"
+  it('4th cousin once removed is a plain cousin — male source', () => {
+    // source 5 levels from CA, target 6 levels
     const all = [
       m('f_ca'),
       m('f_a1'), m('f_a2'), m('f_a3'), m('f_a4'), m('f_src', 'male'),
@@ -559,11 +559,11 @@ describe('Marathi labels — distant relatives', () => {
       ['f_ca', 'f_b1'], ['f_b1', 'f_b2'], ['f_b2', 'f_b3'], ['f_b3', 'f_b4'], ['f_b4', 'f_b5'], ['f_b5', 'f_tgt'],
     ]);
     const r = computeRelationship('f_src', 'f_tgt', all, rels);
-    expect(r?.label).toBe('4th cousin once removed');
-    expect(r?.labelMr).toBe('चौथा चुलत भाऊ (1 पिढी दूर)');
+    expect(r?.label).toBe('Cousin');
+    expect(r?.labelMr).toBe('चुलत भाऊ');
   });
 
-  it('4th cousin 1x removed — female source', () => {
+  it('4th cousin once removed is a plain cousin — female source', () => {
     const all = [
       m('g_ca'),
       m('g_a1'), m('g_a2'), m('g_a3'), m('g_a4'), m('g_src', 'female'),
@@ -574,12 +574,12 @@ describe('Marathi labels — distant relatives', () => {
       ['g_ca', 'g_b1'], ['g_b1', 'g_b2'], ['g_b2', 'g_b3'], ['g_b3', 'g_b4'], ['g_b4', 'g_b5'], ['g_b5', 'g_tgt'],
     ]);
     const r = computeRelationship('g_src', 'g_tgt', all, rels);
-    expect(r?.label).toBe('4th cousin once removed');
-    expect(r?.labelMr).toBe('चौथी चुलत बहीण (1 पिढी दूर)');
+    expect(r?.label).toBe('Cousin');
+    expect(r?.labelMr).toBe('चुलत बहीण');
   });
 
-  it('3rd cousin (same level, unknown gender)', () => {
-    // source & target both 4 levels from CA → "3rd cousin"
+  it('3rd cousin is a plain cousin (same level, unknown gender)', () => {
+    // source & target both 4 levels from CA
     const all = [
       m('t_ca'),
       m('t_a1'), m('t_a2'), m('t_a3'), m('t_src'),
@@ -590,8 +590,8 @@ describe('Marathi labels — distant relatives', () => {
       ['t_ca', 't_b1'], ['t_b1', 't_b2'], ['t_b2', 't_b3'], ['t_b3', 't_tgt'],
     ]);
     const r = computeRelationship('t_src', 't_tgt', all, rels);
-    expect(r?.label).toBe('3rd cousin');
-    expect(r?.labelMr).toBe('तिसरे चुलत भावंड');
+    expect(r?.label).toBe('Cousin');
+    expect(r?.labelMr).toBe('चुलत भावंड');
   });
 });
 
@@ -770,7 +770,7 @@ describe('Relationship audit fixes', () => {
     expect(r('bro_son_son', 'me_f')?.labelMr).toBe('भाच्याचा मुलगा');
     expect(r('wgp', 'me')).toMatchObject({ label: 'Grandfather-in-law', labelMr: 'आजेसासरे' });
     expect(r('bro_son_w', 'me')).toMatchObject({ label: 'Niece-in-law', labelMr: 'पुतणसून' });
-    expect(r('cousin_w', 'me')).toMatchObject({ label: '1st cousin-in-law', labelMr: 'चुलत वहिनी' });
+    expect(r('cousin_w', 'me')).toMatchObject({ label: 'Cousin-in-law', labelMr: 'चुलत वहिनी' });
   });
 
   it('names step-grandparents and step-grandchildren', () => {

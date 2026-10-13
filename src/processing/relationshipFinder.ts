@@ -221,10 +221,6 @@ function greats(n: number): string {
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const lowerFirst = (s: string) => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
 
-function removedText(n: number): string {
-  return n === 1 ? 'once removed' : n === 2 ? 'twice removed' : `${n} times removed`;
-}
-
 /** What the source is when it climbs `up` generations to a common ancestor and the target is `down` below it. */
 function bloodLabelEn(up: number, down: number, g: Gender): string {
   if (up === 0 && down === 0) return 'Same person';
@@ -241,9 +237,8 @@ function bloodLabelEn(up: number, down: number, g: Gender): string {
   if (up === 1 && down === 1) return pick(g, 'Brother', 'Sister', 'Sibling');
   if (up === 1) return capitalize(greats(down - 2) + pick(g, 'uncle', 'aunt', 'uncle/aunt'));
   if (down === 1) return capitalize(greats(up - 2) + pick(g, 'nephew', 'niece', 'nephew/niece'));
-  const level = Math.min(up, down) - 1;
-  const removed = Math.abs(up - down);
-  return `${ordinal(level)} cousin${removed ? ` ${removedText(removed)}` : ''}`;
+  // Cousins of every degree are simply "Cousin" (no 2nd/3rd or "removed").
+  return 'Cousin';
 }
 
 function stepLabel(label: string): string {
@@ -321,11 +316,6 @@ const RELATIVE_MR = 'नातेवाईक';
 const BY_MARRIAGE_MR = 'लग्नामुळे नातेवाईक';
 const FEMININE_ELDERS = new Set(['आत्या', 'मावशी']);
 
-function marathiOrdinal(n: number, g: Gender): string {
-  const stems = ['पहिल', 'दुसर', 'तिसर', 'चौथ', 'पाचव', 'सहाव', 'सातव', 'आठव', 'नवव', 'दहाव'];
-  return (stems[n - 1] ?? `${n}व`) + pick(g, 'ा', 'ी', 'े');
-}
-
 /** Source's term as an uncle/aunt, given the gender of the parent they are a sibling of. */
 function uncleMr(siblingOfGender: Gender, g: Gender): string | null {
   if (g === 'unknown') return null;
@@ -388,11 +378,7 @@ function bloodMr(hr: HopMeta[], g: Gender, tg: Gender): string {
     if (!via || g === 'unknown') return RELATIVE_MR;
     return `${via}${pick(g, 'चा', 'ची', 'चे')} ${pick(g, 'मुलगा', 'मुलगी', 'मूल')}`;
   }
-  if (U >= 2 && D >= 2) {
-    const removed = Math.abs(U - D);
-    const ord = marathiOrdinal(Math.min(U, D) - 1, g);
-    return `${ord} चुलत ${pick(g, 'भाऊ', 'बहीण', 'भावंड')}${removed ? ` (${removed} पिढी दूर)` : ''}`;
-  }
+  if (U >= 2 && D >= 2) return `चुलत ${pick(g, 'भाऊ', 'बहीण', 'भावंड')}`;
   return RELATIVE_MR;
 }
 
