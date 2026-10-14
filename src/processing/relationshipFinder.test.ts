@@ -560,7 +560,7 @@ describe('Marathi labels — distant relatives', () => {
     ]);
     const r = computeRelationship('f_src', 'f_tgt', all, rels);
     expect(r?.label).toBe('Uncle');
-    expect(r?.labelMr).toBe('काका');
+    expect(r?.labelMr).toBe('चुलत काका');
   });
 
   it('parent\'s cousin is an aunt on the mother\'s side — female source', () => {
@@ -593,7 +593,7 @@ describe('Marathi labels — distant relatives', () => {
 
     it('names the cousin\'s son a nephew and the elder his uncle', () => {
       expect(r('n_kid', 'n_elder')).toMatchObject({ label: 'Nephew', labelMr: 'पुतण्या' });
-      expect(r('n_elder', 'n_kid')).toMatchObject({ label: 'Uncle', labelMr: 'काका' });
+      expect(r('n_elder', 'n_kid')).toMatchObject({ label: 'Uncle', labelMr: 'चुलत काका' });
     });
 
     it('uses भाचा/भाची through a female cousin or for a female elder', () => {
@@ -644,7 +644,7 @@ describe('Marathi labels — distant relatives', () => {
 
     it('names a wider same-generation cousin\'s wife चुलत वहिनी', () => {
       expect(r('priyanka', 'v_s3')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'चुलत वहिनी' });
-      expect(r('v_s3', 'priyanka')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'चुलत दीर' });
+      expect(r('v_s3', 'priyanka')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'दीर' });
     });
 
     it('names the wife of an ancestor\'s brother like a grandmother (Saurabh / Kesar Bai shape)', () => {
@@ -857,7 +857,7 @@ describe('Relationship audit fixes', () => {
   });
 
   it('names a cousin\'s child and the cousin\'s uncle\'s wife', () => {
-    expect(r('w', 'cousin_son')).toMatchObject({ label: 'Aunt', labelMr: 'काकू' });
+    expect(r('w', 'cousin_son')).toMatchObject({ label: 'Aunt', labelMr: 'चुलत काकू' });
     expect(r('cousin_son', 'w')).toMatchObject({ label: 'Nephew', labelMr: 'पुतण्या' });
   });
 
@@ -888,10 +888,10 @@ describe('Relationship audit fixes', () => {
     expect(r('cousin_w', 'me')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'चुलत वहिनी' });
   });
 
-  it('names a husband\'s cousin चुलत दीर / चुलत नणंद', () => {
-    expect(r('cousin', 'w')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'चुलत दीर' });
-    expect(r('me', 'cousin_w')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'चुलत दीर' });
-    expect(r('me_f', 'cousin_w')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'चुलत नणंद' });
+  it('names a husband\'s cousin दीर / नणंद without a cousin prefix', () => {
+    expect(r('cousin', 'w')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'दीर' });
+    expect(r('me', 'cousin_w')).toMatchObject({ label: 'Cousin brother-in-law', labelMr: 'दीर' });
+    expect(r('me_f', 'cousin_w')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'नणंद' });
   });
 
   it('names step-grandparents and step-grandchildren', () => {
@@ -921,5 +921,141 @@ describe('Relationship audit fixes', () => {
     expect(describeRelationship(r('sis', 'me')!, 'सीमा', 'अमित', 'mr', 'female')).toBe('सीमा अमितची बहीण आहे.');
     expect(describeRelationship(r('bro', 'me')!, 'राहुल', 'अमित', 'mr', 'male')).toBe('राहुल अमितचा भाऊ आहे.');
     expect(describeRelationship(r('bro_son_son', 'me')!, 'ओम', 'अमित', 'mr', 'male')).toBe('ओम अमितच्या पुतण्याचा मुलगा आहे.');
+  });
+});
+
+// ─── Definitive Marathi kinship matrix (each relative → a married woman "me") ───
+
+describe('Marathi kinship matrix', () => {
+  const rows: [string, 'male' | 'female', number | null][] = [
+    ['me', 'female', 1995], ['hus', 'male', 1990], ['hgp', 'male', 1930],
+    ['dad', 'male', 1965], ['mom', 'female', 1968], ['gp', 'male', 1935], ['gm', 'female', 1938],
+    ['ggp', 'male', 1905], ['ggm', 'female', 1908], ['gggp', 'male', 1875], ['gggm', 'female', 1878],
+    ['kaka', 'male', 1962], ['kaku', 'female', 1964], ['aatya', 'female', 1970], ['k_son', 'male', 1992], ['k_dau', 'female', 1994],
+    ['gp_bro', 'male', 1932], ['fcb', 'male', 1960], ['fcb_w', 'female', 1962], ['fcs', 'female', 1963], ['fcb_son', 'male', 1990], ['fcb_dau', 'female', 1993],
+    ['sasre', 'male', 1960], ['sasu', 'female', 1963], ['hk', 'male', 1958], ['h_bro_old', 'male', 1987], ['h_bro_young', 'male', 1994],
+    ['hcb_old', 'male', 1985], ['hcb_young', 'male', 1993], ['hcb_unknown', 'male', null], ['hcs', 'female', 1991],
+    ['hcb_w', 'female', 1987], ['hcs_h', 'male', 1989],
+  ];
+  const all = rows.map(([id, gender, birthYear]) =>
+    ({ id, gender, birthYear, parentIds: [], childrenIds: [], spouseIds: [] } as unknown as StyledFamilyMember));
+  const rels = combinedRels(
+    [['dad', 'me'], ['mom', 'me'], ['gp', 'dad'], ['gm', 'dad'], ['ggp', 'gp'], ['ggm', 'gp'], ['gggp', 'ggp'], ['gggm', 'ggp'],
+     ['gp', 'kaka'], ['gm', 'kaka'], ['gp', 'aatya'], ['gm', 'aatya'], ['kaka', 'k_son'], ['kaku', 'k_son'], ['kaka', 'k_dau'], ['kaku', 'k_dau'],
+     ['ggp', 'gp_bro'], ['ggm', 'gp_bro'], ['gp_bro', 'fcb'], ['gp_bro', 'fcs'], ['fcb', 'fcb_son'], ['fcb', 'fcb_dau'],
+     ['hgp', 'sasre'], ['hgp', 'hk'], ['sasre', 'hus'], ['sasu', 'hus'], ['sasre', 'h_bro_old'], ['sasu', 'h_bro_old'],
+     ['sasre', 'h_bro_young'], ['sasu', 'h_bro_young'], ['hk', 'hcb_old'], ['hk', 'hcb_young'], ['hk', 'hcb_unknown'], ['hk', 'hcs']],
+    [['me', 'hus'], ['dad', 'mom'], ['gp', 'gm'], ['ggp', 'ggm'], ['gggp', 'gggm'], ['kaka', 'kaku'], ['fcb', 'fcb_w'],
+     ['sasre', 'sasu'], ['hcb_old', 'hcb_w'], ['hcs', 'hcs_h']],
+  );
+  const mr = (id: string) => computeRelationship(id, 'me', all, rels)?.labelMr;
+
+  it.each([
+    ['father', 'dad', 'वडील'], ['mother', 'mom', 'आई'], ['grandfather', 'gp', 'आजोबा'], ['grandmother', 'gm', 'आजी'],
+    ['great-grandfather', 'ggp', 'पणजोबा'], ['great-grandmother', 'ggm', 'पणजी'],
+    ['2x great-grandfather', 'gggp', 'खापरपणजोबा'], ['2x great-grandmother', 'gggm', 'खापरपणजी'],
+    ['father\'s brother', 'kaka', 'काका'], ['father\'s brother\'s wife', 'kaku', 'काकू'], ['father\'s sister', 'aatya', 'आत्या'],
+    ['paternal cousin (male)', 'k_son', 'चुलत भाऊ'], ['paternal cousin (female)', 'k_dau', 'चुलत बहीण'],
+    ['father\'s paternal cousin-brother', 'fcb', 'चुलत काका'], ['father\'s cousin-brother\'s wife', 'fcb_w', 'चुलत काकू'],
+    ['father\'s paternal cousin-sister', 'fcs', 'आत्या'],
+    ['father\'s cousin-brother\'s son', 'fcb_son', 'चुलत भाऊ'], ['father\'s cousin-brother\'s daughter', 'fcb_dau', 'चुलत बहीण'],
+    ['father-in-law', 'sasre', 'सासरे'], ['mother-in-law', 'sasu', 'सासू'],
+    ['husband\'s elder brother', 'h_bro_old', 'भाऊजी'], ['husband\'s younger brother', 'h_bro_young', 'दीर'],
+    ['husband\'s cousin-brother, older than husband', 'hcb_old', 'भाऊजी'],
+    ['husband\'s cousin-brother, younger than husband', 'hcb_young', 'दीर'],
+    ['husband\'s cousin-brother, age unknown', 'hcb_unknown', 'दीर'],
+    ['husband\'s cousin-sister', 'hcs', 'नणंद'],
+    ['husband\'s cousin-brother\'s wife', 'hcb_w', 'जाऊ'], ['husband\'s cousin-sister\'s husband', 'hcs_h', 'नणंदोई'],
+  ])('%s → %s', (_name, id, expected) => {
+    expect(mr(id)).toBe(expected);
+  });
+
+  it('uses the respectful form for भाऊजी', () => {
+    expect(describeRelationship(computeRelationship('hcb_old', 'me', all, rels)!, 'सुनील', 'दीक्षा', 'mr', 'male'))
+      .toBe('सुनील दीक्षाचे भाऊजी आहेत.');
+  });
+});
+
+// ─── Shapes found in the live tree: a married-in woman and her husband's wider family ───
+
+describe('husband\'s wider family seen by a married-in woman', () => {
+  const females = new Set(['kesar', 'kiran', 'kalpana', 'priyanka', 'deeksha']);
+  const ids = ['narayan', 'tukaram', 'vitthal', 'lotan', 'gangaram', 'suklal', 'jagannath', 'tarachand', 'gopal', 'dnyan', 'yash', 'pankaj',
+    'kesar', 'kiran', 'kalpana', 'priyanka', 'deeksha'];
+  const all = ids.map(id => m(id, females.has(id) ? 'female' : 'male'));
+  const rels = combinedRels(
+    [['narayan', 'tukaram'], ['tukaram', 'vitthal'], ['vitthal', 'lotan'], ['lotan', 'gangaram'], ['gangaram', 'suklal'], ['suklal', 'jagannath'],
+     ['gangaram', 'tarachand'], ['tarachand', 'gopal'], ['tarachand', 'dnyan'], ['gopal', 'yash'], ['dnyan', 'pankaj']],
+    [['tarachand', 'kesar'], ['gopal', 'kiran'], ['dnyan', 'kalpana'], ['yash', 'priyanka'], ['pankaj', 'deeksha']],
+  );
+  const r = (a: string, b: string) => computeRelationship(a, b, all, rels);
+
+  it('names the husband\'s father\'s cousin and the reverse', () => {
+    expect(r('jagannath', 'deeksha')).toMatchObject({ label: 'Uncle-in-law', labelMr: 'पतीचे चुलत काका' });
+    expect(r('deeksha', 'jagannath')).toMatchObject({ label: 'Niece-in-law', labelMr: 'पुतणसून' });
+  });
+
+  it('names the husband\'s grandfather\'s brother and the reverse', () => {
+    expect(r('suklal', 'deeksha')?.labelMr).toBe('चुलत आजेसासरे');
+    expect(r('deeksha', 'suklal')?.labelMr).toBe('चुलत नातसून');
+  });
+
+  it('names the husband\'s ancestors by generation', () => {
+    expect(r('vitthal', 'kesar')?.labelMr).toBe('पणजेसासरे');
+    expect(r('kesar', 'vitthal')?.labelMr).toBe('पणतसून');
+    expect(r('tukaram', 'kesar')?.labelMr).toBe('खापरपणजेसासरे');
+    expect(r('kesar', 'tukaram')?.labelMr).toBe('खापरपणतसून');
+    expect(r('narayan', 'kesar')?.labelMr).toBe('पतीचे पूर्वज');
+    expect(r('kesar', 'narayan')?.labelMr).toBe('वंशजाची पत्नी');
+  });
+
+  it('names the husband\'s uncle\'s wife and the reverse across two marriages', () => {
+    expect(r('kiran', 'deeksha')).toMatchObject({ label: 'Aunt-in-law', labelMr: 'पतीची काकू' });
+    expect(r('kalpana', 'priyanka')).toMatchObject({ label: 'Aunt-in-law', labelMr: 'पतीची काकू' });
+    expect(r('deeksha', 'kiran')).toMatchObject({ label: 'Niece-in-law', labelMr: 'पुतणसून' });
+  });
+
+  it('names cousins\' wives जाऊ with an English label', () => {
+    expect(r('deeksha', 'priyanka')).toMatchObject({ label: 'Cousin sister-in-law', labelMr: 'जाऊ' });
+  });
+});
+
+// ─── In-laws of in-laws: chained names, two-marriage elders, compound possessives ───
+
+describe('chained in-law names', () => {
+  const females = new Set(['gm', 'gu_w', 'sunanda', 'pooja', 'kamal']);
+  const ids = ['gp', 'gm', 'gu', 'gu_w', 'kamal', 'shankar', 'suresh', 'sunanda', 'bhau', 'amit', 'pooja', 'cous', 'vasant'];
+  const all = ids.map(id => m(id, females.has(id) ? 'female' : 'male'));
+  // ggp → gp, gu, kamal;  gp → suresh → amit;  gu → cous;  bhau → sunanda;  vasant → pooja
+  all.push(m('ggp', 'male'));
+  const rels = combinedRels(
+    [['ggp', 'gp'], ['ggp', 'gu'], ['ggp', 'kamal'], ['gp', 'suresh'], ['gm', 'suresh'], ['suresh', 'amit'], ['sunanda', 'amit'],
+     ['gu', 'cous'], ['bhau', 'sunanda'], ['vasant', 'pooja']],
+    [['gp', 'gm'], ['gu', 'gu_w'], ['kamal', 'shankar'], ['suresh', 'sunanda'], ['amit', 'pooja']],
+  );
+  const r = (a: string, b: string) => computeRelationship(a, b, all, rels);
+
+  it('uses the oblique form of compound words', () => {
+    expect(r('vasant', 'gp')?.labelMr).toBe('नातसुनेचे वडील');
+    expect(r('vasant', 'gp')?.label).toBe('Granddaughter-in-law\'s father');
+  });
+
+  it('names relatives across two marriages through the linking spouse', () => {
+    expect(r('gu_w', 'bhau')).toMatchObject({ label: 'Son-in-law\'s aunt', labelMr: 'जावयाची काकू' });
+    expect(r('bhau', 'gu_w')).toMatchObject({ label: 'Husband\'s niece-in-law\'s father', labelMr: 'पतीच्या पुतणसुनेचे वडील' });
+  });
+
+  it('names the spouse\'s grand-uncle\'s wife and the reverse', () => {
+    expect(r('gu_w', 'pooja')).toMatchObject({ label: 'Grandmother-in-law', labelMr: 'चुलत आजेसासू' });
+    expect(r('pooja', 'gu_w')).toMatchObject({ label: 'Granddaughter-in-law', labelMr: 'चुलत नातसून' });
+  });
+
+  it('names a grandparent\'s sibling\'s spouse like the blood term', () => {
+    expect(r('shankar', 'amit')).toMatchObject({ label: 'Grandfather', labelMr: 'वडिलांचे आतोबा' });
+    expect(describeRelationship(r('shankar', 'amit')!, 'शंकर', 'अमित', 'mr', 'male')).toBe('शंकर अमितच्या वडिलांचे आतोबा आहेत.');
+  });
+
+  it('uses the respectful form for पणजेसासरे', () => {
+    expect(describeRelationship(r('ggp', 'pooja')!, 'रामराव', 'पूजा', 'mr', 'male')).toBe('रामराव पूजाचे पणजेसासरे आहेत.');
   });
 });
