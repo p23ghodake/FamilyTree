@@ -1,5 +1,10 @@
 /// <reference types="react-scripts" />
 
+declare module '*.woff2' {
+  const src: string;
+  export default src;
+}
+
 declare module 'html-to-image' {
   export function toPng(
     node: HTMLElement,

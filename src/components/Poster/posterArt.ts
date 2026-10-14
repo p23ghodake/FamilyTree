@@ -47,7 +47,8 @@ export interface PosterArtInput {
   nodes: PosterNode[];
   focusDepth: number;
   posOf: (n: PosterNode) => Point;
-  bannerH: number;
+  /** Card height of a node; 0 for forks, which are bare branch points. */
+  cardH: (n: PosterNode) => number;
   groundY: number;
   trunkH: number;
   /** Grows leaves and twigs on large posters so they stay in proportion. */
@@ -185,9 +186,11 @@ function twig(rand: () => number, x: number, y: number, angleDeg: number, length
 }
 
 /** Trunk, tapering limbs, leafy twigs and fallen leaves around an already laid-out poster. */
-export function buildPosterArt({ nodes, focusDepth, posOf, bannerH, groundY, trunkH, scale, minX, maxX }: PosterArtInput): PosterArt {
+export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunkH, scale, minX, maxX }: PosterArtInput): PosterArt {
   const art: PosterArt = { wood: [], texture: [], twigs: [], leaves: [], fallen: [], drifting: [], ground: { cx: 0, cy: 0, rx: 0 } };
   if (nodes.length === 0) return art;
+  // How far a limb reaches into a card from its edge.
+  const inset = (n: PosterNode) => (cardH(n) ? cardH(n) / 2 - 6 : 0);
 
   const rand = rng(`${nodes[0].id}:${nodes.length}`);
   const byId = new Map(nodes.map(n => [n.id, n]));
@@ -195,7 +198,7 @@ export function buildPosterArt({ nodes, focusDepth, posOf, bannerH, groundY, tru
   nodes.forEach(n => { if (n.stemId) kids.set(n.stemId, [...(kids.get(n.stemId) ?? []), n]); });
   const weight = new Map<string, number>();
   const weightOf = (n: PosterNode): number => {
-    if (!weight.has(n.id)) weight.set(n.id, 1 + (kids.get(n.id) ?? []).reduce((sum, c) => sum + weightOf(c), 0));
+    if (!weight.has(n.id)) weight.set(n.id, (n.kind === 'fork' ? 0 : 1) + (kids.get(n.id) ?? []).reduce((sum, c) => sum + weightOf(c), 0));
     return weight.get(n.id)!;
   };
   // Pipe model: a limb's cross-section grows with the number of people it carries.
@@ -209,7 +212,7 @@ export function buildPosterArt({ nodes, focusDepth, posOf, bannerH, groundY, tru
     { x: base.x - top * 0.25, y: groundY + 4 },
     { x: base.x - 5, y: groundY - trunkH * 0.45 },
     { x: base.x + 4, y: base.y + trunkH * 0.3 },
-    { x: base.x, y: base.y + bannerH / 2 - 6 },
+    { x: base.x, y: base.y + inset(nodes[0]) },
   ];
   art.ground = { cx: base.x, cy: groundY + 8, rx: flare * 3.2 + 60 };
   for (let i = 0; i < 6; i++) {
@@ -227,10 +230,11 @@ export function buildPosterArt({ nodes, focusDepth, posOf, bannerH, groundY, tru
 
   // Limbs, thickest first so thinner ones sit on top
   const limbs = nodes.filter(n => n.stemId).map(n => {
-    const from = posOf(byId.get(n.stemId!)!);
+    const stem = byId.get(n.stemId!)!;
+    const from = posOf(stem);
     const to = posOf(n);
-    const p0 = { x: from.x, y: from.y - bannerH / 2 + 6 };
-    const p3 = { x: to.x, y: to.y + bannerH / 2 - 6 };
+    const p0 = { x: from.x, y: from.y - inset(stem) };
+    const p3 = { x: to.x, y: to.y + inset(n) };
     const dx = p3.x - p0.x;
     const dy = p0.y - p3.y;
     const curve: Curve = [p0, { x: p0.x + dx * BEND, y: p0.y - dy * 0.5 }, { x: p3.x - dx * 0.06, y: p3.y + dy * 0.38 }, p3];
@@ -265,7 +269,7 @@ export function buildPosterArt({ nodes, focusDepth, posOf, bannerH, groundY, tru
   // Leafy sprigs above the outermost names
   nodes.filter(n => n.depth >= focusDepth && !kids.has(n.id)).forEach(n => {
     const { x, y } = posOf(n);
-    const crown = y - bannerH / 2 + 2;
+    const crown = y - cardH(n) / 2 + 2;
     [-38, 0, 38].forEach(off =>
       twig(rand, x + off * 0.15, crown, -90 + off + (rand() - 0.5) * 14, LEAF_SIZE * scale * (1.9 + rand() * 1.1), scale, art));
   });

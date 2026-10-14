@@ -9,18 +9,21 @@ import { getDisplayFirstName } from '../../processing/displayName';
 import { buildPosterLayout, findPosterRoot, PosterNode } from '../../processing/posterLayout';
 import { DownloadIcon, ImageIcon, Maximize2Icon, PrinterIcon, XIcon } from '../Icons';
 import { BARK_DARK, BARK_LIGHT, buildPosterArt, LEAF_COLORS, LEAF_PATHS, LeafArt, PAPER, Point } from './posterArt';
+import greatVibesLatin from '@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2';
+import yatraOneDevanagari from '@fontsource/yatra-one/files/yatra-one-devanagari-400-normal.woff2';
+import yatraOneLatin from '@fontsource/yatra-one/files/yatra-one-latin-400-normal.woff2';
 import './PosterModal.css';
 
-const SLOT_W = 160;
-const LEVEL_H = 112;
+const SLOT_W = 170;
+const LEVEL_H = 150;
 const MAX_LEVEL_H = 320;
 const POSTER_RATIO = 0.62;
 const ANCESTOR_RATIO = 0.45;
-const BANNER_H = 44;
-const MIN_BANNER_W = 76;
-const MAX_BANNER_W = 150;
-const BANNER_PAD = 28;
-const NAME_FONT = 16;
+const SINGLE_H = 44;
+const COUPLE_H = 76;
+const MIN_CARD_W = 84;
+const MAX_CARD_W = 158;
+const CARD_PAD = 30;
 const NAME_MAX_CHARS = 20;
 const SIDE_PAD = 110;
 const TOP_PAD = 150;
@@ -28,8 +31,17 @@ const TRUNK_H = 90;
 const TITLE_H = 96;
 const MIN_W = 760;
 const GENERATION_CHOICES = [2, 3, 4, 5, 6, 7, 8];
-const BANNER_EDGE = '#8a6a4a';
-const FOCUS_EDGE = '#c79a2c';
+// Leaf cards: sons in green, daughters in rose, mirrored corner shapes.
+const CARD_COLORS = {
+  male: { edge: '#6a994e', text: '#24402a' },
+  female: { edge: '#c96f8a', text: '#5c2638' },
+};
+const HEART = '#a7c957';
+const FONT = {
+  en: { family: 'Poster Great Vibes', size: 23 },
+  mr: { family: 'Poster Yatra One', size: 17 },
+};
+const FONT_FILES = [greatVibesLatin, yatraOneDevanagari, yatraOneLatin];
 
 const Leaf: React.FC<{ leaf: LeafArt }> = ({ leaf }) => (
   <path
@@ -40,12 +52,41 @@ const Leaf: React.FC<{ leaf: LeafArt }> = ({ leaf }) => (
   />
 );
 
-// Text styles live inside the SVG so the downloaded image matches the screen.
+// Text styles and fonts live inside the SVG so the downloaded image matches the screen.
 const SVG_STYLE = `
-  .poster-banner__name { font-family: Georgia, 'Times New Roman', serif; font-size: ${NAME_FONT}px; font-weight: 700; fill: #2f2117; }
-  .poster-banner__years { font-family: Georgia, 'Times New Roman', serif; font-size: 9.5px; fill: #6b5544; }
+  @font-face { font-family: '${FONT.en.family}'; src: url(${greatVibesLatin}) format('woff2'); }
+  @font-face { font-family: '${FONT.mr.family}'; src: url(${yatraOneDevanagari}) format('woff2'); unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+25CC, U+A8E0-A8FF; }
+  @font-face { font-family: '${FONT.mr.family}'; src: url(${yatraOneLatin}) format('woff2'); unicode-range: U+0000-00FF; }
+  .poster-card__name--en { font-family: '${FONT.en.family}', 'Brush Script MT', cursive; font-size: ${FONT.en.size}px; }
+  .poster-card__name--mr { font-family: '${FONT.mr.family}', 'Nirmala UI', 'Mangal', sans-serif; font-size: ${FONT.mr.size}px; }
+  .poster-card__heart { font-family: Georgia, serif; font-size: 12px; fill: ${HEART}; }
   .poster-title-text { font-family: 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive; fill: ${BARK_DARK}; }
 `;
+
+/** Swaps the bundled font URLs for data URLs, since an SVG drawn as an image cannot fetch them. */
+async function inlineFonts(svgText: string): Promise<string> {
+  let out = svgText;
+  for (const url of FONT_FILES) {
+    const blob = await (await fetch(url)).blob();
+    const data = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+    out = out.split(url).join(data);
+  }
+  return out;
+}
+
+/** Card outline with two rounded corners: top-right/bottom-left for sons, mirrored for daughters. */
+function leafCard(left: number, top: number, w: number, h: number, female: boolean): string {
+  const big = Math.min(18, h / 2);
+  const [tl, tr, br, bl] = female ? [big, 3, big, 3] : [3, big, 3, big];
+  return `M${left + tl},${top} H${left + w - tr} A${tr},${tr} 0 0 1 ${left + w},${top + tr} V${top + h - br} `
+    + `A${br},${br} 0 0 1 ${left + w - br},${top + h} H${left + bl} A${bl},${bl} 0 0 1 ${left},${top + h - bl} `
+    + `V${top + tl} A${tl},${tl} 0 0 1 ${left + tl},${top} Z`;
+}
 
 /** Print quality (about 6000 px on the long side) while staying within browser canvas limits. */
 function exportScale(width: number, height: number): number {
@@ -67,11 +108,12 @@ function truncate(text: string, max: number): string {
 
 let measureContext: CanvasRenderingContext2D | null | undefined;
 
-/** Rendered width of a banner name, falling back to an estimate where canvas is unavailable. */
-function nameWidth(text: string): number {
+/** Rendered width of a card name, falling back to an estimate where canvas is unavailable. */
+function nameWidth(text: string, lang: 'en' | 'mr'): number {
+  const { family, size } = FONT[lang];
   if (measureContext === undefined) measureContext = document.createElement('canvas').getContext('2d');
-  if (!measureContext) return text.length * NAME_FONT * 0.56;
-  measureContext.font = `700 ${NAME_FONT}px Georgia, 'Times New Roman', serif`;
+  if (!measureContext) return text.length * size * 0.5;
+  measureContext.font = `${size}px '${family}', serif`;
   return measureContext.measureText(text).width;
 }
 
@@ -88,6 +130,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
 
   const members = useMemo(() => currentTree?.members ?? [], [currentTree]);
   const parentChild = useMemo(() => currentTree?.relationships.parentChild ?? [], [currentTree]);
+  const marriages = useMemo(() => currentTree?.relationships.spouses ?? [], [currentTree]);
   const byId = useMemo(() => new Map(members.map(m => [m.id, m])), [members]);
 
   const [rootId, setRootId] = useState<string>(
@@ -96,6 +139,17 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const [generations, setGenerations] = useState(4);
   const [fit, setFit] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  // Card widths are measured with the card fonts, so re-render once they have loaded.
+  const [, setFontsLoaded] = useState(0);
+  useEffect(() => {
+    const fonts = document.fonts;
+    if (!fonts) return;
+    let live = true;
+    Promise.all([FONT.en, FONT.mr].map(f => fonts.load(`${f.size}px '${f.family}'`, 'Aa अ')))
+      .then(() => { if (live) setFontsLoaded(n => n + 1); })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, []);
 
   const nameOf = useCallback(
     (id: string) => { const m = byId.get(id); return m ? getDisplayFirstName(m, lang) : ''; },
@@ -124,9 +178,10 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   }, [members, lang]);
 
   const layout = useMemo(
-    () => buildPosterLayout(rootId, generations, members, parentChild),
-    [rootId, generations, members, parentChild],
+    () => buildPosterLayout(rootId, generations, members, parentChild, marriages),
+    [rootId, generations, members, parentChild, marriages],
   );
+  const cardH = useCallback((n: PosterNode) => (n.kind === 'fork' ? 0 : n.spouseId ? COUPLE_H : SINGLE_H), []);
 
   const contentW = layout.slots * SLOT_W;
   const width = Math.max(contentW + SIDE_PAD * 2, MIN_W);
@@ -135,13 +190,13 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const titleH = Math.max(TITLE_H, titleSize * 2.4);
   const focusDepth = layout.focusDepth;
   const descGaps = Math.max(layout.levels - 1 - focusDepth, 0);
-  const fixedH = TOP_PAD + BANNER_H / 2 + titleH;
+  const fixedH = TOP_PAD + COUPLE_H / 2 + titleH;
   // Stretch the levels so wide families still look like a poster rather than a thin strip.
   const levelH = descGaps + focusDepth
     ? Math.min(MAX_LEVEL_H, Math.max(LEVEL_H, (width * POSTER_RATIO - fixedH - TRUNK_H) / (descGaps + ANCESTOR_RATIO * focusDepth + 0.8)))
     : LEVEL_H;
   // Ancestors sit closer together on the trunk than the descendant levels above.
-  const ancestorGap = Math.max(BANNER_H + 30, levelH * ANCESTOR_RATIO);
+  const ancestorGap = Math.max(COUPLE_H + 30, levelH * ANCESTOR_RATIO);
   const trunkH = Math.max(TRUNK_H, levelH * 0.6);
   const height = fixedH + descGaps * levelH + focusDepth * ancestorGap + trunkH;
   const groundY = height - titleH;
@@ -160,10 +215,10 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
 
   const art = useMemo(
     () => buildPosterArt({
-      nodes: layout.nodes, focusDepth, posOf, bannerH: BANNER_H, groundY, trunkH, scale: artScale,
+      nodes: layout.nodes, focusDepth, posOf, cardH, groundY, trunkH, scale: artScale,
       minX: offsetX, maxX: offsetX + contentW,
     }),
-    [layout, focusDepth, posOf, groundY, trunkH, artScale, offsetX, contentW],
+    [layout, focusDepth, posOf, cardH, groundY, trunkH, artScale, offsetX, contentW],
   );
   const exportSize = useMemo(() => {
     const scale = exportScale(width, height);
@@ -184,7 +239,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     const svg = sheetRef.current?.querySelector('svg');
     if (!svg) return;
     setIsExporting(true);
-    const svgUrl = URL.createObjectURL(new Blob([serializeForExport(svg, exportSize.width, exportSize.height)], { type: 'image/svg+xml' }));
+    const svgUrl = URL.createObjectURL(new Blob([await inlineFonts(serializeForExport(svg, exportSize.width, exportSize.height))], { type: 'image/svg+xml' }));
     try {
       const img = new Image();
       img.src = svgUrl;
@@ -303,40 +358,35 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               {art.twigs.map((d, i) => <path key={`t${i}`} d={d} fill={BARK_DARK} />)}
               {art.leaves.map((leaf, i) => <Leaf key={`l${i}`} leaf={leaf} />)}
 
-              {/* Name banners */}
+              {/* Member cards: one per person, with the spouse on the same card */}
               {layout.nodes.map(n => {
                 const m = byId.get(n.id);
-                if (!m) return null;
+                if (!m || n.kind === 'fork') return null;
+                const spouse = n.spouseId ? byId.get(n.spouseId) : undefined;
                 const { x, y } = posOf(n);
-                const years = m.birthYear || m.deathYear
-                  ? `${m.birthYear ?? '?'}${m.deathYear ? ` – ${m.deathYear}` : ''}`
-                  : '';
-                const name = getDisplayFirstName(m, lang);
-                const label = truncate(name, NAME_MAX_CHARS);
-                const textW = nameWidth(label);
-                const bw = Math.min(MAX_BANNER_W, Math.max(MIN_BANNER_W, textW + BANNER_PAD));
-                const squeeze = textW > bw - BANNER_PAD;
-                const left = x - bw / 2;
-                const top = y - BANNER_H / 2;
+                const names = [m, ...(spouse ? [spouse] : [])].map(p => truncate(getDisplayFirstName(p, lang), NAME_MAX_CHARS));
+                const font = lang === 'mr' ? 'mr' : 'en';
+                const textW = Math.max(...names.map(s => nameWidth(s, font)));
+                const w = Math.min(MAX_CARD_W, Math.max(MIN_CARD_W, textW + CARD_PAD));
+                const squeeze = textW > w - CARD_PAD ? { textLength: w - CARD_PAD, lengthAdjust: 'spacingAndGlyphs' as const } : {};
+                const h = cardH(n);
+                const female = m.gender === 'female';
+                const colors = female ? CARD_COLORS.female : CARD_COLORS.male;
                 const focus = n.depth === focusDepth;
-                const edge = focus ? FOCUS_EDGE : BANNER_EDGE;
+                const nameClass = `poster-card__name--${font}`;
                 return (
-                  <g key={`b-${n.id}`} className="poster-banner" filter="url(#poster-banner-shadow)">
-                    <title>{name}</title>
-                    <path d={`M${left + 6},${top + 8} h-14 l6,${(BANNER_H - 4) / 2} l-6,${(BANNER_H - 4) / 2} h14Z`} fill="#eadbc2" stroke={BANNER_EDGE} />
-                    <path d={`M${left + bw - 6},${top + 8} h14 l-6,${(BANNER_H - 4) / 2} l6,${(BANNER_H - 4) / 2} h-14Z`} fill="#eadbc2" stroke={BANNER_EDGE} />
-                    <rect x={left} y={top} width={bw} height={BANNER_H} rx={4} fill={focus ? '#fff1cf' : '#fffdf7'} stroke={edge} strokeWidth={focus ? 2.5 : 1.5} />
-                    <rect x={left + 3} y={top + 3} width={bw - 6} height={BANNER_H - 6} rx={2} fill="none" stroke={edge} strokeWidth={0.6} opacity={0.55} />
-                    <text
-                      x={x}
-                      y={years ? y - 2 : y + 5.5}
-                      textAnchor="middle"
-                      className="poster-banner__name"
-                      {...(squeeze ? { textLength: bw - BANNER_PAD, lengthAdjust: 'spacingAndGlyphs' } : {})}
-                    >
-                      {label}
-                    </text>
-                    {years && <text x={x} y={y + 14} textAnchor="middle" className="poster-banner__years">{years}</text>}
+                  <g key={`c-${n.id}`} className="poster-card" filter="url(#poster-banner-shadow)">
+                    <title>{names.join(' ♥ ')}</title>
+                    <path d={leafCard(x - w / 2, y - h / 2, w, h, female)} fill={focus ? '#fdfbea' : '#ffffff'} stroke={colors.edge} strokeWidth={focus ? 3 : 2} />
+                    {spouse ? (
+                      <>
+                        <text x={x} y={y - 12} textAnchor="middle" className={nameClass} fill={colors.text} {...squeeze}>{names[0]}</text>
+                        <text x={x} y={y + 4} textAnchor="middle" className="poster-card__heart">♥</text>
+                        <text x={x} y={y + 25} textAnchor="middle" className={nameClass} fill={colors.text} {...squeeze}>{names[1]}</text>
+                      </>
+                    ) : (
+                      <text x={x} y={y + 7} textAnchor="middle" className={nameClass} fill={colors.text} {...squeeze}>{names[0]}</text>
+                    )}
                   </g>
                 );
               })}
