@@ -841,10 +841,6 @@
     max-width: 86px;
   }
 
-  .spouse-connector__line {
-    width: 10px;
-  }
-
   /* Recenter connector with smaller 52px circle: 2px padding + 26px half-circle - 4.5px half-bond ≈ 24px */
   .spouse-connector {
     margin-top: 24px;
