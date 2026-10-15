@@ -148,6 +148,7 @@ interface State {
   relMode: boolean;
   relSource: string | null;
   relTarget: string | null;
+  lineageMode: boolean;
   theme: ThemeName;
   avatarStyle: AvatarStyle;
 }
@@ -166,6 +167,7 @@ const initialState: State = {
   relMode: false,
   relSource: null,
   relTarget: null,
+  lineageMode: false,
   theme: loadSavedTheme(),
   avatarStyle: loadSavedAvatarStyle(),
 };
@@ -182,6 +184,7 @@ type Action =
   | { type: 'SET_ADVANCED_FILTER'; payload: Partial<AdvancedFilters> }
   | { type: 'CLEAR_ADVANCED_FILTERS' }
   | { type: 'TOGGLE_REL_MODE' }
+  | { type: 'TOGGLE_LINEAGE_MODE' }
   | { type: 'SET_REL_NODE'; payload: string }
   | { type: 'CLEAR_REL_PATH' }
   | { type: 'SET_THEME'; payload: ThemeName }
@@ -235,7 +238,7 @@ function reduceState(state: State, action: Action): State {
     case 'SET_ERROR':
       return { ...state, error: action.payload };
     case 'SELECT_TREE':
-      return { ...state, selectedTreeId: action.payload, selectedMemberId: null, relMode: false, relSource: null, relTarget: null };
+      return { ...state, selectedTreeId: action.payload, selectedMemberId: null, relMode: false, relSource: null, relTarget: null, lineageMode: false };
     case 'SELECT_MEMBER':
       return { ...state, selectedMemberId: action.payload };
     case 'SET_SEARCH':
@@ -247,7 +250,7 @@ function reduceState(state: State, action: Action): State {
         data: action.payload,
         selectedTreeId: action.payload.familyTreesStyled[0]?.familyTreeId ?? null,
         selectedMemberId: null,
-        relMode: false, relSource: null, relTarget: null,
+        relMode: false, relSource: null, relTarget: null, lineageMode: false,
         error: null,
       };
 
@@ -403,6 +406,8 @@ function reduceState(state: State, action: Action): State {
 
     case 'TOGGLE_REL_MODE':
       return { ...state, relMode: !state.relMode, relSource: null, relTarget: null };
+    case 'TOGGLE_LINEAGE_MODE':
+      return { ...state, lineageMode: !state.lineageMode };
     case 'SET_REL_NODE': {
       const id = action.payload;
       if (!state.relSource || (state.relSource && state.relTarget)) {

@@ -12,7 +12,7 @@ import TimelineModal from '../Timeline/TimelineModal';
 import PosterModal from '../Poster/PosterModal';
 import { useDialog } from '../useDialog';
 import {
-  BarChart2Icon, GitBranchIcon, HelpCircleIcon, ImageIcon, MenuIcon, PlusIcon, Redo2Icon, SettingsIcon,
+  BarChart2Icon, FocusIcon, GitBranchIcon, HelpCircleIcon, ImageIcon, MenuIcon, PlusIcon, Redo2Icon, SettingsIcon,
   ShareIcon, TimelineIcon, TreeIcon, Undo2Icon, UserPlusIcon,
 } from '../Icons';
 import './TopBar.css';
@@ -183,6 +183,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
     setShowStats(false);
     dispatch({ type: 'TOGGLE_REL_MODE' });
   };
+  const toggleLineage = () => dispatch({ type: 'TOGGLE_LINEAGE_MODE' });
   const openAddMember = () => dispatch({ type: 'OPEN_MEMBER_FORM', payload: { mode: 'add' } });
   const fromSheet = (action: () => void) => () => { setSheetOpen(false); action(); };
 
@@ -218,6 +219,9 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         </button>
         <button type="button" className="top-bar__view" aria-pressed={state.relMode} onClick={toggleTrace} title={t.tooltipTracer} data-tour="trace">
           <GitBranchIcon size={15} /><span className="top-bar__label">{t.viewTrace}</span>
+        </button>
+        <button type="button" className="top-bar__view" aria-pressed={state.lineageMode} onClick={toggleLineage} title={t.tooltipLineageFocus}>
+          <FocusIcon size={15} /><span className="top-bar__label">{t.viewLineage}</span>
         </button>
         <button type="button" className="top-bar__view" aria-pressed={showTimeline} onClick={() => setShowTimeline(true)}>
           <TimelineIcon size={15} /><span className="top-bar__label">{t.menuTimeline}</span>
@@ -309,6 +313,9 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
         )}
         <button type="button" className="top-bar__icon" aria-pressed={state.relMode} onClick={toggleTrace} aria-label={t.tooltipTracer} title={t.tooltipTracer} data-tour="trace">
           <GitBranchIcon size={18} />
+        </button>
+        <button type="button" className="top-bar__icon" aria-pressed={state.lineageMode} onClick={toggleLineage} aria-label={t.tooltipLineageFocus} title={t.tooltipLineageFocus}>
+          <FocusIcon size={18} />
         </button>
         <button ref={sheetButtonRef} type="button" className="top-bar__icon" onClick={() => setSheetOpen(true)} aria-expanded={sheetOpen} aria-label={t.headerMenu} title={t.headerMenu} data-tour="menu">
           <MenuIcon size={18} />

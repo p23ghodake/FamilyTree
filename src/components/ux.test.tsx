@@ -48,7 +48,7 @@ beforeEach(() => {
     state: {
       data, past: [], future: [], selectedTreeId: 'test', selectedMemberId: null,
       searchQuery: '', error: null, memberFormMode: null, memberFormTargetId: null,
-      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null,
+      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null, lineageMode: false,
       theme: 'light', avatarStyle: 'initials',
     },
     currentTree: data.familyTreesStyled[0],

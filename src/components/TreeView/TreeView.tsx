@@ -25,16 +25,14 @@ const TreeView: React.FC = () => {
   const panRef = useRef(pan); // sync ref so touch handlers always read latest pan
   panRef.current = pan;
 
-  // Lineage focus mode
-  const [lineageModeActive, setLineageModeActive] = useState(false);
+  // Lineage focus mode (toggled from the top bar)
+  const lineageModeActive = state.lineageMode;
   const [lineageIds, setLineageIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!lineageModeActive) setLineageIds(new Set());
+  }, [lineageModeActive]);
 
-  const toggleLineageMode = useCallback(() => {
-    setLineageModeActive(prev => {
-      if (prev) setLineageIds(new Set());
-      return !prev;
-    });
-  }, []);
+  const toggleLineageMode = useCallback(() => dispatch({ type: 'TOGGLE_LINEAGE_MODE' }), [dispatch]);
 
   // Relationship mode: set of IDs in the found path (excluding source/target)
   const relPathSet = useMemo(() => {
@@ -534,15 +532,6 @@ const TreeView: React.FC = () => {
         <span className="zoom-controls__level">{Math.round(zoom * 100)}%</span>
         <button className="zoom-controls__btn" onClick={zoomOut} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}>−</button>
         <button className="zoom-controls__btn zoom-controls__reset" onClick={resetView} title={t.tooltipZoomReset} aria-label={t.tooltipZoomReset}>⟲</button>
-        <div className="zoom-controls__divider" />
-        <button
-          className={`zoom-controls__btn zoom-controls__fit${lineageModeActive ? ' zoom-controls__fit--active' : ''}`}
-          onClick={toggleLineageMode}
-          title={t.tooltipLineageFocus}
-          aria-label={t.tooltipLineageFocus}
-        >
-          <FocusIcon size={14} />
-        </button>
         <div className="zoom-controls__divider" />
         <button className="zoom-controls__btn zoom-controls__fit" onClick={fitToScreen} title={t.tooltipFitToScreen} aria-label={t.tooltipFitToScreen}>
           <Maximize2Icon size={14} />

@@ -616,17 +616,6 @@
   color: var(--accent-text);
 }
 
-.zoom-controls__fit--active {
-  background: var(--success-active);
-  color: #fff;
-  border-color: var(--success-active-border);
-}
-
-.zoom-controls__fit--active:hover {
-  background: var(--success-active-hover);
-  color: #fff;
-}
-
 /* ─── Wrap rows mode ─── */
 
 /* Allow children to wrap to next row when they exceed available width */

@@ -347,6 +347,7 @@ type Translations = {
   // ── Header ──
   viewTree: string;
   viewTrace: string;
+  viewLineage: string;
   viewStats: string;
   viewPoster: string;
   posterTitle: string;
@@ -751,6 +752,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // Header
     viewTree: 'Tree',
     viewTrace: 'Trace',
+    viewLineage: 'Lineage',
     viewStats: 'Statistics',
     viewPoster: 'Poster',
     posterTitle: 'Family poster',
@@ -1154,6 +1156,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // Header
     viewTree: 'वृक्ष',
     viewTrace: 'नाते शोधा',
+    viewLineage: 'वंश फोकस',
     viewStats: 'आकडेवारी',
     viewPoster: 'पोस्टर',
     posterTitle: 'कुटुंब पोस्टर',

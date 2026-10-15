@@ -345,7 +345,7 @@
 /* ── Narrow screens ── */
 @media (max-width: 640px) {
   .tl-backdrop { padding: 10px; }
-  .tl-modal { height: min(460px, calc(100vh - 20px)); width: 100%; }
+  .tl-modal { height: min(460px, calc(100vh - 20px)); height: min(460px, calc(100dvh - 20px)); width: 100%; }
   .tl-header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
   .tl-header__left { flex: 1; min-width: 0; flex-wrap: wrap; }
   .tl-close { order: 2; }

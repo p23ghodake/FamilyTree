@@ -132,6 +132,8 @@ body {
 
 #root {
   height: 100vh;
+  /* Visible height on phones, excluding the browser's address/tool bars. */
+  height: 100dvh;
 }
 
 /* Scrollbar styling */

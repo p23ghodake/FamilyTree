@@ -41,7 +41,7 @@ beforeEach(() => {
     state: {
       data, past: [], future: [], selectedTreeId: 'test', selectedMemberId: null,
       searchQuery: '', error: null, memberFormMode: null, memberFormTargetId: null,
-      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null,
+      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null, lineageMode: false,
       theme: 'light', avatarStyle: 'initials',
     },
     currentTree: data.familyTreesStyled[0],
@@ -93,6 +93,24 @@ it('shows reset only for admins and confirms the shared GitHub impact', () => {
   openSettings();
   fireEvent.click(screen.getByRole('button', { name: t.settingsResetShared }));
   expect(context.resetData).toHaveBeenCalledTimes(1);
+});
+
+it('toggles lineage focus from the desktop and phone top bar', () => {
+  const view = render(<TopBar />);
+  const lineageButtons = () => [
+    screen.getByRole('button', { name: t.viewLineage }),
+    screen.getByRole('button', { name: t.tooltipLineageFocus }),
+  ];
+  const buttons = lineageButtons();
+  buttons.forEach(button => expect(button.getAttribute('aria-pressed')).toBe('false'));
+  fireEvent.click(buttons[0]);
+  fireEvent.click(buttons[1]);
+  expect(context.dispatch).toHaveBeenCalledTimes(2);
+  expect(context.dispatch).toHaveBeenNthCalledWith(1, { type: 'TOGGLE_LINEAGE_MODE' });
+  expect(context.dispatch).toHaveBeenNthCalledWith(2, { type: 'TOGGLE_LINEAGE_MODE' });
+  context.state = { ...context.state, lineageMode: true };
+  view.rerender(<TopBar />);
+  lineageButtons().forEach(button => expect(button.getAttribute('aria-pressed')).toBe('true'));
 });
 
 it('hides Share from visitors in the limited view', () => {

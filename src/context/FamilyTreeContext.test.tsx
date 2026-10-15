@@ -60,6 +60,15 @@ it('starts with Hide females off and lets Clear switch every filter off', async 
   expect(NO_FILTERS.hideFemale).toBe(false);
 });
 
+it('toggles lineage focus and turns it off when switching trees', async () => {
+  await mountEditor();
+  expect(context.state.lineageMode).toBe(false);
+  act(() => context.dispatch({ type: 'TOGGLE_LINEAGE_MODE' }));
+  expect(context.state.lineageMode).toBe(true);
+  act(() => context.dispatch({ type: 'SELECT_TREE', payload: context.state.selectedTreeId! }));
+  expect(context.state.lineageMode).toBe(false);
+});
+
 it('lets only administrators delete members, including through undo', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser, access_token: githubToken }, loading: false });
   await mountEditor();
