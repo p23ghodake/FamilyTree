@@ -327,6 +327,13 @@ type Translations = {
   detailsFormerSpouse: string;
   detailsMore: string;
   detailsLess: string;
+  detailsPrevious: string;
+  detailsNext: string;
+  detailsPage: (page: number, total: number) => string;
+  detailsTimeline: string;
+  detailsSon: string;
+  detailsDaughter: string;
+  detailsChild: string;
   // ── Year picker ──
   yearPrevDecade: string;
   yearNextDecade: string;
@@ -724,6 +731,13 @@ export const translations: Record<'en' | 'mr', Translations> = {
     detailsFormerSpouse: 'former',
     detailsMore: 'More',
     detailsLess: 'Less',
+    detailsPrevious: 'Previous',
+    detailsNext: 'Next',
+    detailsPage: (page, total) => `Page ${page} of ${total}`,
+    detailsTimeline: 'Life events',
+    detailsSon: 'Son',
+    detailsDaughter: 'Daughter',
+    detailsChild: 'Child',
     // Year picker
     yearPrevDecade: 'Previous decade',
     yearNextDecade: 'Next decade',
@@ -1120,6 +1134,13 @@ export const translations: Record<'en' | 'mr', Translations> = {
     detailsFormerSpouse: 'पूर्वीचे',
     detailsMore: 'अधिक',
     detailsLess: 'कमी',
+    detailsPrevious: 'मागील',
+    detailsNext: 'पुढील',
+    detailsPage: (page, total) => `पान ${page} / ${total}`,
+    detailsTimeline: 'जीवनातील घटना',
+    detailsSon: 'मुलगा',
+    detailsDaughter: 'मुलगी',
+    detailsChild: 'अपत्य',
     // Year picker
     yearPrevDecade: 'मागील दशक',
     yearNextDecade: 'पुढील दशक',

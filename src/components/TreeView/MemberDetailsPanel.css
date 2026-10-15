@@ -2,9 +2,8 @@
   position: absolute;
   top: 14px;
   right: 14px;
-  width: 264px;
-  max-height: calc(100% - 96px);
-  overflow-y: auto;
+  width: 300px;
+  max-height: min(330px, calc(100% - 96px));
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -29,8 +28,8 @@
 }
 
 .member-details__avatar {
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: 2px solid var(--border);
   overflow: hidden;
@@ -45,9 +44,9 @@
   display: block;
 }
 
-.member-details__avatar .member-avatar__fa i { font-size: 14px; }
-.member-details__avatar .member-avatar__initials { font-size: 10px; }
-.member-details__avatar .member-avatar__emoji { font-size: 15px; }
+.member-details__avatar .member-avatar__fa i { font-size: 19.6px; }
+.member-details__avatar .member-avatar__initials { font-size: 14px; }
+.member-details__avatar .member-avatar__emoji { font-size: 21px; }
 
 .member-details__names {
   flex: 1;
@@ -65,9 +64,16 @@
   overflow-wrap: anywhere;
 }
 
-.member-details__alt-name {
-  font-size: 0.75rem;
+.member-details__sub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.member-details__meta {
+  font-size: 0.7rem;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
 .member-details__actions {
@@ -93,8 +99,7 @@
 .member-details__icon:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); }
 .member-details__icon:disabled { opacity: 0.55; cursor: default; }
 
-.member-details__facts,
-.member-details__relatives,
+.member-details__event,
 .member-details__notes {
   margin: 0;
   font-size: 0.75rem;
@@ -103,44 +108,156 @@
   overflow-wrap: anywhere;
 }
 
+.member-details__event {
+  display: grid;
+  grid-template-columns: 34px 12px 1fr;
+  column-gap: 6px;
+}
+
+.member-details__body--undated .member-details__event { grid-template-columns: 0 12px 1fr; column-gap: 0; }
+.member-details__body--undated .member-details__event-text { padding-left: 6px; }
+
+.member-details__year,
+.member-details__event-text {
+  padding: 2px 0;
+  min-width: 0;
+}
+
+.member-details__year {
+  text-align: right;
+  font-weight: 700;
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.member-details__dot {
+  position: relative;
+}
+
+/* Rail segment per row, so the line stays continuous across pages. */
+.member-details__dot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--border-strong);
+}
+
+.member-details__event--first .member-details__dot::before { top: 11px; }
+.member-details__event--last .member-details__dot::before { bottom: calc(100% - 11px); }
+.member-details__event--first.member-details__event--last .member-details__dot::before { display: none; }
+
+.member-details__dot::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6.5px;
+  width: 9px;
+  height: 9px;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--modal-bg, var(--bg-primary));
+}
+
+.member-details__event--death .member-details__dot::after { border-color: var(--text-muted); }
+.member-details__event--death .member-details__year { color: var(--text-muted); }
+
 .member-details__label {
-  margin-right: 5px;
-  font-size: 0.66rem;
+  margin: 0 4px 0 2px;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
-.member-details__link,
-.member-details__more {
-  padding: 0;
+.member-details__link {
+  display: inline-block;
+  margin: 1px 3px 1px 0;
+  padding: 0 7px;
   border: 0;
-  background: none;
+  border-radius: 999px;
+  background: var(--accent-light);
   font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.6;
   color: var(--accent-text);
   cursor: pointer;
 }
 
-.member-details__link:hover,
-.member-details__more:hover { text-decoration: underline; }
+.member-details__link:hover { text-decoration: underline; }
 
 .member-details__former { color: var(--text-muted); }
 
-.member-details__notes { white-space: pre-wrap; }
+.member-details__row--spaced { padding-top: 6px; }
 
-.member-details__notes--clamped {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+.member-details__notes {
+  white-space: pre-wrap;
+  padding: 0 8px;
+  background: var(--bg-tertiary);
+  border-left: 2px solid var(--accent);
+}
+
+.member-details__notes--first { padding-top: 4px; border-top-right-radius: 6px; }
+.member-details__notes--last { padding-bottom: 4px; border-bottom-right-radius: 6px; }
+
+.member-details__body {
+  flex: 0 1 auto;
+  min-height: 0;
+  position: relative;
+}
+
+.member-details__measure,
+.member-details__page {
+  display: flex;
+  flex-direction: column;
+}
+
+.member-details__measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
   overflow: hidden;
 }
 
-.member-details__more { font-size: 0.75rem; font-weight: 600; }
+.member-details__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 5px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.member-details__pagination button {
+  padding: 5px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--accent-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.member-details__pagination button:disabled { opacity: .45; cursor: default; }
 
 .member-details__icon:focus-visible,
 .member-details__link:focus-visible,
-.member-details__more:focus-visible {
+.member-details__pagination button:focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
@@ -152,13 +269,13 @@
     right: 8px;
     bottom: 72px;
     width: auto;
-    max-height: 45%;
+    max-height: min(300px, calc(100% - 100px));
   }
 }
 
 @media (pointer: coarse) {
   .member-details__icon { width: 34px; height: 34px; }
-  .member-details__link { padding: 4px 0; }
+  .member-details__link { padding: 3px 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

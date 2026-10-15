@@ -69,10 +69,13 @@ describe('person details panel', () => {
     context.state.selectedMemberId = 'parent';
     render(<MemberDetailsPanel />);
     const panel = screen.getByRole('complementary', { name: en.detailsPanelLabel('Ravi Patil') });
-    expect(panel.textContent).toContain('b. 7 March 1950');
-    expect(panel.textContent).toContain('Farmer · Pune');
-    expect(within(panel).getByText('रवी पाटील')).toBeTruthy();
-    expect(within(panel).getByText('Family historian')).toBeTruthy();
+    const page = panel.querySelector('.member-details__page')!;
+    expect(page.textContent).toContain(`${en.tlVerbBorn} · 7 March`);
+    expect(Array.from(page.querySelectorAll('.member-details__year')).map(el => el.textContent)).toEqual(['1950', '', '1980']);
+    expect(page.textContent).toContain(`${en.detailsSon} Anil`);
+    expect(panel.querySelector('.member-details__meta')?.textContent).toBe('Farmer · Pune');
+    expect(within(panel).queryByText('रवी पाटील')).toBeNull();
+    expect(page.textContent).toContain('Family historian');
     expect(within(panel).queryByRole('button', { name: en.detailsMore })).toBeNull();
     expect(within(panel).getByRole('button', { name: 'Sita' })).toBeTruthy();
     fireEvent.click(within(panel).getByRole('button', { name: 'Anil' }));
@@ -81,7 +84,7 @@ describe('person details panel', () => {
     expect(context.dispatch).toHaveBeenCalledWith({ type: 'OPEN_MEMBER_FORM', payload: { mode: 'edit', targetId: 'parent' } });
   });
 
-  it('clamps long notes with a More/Less toggle', () => {
+  it('keeps long notes available in compact rows without a More/Less toggle', () => {
     const longNotes = 'Kept the original handwritten family records and the village land papers safe for many decades.';
     context.currentTree = {
       ...context.currentTree!,
@@ -89,11 +92,72 @@ describe('person details panel', () => {
     };
     context.state.selectedMemberId = 'parent';
     render(<MemberDetailsPanel />);
-    const notes = screen.getByText(longNotes);
-    expect(notes.className).toContain('member-details__notes--clamped');
-    fireEvent.click(screen.getByRole('button', { name: en.detailsMore }));
-    expect(notes.className).not.toContain('member-details__notes--clamped');
-    expect(screen.getByRole('button', { name: en.detailsLess }).getAttribute('aria-expanded')).toBe('true');
+    const notes = Array.from(document.querySelectorAll('.member-details__page .member-details__notes')).map(el => el.textContent).join(' ');
+    expect(notes).toBe(longNotes);
+    expect(screen.queryByRole('button', { name: en.detailsMore })).toBeNull();
+  });
+
+  it('paginates overflow and keeps all notes accessible without scrolling', () => {
+    const height = jest.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(100);
+    const rect = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, right: 280, bottom: 36, width: 280, height: 36, toJSON: () => ({}),
+    });
+    try {
+      context.state.selectedMemberId = 'parent';
+      const view = render(<MemberDetailsPanel />);
+      const page = view.container.querySelector('.member-details__page')!;
+      expect(screen.getByText(en.detailsPage(1, 2))).toBeTruthy();
+      expect(screen.getByRole('button', { name: en.detailsPrevious }).hasAttribute('disabled')).toBe(true);
+      expect(page.textContent).toContain(`${en.tlVerbBorn} · 7 March`);
+      fireEvent.click(screen.getByRole('button', { name: en.detailsNext }));
+      expect(page.textContent).toContain('Family historian');
+      expect(screen.getByRole('button', { name: en.detailsNext }).hasAttribute('disabled')).toBe(true);
+      fireEvent.click(screen.getByRole('button', { name: en.detailsPrevious }));
+      expect(screen.getByText(en.detailsPage(1, 2))).toBeTruthy();
+    } finally {
+      height.mockRestore();
+      rect.mockRestore();
+    }
+  });
+
+  it('orders dated life events and ends with death', () => {
+    context.currentTree = {
+      ...context.currentTree!,
+      members: context.currentTree!.members.map(m => (m.id === 'parent' ? { ...m, deathYear: 2020, deathDate: '2020-05-02', age: 70 } : m)),
+      relationships: {
+        ...context.currentTree!.relationships,
+        spouses: context.currentTree!.relationships.spouses.map(r => ({ ...r, marriageYear: 1975, status: 'former' as const, endYear: 1978 })),
+      },
+    };
+    context.state.selectedMemberId = 'parent';
+    const view = render(<MemberDetailsPanel />);
+    const rows = Array.from(view.container.querySelectorAll('.member-details__page .member-details__event'));
+    expect(rows.map(row => row.querySelector('.member-details__year')?.textContent)).toEqual(['1950', '1975', '1980', '2020']);
+    expect(rows[1].textContent).toContain(`${en.tlVerbMarried} Sita(${en.detailsFormerSpouse} – 1978)`);
+    expect(rows[3].className).toContain('member-details__event--death');
+    expect(rows[3].textContent).toContain(`${en.tlVerbDied} · 2 May`);
+    expect(view.container.querySelector('.member-details__sub')?.textContent).toContain(en.detailsAgeAtDeath(70));
+  });
+
+  it('collapses the year column when no life events are dated', () => {
+    context.currentTree = {
+      ...context.currentTree!,
+      members: context.currentTree!.members.map(m => ({ ...m, birthYear: null, birthDate: null })),
+    };
+    context.state.selectedMemberId = 'parent';
+    const view = render(<MemberDetailsPanel />);
+    expect(view.container.querySelector('.member-details__body--undated')).not.toBeNull();
+    expect(Array.from(view.container.querySelectorAll('.member-details__page .member-details__year')).every(el => el.textContent === '')).toBe(true);
+  });
+
+  it('shows just the selected-language name and labels', () => {
+    localStorage.setItem('app-lang', 'mr');
+    context.state.selectedMemberId = 'parent';
+    render(<LanguageProvider><MemberDetailsPanel /></LanguageProvider>);
+    const panel = screen.getByRole('complementary', { name: mr.detailsPanelLabel('रवी पाटील') });
+    expect(within(panel).getByRole('heading').textContent).toBe('रवी पाटील');
+    expect(panel.querySelector('.member-details__alt-name')).toBeNull();
+    expect(panel.querySelector('.member-details__page')?.textContent).toContain(mr.months[2]);
   });
 
   it('hides editing for viewers and closes with Escape', () => {
