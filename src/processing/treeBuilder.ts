@@ -8,6 +8,30 @@ export interface TreeNode {
   children: TreeNode[];
 }
 
+const GENDER_RANK: Record<string, number> = { male: 0, female: 1 };
+
+function birthYearOf(member: StyledFamilyMember): number | null {
+  if (member.birthYear != null) return member.birthYear;
+  const year = Number(member.birthDate?.slice(0, 4));
+  return Number.isFinite(year) && year > 0 ? year : null;
+}
+
+/**
+ * Sibling order, left to right: sons, then daughters, then others; each group eldest first.
+ * Siblings without a birth year follow the dated ones in their group, in entered order.
+ */
+export function compareSiblings(a: TreeNode, b: TreeNode): number {
+  const rank = (node: TreeNode) => GENDER_RANK[node.member.gender] ?? 2;
+  if (rank(a) !== rank(b)) return rank(a) - rank(b);
+  const yearA = birthYearOf(a.member);
+  const yearB = birthYearOf(b.member);
+  if (yearA === null || yearB === null) return yearA === yearB ? 0 : yearA === null ? 1 : -1;
+  if (yearA !== yearB) return yearA - yearB;
+  const dateA = a.member.birthDate ?? '';
+  const dateB = b.member.birthDate ?? '';
+  return dateA && dateB ? dateA.localeCompare(dateB) : 0;
+}
+
 export function buildTreeFromMembers(
   allMembers: StyledFamilyMember[],
   relationships: StyledRelationships
@@ -95,6 +119,8 @@ export function buildTreeFromMembers(
     const children = Array.from(childIds)
       .map(cid => build(cid))
       .filter((n): n is TreeNode => n !== null);
+    // Sorted after building, so the order never changes which branch claims a shared relative.
+    children.sort(compareSiblings);
 
     return { member, currentSpouses, formerSpouses, children };
   }

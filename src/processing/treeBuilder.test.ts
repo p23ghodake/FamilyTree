@@ -89,6 +89,53 @@ describe('buildTreeFromMembers', () => {
     const ids = result.map(n => n.member.id).sort();
     expect(ids).toEqual(['x', 'y']);
   });
+
+  describe('sibling order', () => {
+    const kid = (id: string, gender: 'male' | 'female' | 'unknown', birthYear: number | null, birthDate?: string) =>
+      ({ id, gender, birthYear, birthDate, parentIds: ['p'], childrenIds: [] } as unknown as StyledFamilyMember);
+    const order = (kids: StyledFamilyMember[], rels?: StyledRelationships, extra: StyledFamilyMember[] = []) =>
+      buildTreeFromMembers([m('p'), ...extra, ...kids], rels ?? pc(kids.map(k => ['p', k.id] as [string, string])))[0]
+        .children.map(n => n.member.id);
+
+    it('places sons eldest-first, then daughters eldest-first', () => {
+      expect(order([
+        kid('d1990', 'female', 1990), kid('s1985', 'male', 1985),
+        kid('d1980', 'female', 1980), kid('s1975', 'male', 1975),
+      ])).toEqual(['s1975', 's1985', 'd1980', 'd1990']);
+    });
+
+    it('puts undated siblings after dated ones in their group, keeping entered order', () => {
+      expect(order([
+        kid('sNoneA', 'male', null), kid('s1970', 'male', 1970), kid('sNoneB', 'male', null),
+        kid('dNone', 'female', null), kid('d1960', 'female', 1960),
+      ])).toEqual(['s1970', 'sNoneA', 'sNoneB', 'd1960', 'dNone']);
+    });
+
+    it('uses full birth dates to order same-year siblings and reads the year from a date', () => {
+      expect(order([
+        kid('lateTwin', 'male', 1990, '1990-11-02'), kid('earlyTwin', 'male', 1990, '1990-03-15'),
+        kid('dateOnly', 'male', null, '1985-06-01'),
+      ])).toEqual(['dateOnly', 'earlyTwin', 'lateTwin']);
+    });
+
+    it('places children of unknown gender after daughters', () => {
+      expect(order([kid('u', 'unknown', 1950), kid('d', 'female', 1990), kid('s', 'male', 1995)]))
+        .toEqual(['s', 'd', 'u']);
+    });
+
+    it('keeps spouses beside their partner and orders the partners by age', () => {
+      const younger = kid('younger', 'male', 1990);
+      const elder = kid('elder', 'male', 1980);
+      const wife = { id: 'wife', gender: 'female', birthYear: 1950, parentIds: [], childrenIds: [] } as unknown as StyledFamilyMember;
+      const rels: StyledRelationships = {
+        parentChild: [{ parentId: 'p', childId: 'younger' }, { parentId: 'p', childId: 'elder' }] as any,
+        spouses: [{ spouse1Id: 'younger', spouse2Id: 'wife', status: 'current' } as SpouseRelationship],
+      };
+      const tree = buildTreeFromMembers([m('p'), wife, younger, elder], rels)[0];
+      expect(tree.children.map(n => n.member.id)).toEqual(['elder', 'younger']);
+      expect(tree.children[1].currentSpouses.map(s => s.member.id)).toEqual(['wife']);
+    });
+  });
 });
 
 // ─── computeLineage ───
