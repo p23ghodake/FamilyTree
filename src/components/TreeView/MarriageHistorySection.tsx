@@ -4,7 +4,6 @@ import { useLanguage } from '../../context/LanguageContext';
 import { StyledFamilyTree } from '../../types/FamilyTypes';
 import { getAvatarFallback } from '../../processing/avatarFallback';
 import { getDisplayFirstName } from '../../processing/displayName';
-import { hasUnderageChildren } from '../../processing/spouseRules';
 
 interface MarriageHistorySectionProps {
   editMemberId: string;
@@ -72,10 +71,10 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
             <span className={`member-form__marriage-badge${isCurrent ? ' member-form__marriage-badge--current' : ' member-form__marriage-badge--former'}`}>
               {isCurrent ? t.currentMarriage : t.formerMarriage}
             </span>
-            {isCurrent && (() => {
-              const blocked = hasUnderageChildren(currentTree, r.spouse1Id) || hasUnderageChildren(currentTree, r.spouse2Id);
+            {(() => {
               const saved = r.marriageDate ?? '';
               const draft = dateDrafts[spouseId] ?? saved;
+              const afterEnd = !isCurrent && !!r.endYear && !!draft && parseInt(draft.slice(0, 4)) > r.endYear;
               return (
                 <div className="member-form__marriage-end-form">
                   <label>
@@ -84,15 +83,14 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                       type="date"
                       className="member-form__input"
                       value={/^\d{4}-\d{2}-\d{2}$/.test(draft) ? draft : ''}
-                      disabled={blocked}
-                      title={blocked ? t.tooltipSpouseChildrenAge : undefined}
+                      max={!isCurrent && r.endYear ? `${r.endYear}-12-31` : undefined}
                       onChange={e => setDateDrafts(d => ({ ...d, [spouseId]: e.target.value }))}
                     />
                   </label>
                   <button
                     type="button"
                     className="member-form__btn member-form__btn--primary"
-                    disabled={blocked || draft === saved}
+                    disabled={draft === saved || afterEnd}
                     onClick={() => {
                       dispatch({
                         type: 'UPDATE_MARRIAGE_DATE',

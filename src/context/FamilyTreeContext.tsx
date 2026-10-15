@@ -391,6 +391,7 @@ function reduceState(state: State, action: Action): State {
             r.marriageYear = parseInt(marriageDate.slice(0, 4));
           } else {
             delete r.marriageDate;
+            delete r.marriageYear;
           }
         });
         Object.assign(draft, withHistory(state));
