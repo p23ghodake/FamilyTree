@@ -667,10 +667,11 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, [authLoading, session, reloadKey, setCloudReadyState]);
 
-  // Debounced search query — used for filtering to avoid O(n) scan on every keystroke
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(state.searchQuery);
+  // Debounced search query — used for filtering to avoid O(n) scan on every keystroke.
+  // Trimmed so stray spaces around a name neither break matching nor count as a search.
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(state.searchQuery.trim());
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(state.searchQuery), CONFIG.ui.SEARCH_DEBOUNCE_MS);
+    const timer = setTimeout(() => setDebouncedSearchQuery(state.searchQuery.trim()), CONFIG.ui.SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [state.searchQuery]);
 

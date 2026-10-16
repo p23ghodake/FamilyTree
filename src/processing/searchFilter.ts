@@ -23,8 +23,9 @@ export function normalizeForSearch(s: string): string {
  * occupation, location.
  */
 export function memberMatchesQuery(member: StyledFamilyMember, rawQuery: string): boolean {
-  if (!rawQuery.trim()) return true;
-  const q = normalizeForSearch(rawQuery);
+  const trimmed = rawQuery.trim();
+  if (!trimmed) return true;
+  const q = normalizeForSearch(trimmed);
   const mrFull = `${member.firstName_mr ?? ''} ${member.lastName_mr ?? ''}`.trim();
   return (
     normalizeForSearch(`${member.firstName} ${member.lastName}`).includes(q) ||

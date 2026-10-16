@@ -139,4 +139,10 @@ describe('memberMatchesQuery', () => {
   it('all-whitespace query matches all members', () => {
     expect(memberMatchesQuery(m, '     ')).toBe(true);
   });
+
+  it('ignores spaces before and after the query', () => {
+    expect(memberMatchesQuery(m, `${m.lastName} `)).toBe(true);
+    expect(memberMatchesQuery(m, `  ${m.firstName}`)).toBe(true);
+    expect(memberMatchesQuery(m, ` ${m.firstName} ${m.lastName}  `)).toBe(true);
+  });
 });

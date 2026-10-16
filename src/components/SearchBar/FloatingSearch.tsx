@@ -282,7 +282,7 @@ const FloatingSearch: React.FC = () => {
           {listOpen && listItems.length > 0 && (
             <div className="floating-search__list" ref={listRef}>
               <div className="floating-search__list-header">
-                {isSearching ? t.searchResultsHeader(matchCount, state.searchQuery) : t.searchAllMembersHeader(listItems.length)}
+                {isSearching ? t.searchResultsHeader(matchCount, debouncedSearchQuery) : t.searchAllMembersHeader(listItems.length)}
               </div>
               {listItems.map((m, i) => (
                 <button
@@ -306,7 +306,7 @@ const FloatingSearch: React.FC = () => {
           )}
 
           {listOpen && listItems.length === 0 && (hasQuery || filtersActive) && (
-            <div className="floating-search__empty">{t.searchNoResults(state.searchQuery || t.filtersTitle)}</div>
+            <div className="floating-search__empty">{t.searchNoResults(state.searchQuery.trim() || t.filtersTitle)}</div>
           )}
 
           {state.data && state.data.familyTreesStyled.length > 1 && (
