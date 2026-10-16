@@ -10,7 +10,7 @@ export interface YearPickerProps {
   onChange: (year: string) => void;
   placeholder?: string;
   min?: number;               // earliest selectable year (default 1000)
-  max?: number;               // latest selectable year (default currentYear + 10)
+  max?: number;               // latest selectable year (default currentYear + 10); typed years beyond it are passed to onChange for the parent to validate
   hasError?: boolean;
   clearable?: boolean;        // show "Clear" button (for death year)
   ariaLabel?: string;
@@ -229,10 +229,9 @@ const YearPicker: React.FC<YearPickerProps> = ({
     setTyped(v);
     if (v.length === 4) {
       const n = parseInt(v, 10);
-      if (n >= min && n <= max) {
-        onChange(v);
-        setDecade(toDecade(n));
-      }
+      // Pass out-of-range years through too, so the parent form can show an error.
+      onChange(v);
+      if (n >= min && n <= max) setDecade(toDecade(n));
     } else if (v === '') {
       onChange('');
     }

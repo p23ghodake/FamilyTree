@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext';
 import { getFamilyData, saveFamilyData } from '../services/familyDataService';
 import { buildTreeFromMembers } from '../processing/treeBuilder';
 import { RawFamilyData } from '../types/FamilyTypes';
+import toast from 'react-hot-toast';
 
 jest.mock('../lib/AuthContext', () => ({ useAuth: jest.fn() }));
 jest.mock('../services/familyDataService', () => ({
@@ -188,6 +189,16 @@ it('rejects malformed shared data without changing the current tree', async () =
   await mountEditor();
   act(() => expect(context.loadSharedData('{}')).toBe(false));
   expect(context.canEdit).toBe(true);
+  expect(saveFamilyData).not.toHaveBeenCalled();
+});
+
+it('rejects an import that contains a future date', async () => {
+  await mountEditor();
+  const future = JSON.parse(JSON.stringify(rawData)) as RawFamilyData;
+  future.familyTrees[0].members[1].birthYear = new Date().getFullYear() + 1;
+  act(() => context.importData(JSON.stringify(future)));
+  expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Child Family'), expect.anything());
+  expect(context.currentTree?.members.find(m => m.id === 'child')?.birthYear).toBe(2000);
   expect(saveFamilyData).not.toHaveBeenCalled();
 });
 

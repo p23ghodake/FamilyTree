@@ -6,7 +6,7 @@ import { StyledFamilyMember } from '../../types/FamilyTypes';
 import { AlertTriangleIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FemaleIcon, HelpCircleIcon, MaleIcon, Trash2Icon, XIcon } from '../Icons';
 import { transliterateToMarathi } from '../../processing/transliteration';
 import { findDuplicates } from '../../processing/duplicateDetection';
-import { sanitizeImageUrl } from '../../processing/dataValidation';
+import { containsDigit, isFutureDate, isFutureYear, sanitizeImageUrl } from '../../processing/dataValidation';
 import toast from 'react-hot-toast';
 import { ageOnDate, getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
 import { computeAge } from '../../processing/ageCalculation';
@@ -111,8 +111,12 @@ type FormErrors = Partial<Record<keyof FormFields | 'relationship', string>>;
 
 function stepOfError(key: string): StepId {
   if (key === 'relationship') return 'relation';
-  return key === 'firstName' || key === 'lastName' ? 'who' : 'details';
+  return NAME_KEYS.includes(key as NameKey) ? 'who' : 'details';
 }
+
+type NameKey = 'firstName' | 'lastName' | 'firstName_mr' | 'lastName_mr';
+const NAME_KEYS: NameKey[] = ['firstName', 'lastName', 'firstName_mr', 'lastName_mr'];
+const MAX_YEAR = new Date().getFullYear();
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
@@ -189,7 +193,7 @@ const MemberFormModal: React.FC = () => {
   const handleNameBlur = useCallback(async (field: 'firstName' | 'lastName') => {
     const value = fields[field];
     const mrField = field === 'firstName' ? 'firstName_mr' : 'lastName_mr';
-    if (value && !fields[mrField]) {
+    if (value && !containsDigit(value) && !fields[mrField]) {
       const transliterated = await transliterateToMarathi(value);
       if (transliterated) {
         // Don't overwrite a Marathi name typed while the request was in flight.
@@ -202,11 +206,20 @@ const MemberFormModal: React.FC = () => {
     const errs: FormErrors = {};
     if (!fields.firstName.trim()) errs.firstName = t.firstNameRequired;
     if (!fields.lastName.trim()) errs.lastName = t.lastNameRequired;
+    NAME_KEYS.forEach(key => {
+      if (!errs[key] && containsDigit(fields[key])) errs[key] = t.nameHasDigits;
+    });
     const by = parseInt(fields.birthYear);
     const dy = living ? NaN : parseInt(fields.deathYear);
-    if (fields.birthYear && isNaN(by)) errs.birthYear = t.invalidYear;
-    if (!living && fields.deathYear && isNaN(dy)) errs.deathYear = t.invalidYear;
-    if (fields.birthYear && !isNaN(by) && !isNaN(dy) && dy < by) {
+    if (fields.birthYear && (isNaN(by) || by < 1000)) errs.birthYear = t.invalidYear;
+    if (!living && fields.deathYear && (isNaN(dy) || dy < 1000)) errs.deathYear = t.invalidYear;
+    if (!errs.birthYear && (isFutureYear(by) || isFutureDate(buildIsoDate(fields.birthYear, fields.birthMonth, fields.birthDay)))) {
+      errs.birthYear = t.futureDate;
+    }
+    if (!living && !errs.deathYear && (isFutureYear(dy) || isFutureDate(buildIsoDate(fields.deathYear, fields.deathMonth, fields.deathDay)))) {
+      errs.deathYear = t.futureDate;
+    }
+    if (!errs.deathYear && fields.birthYear && !isNaN(by) && !isNaN(dy) && dy < by) {
       errs.deathYear = t.deathBeforeBirth;
     }
     const url = fields.imageUrl.trim();
@@ -242,12 +255,17 @@ const MemberFormModal: React.FC = () => {
     setStepIndex(index);
   };
 
+  const showErrors = (errs: FormErrors) => {
+    setErrors(errs);
+    if (errs.firstName_mr || errs.lastName_mr) setEditingMarathi(true);
+  };
+
   const handleNext = () => {
     const stepErrors = Object.fromEntries(
       Object.entries(collectErrors()).filter(([key]) => stepOfError(key) === step),
     ) as FormErrors;
     if (Object.keys(stepErrors).length > 0) {
-      setErrors(stepErrors);
+      showErrors(stepErrors);
       return;
     }
     goToStep(stepIndex + 1);
@@ -257,7 +275,7 @@ const MemberFormModal: React.FC = () => {
     if (isSaving || !canEdit || !currentTree) return;
     const errs = collectErrors();
     if (Object.keys(errs).length > 0) {
-      setErrors(errs);
+      showErrors(errs);
       const firstStep = steps.find(s => Object.keys(errs).some(key => stepOfError(key) === s));
       if (firstStep) setStepIndex(steps.indexOf(firstStep));
       return;
@@ -406,6 +424,7 @@ const MemberFormModal: React.FC = () => {
               ariaLabel={isBirth ? t.labelBirthYear : t.labelDeathYear}
               hasError={Boolean(errors[yearKey])}
               clearable={!isBirth}
+              max={MAX_YEAR}
             />
           </div>
           <select
@@ -527,16 +546,19 @@ const MemberFormModal: React.FC = () => {
                 {editingMarathi ? (
                   <div className="mf-mr-edit">
                     <div className="mf-row">
-                      <div className="mf-field">
-                        <label className="mf-label" htmlFor="member-form-first-name-mr">{t.labelFirstNameMr}</label>
-                        <input id="member-form-first-name-mr" type="text" className="mf-input" lang="mr"
-                          value={fields.firstName_mr} onChange={e => set('firstName_mr', e.target.value)} />
-                      </div>
-                      <div className="mf-field">
-                        <label className="mf-label" htmlFor="member-form-last-name-mr">{t.labelLastNameMr}</label>
-                        <input id="member-form-last-name-mr" type="text" className="mf-input" lang="mr"
-                          value={fields.lastName_mr} onChange={e => set('lastName_mr', e.target.value)} />
-                      </div>
+                      {(['firstName_mr', 'lastName_mr'] as const).map(key => {
+                        const id = key === 'firstName_mr' ? 'member-form-first-name-mr' : 'member-form-last-name-mr';
+                        return (
+                          <div className="mf-field" key={key}>
+                            <label className="mf-label" htmlFor={id}>{key === 'firstName_mr' ? t.labelFirstNameMr : t.labelLastNameMr}</label>
+                            <input id={id} type="text" className={`mf-input${errors[key] ? ' mf-input--err' : ''}`} lang="mr"
+                              value={fields[key]} onChange={e => set(key, e.target.value)}
+                              aria-invalid={errors[key] ? true : undefined}
+                              aria-describedby={errors[key] ? `${key}-err` : undefined} />
+                            {errors[key] && <span id={`${key}-err`} className="mf-err">{errors[key]}</span>}
+                          </div>
+                        );
+                      })}
                     </div>
                     <button type="button" className="mf-link" onClick={() => setEditingMarathi(false)}>{t.marathiDone}</button>
                   </div>

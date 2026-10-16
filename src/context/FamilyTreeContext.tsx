@@ -11,7 +11,7 @@ import {
   DisplaySettings,
 } from '../types/FamilyTypes';
 import { processAllFamilyData } from '../processing/dataProcessor';
-import { validateRawFamilyData } from '../processing/dataValidation';
+import { findFutureDate, validateRawFamilyData } from '../processing/dataValidation';
 import { normalizeDisplaySettings, sameDisplaySettings } from '../processing/displaySettings';
 import { computeAge, getAgeCategory } from '../processing/ageCalculation';
 import { getNodeColors } from '../processing/nodeStyling';
@@ -799,6 +799,11 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     const result = validateRawFamilyData(parsed);
     if (!result.ok || !result.data) {
       toast.error(tRef.current.importFailed(result.error ?? 'the data is not a valid family tree.'), { id: 'import-error' });
+      return;
+    }
+    const futureDateError = findFutureDate(result.data);
+    if (futureDateError) {
+      toast.error(tRef.current.importFailed(futureDateError), { id: 'import-error' });
       return;
     }
 

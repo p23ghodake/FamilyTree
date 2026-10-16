@@ -1,4 +1,4 @@
-import { validateRawFamilyData, sanitizeImageUrl } from './dataValidation';
+import { validateRawFamilyData, sanitizeImageUrl, containsDigit, isFutureYear, isFutureDate, findFutureDate } from './dataValidation';
 import { processAllFamilyData } from './dataProcessor';
 
 const validTree = {
@@ -184,5 +184,55 @@ describe('validateRawFamilyData — success & repair', () => {
     const result = validateRawFamilyData(data);
     const processed = processAllFamilyData(result.data!);
     expect(processed.familyTreesStyled[0].members[2].parentIds).toEqual(['a']);
+  });
+});
+
+describe('containsDigit', () => {
+  it('detects ASCII and Devanagari digits', () => {
+    expect(containsDigit('Ravi2')).toBe(true);
+    expect(containsDigit('राम२')).toBe(true);
+  });
+
+  it('allows names without digits', () => {
+    expect(containsDigit("Anne-Marie O'Neil")).toBe(false);
+    expect(containsDigit('राम')).toBe(false);
+    expect(containsDigit('')).toBe(false);
+    expect(containsDigit(null)).toBe(false);
+  });
+});
+
+describe('future date checks', () => {
+  const now = new Date(2026, 9, 16); // 16 Oct 2026, local time
+
+  it('compares years', () => {
+    expect(isFutureYear(2026, now)).toBe(false);
+    expect(isFutureYear(2027, now)).toBe(true);
+    expect(isFutureYear(null, now)).toBe(false);
+  });
+
+  it('compares partial and full ISO dates at their own precision', () => {
+    expect(isFutureDate('2026-10-16', now)).toBe(false);
+    expect(isFutureDate('2026-10-17', now)).toBe(true);
+    expect(isFutureDate('2026-10', now)).toBe(false);
+    expect(isFutureDate('2026-11', now)).toBe(true);
+    expect(isFutureDate('2027', now)).toBe(true);
+    expect(isFutureDate('1990-01-01', now)).toBe(false);
+    expect(isFutureDate(null, now)).toBe(false);
+  });
+
+  it('finds future birth, death and marriage dates in data', () => {
+    expect(findFutureDate(validData() as never, now)).toBeNull();
+
+    const birth = validData();
+    birth.familyTrees[0].members[2].birthYear = 2030;
+    expect(findFutureDate(birth as never, now)).toMatch(/Chetan Sharma.*birth/);
+
+    const death = validData();
+    (death.familyTrees[0].members[0] as Record<string, unknown>).deathDate = '2026-12-01';
+    expect(findFutureDate(death as never, now)).toMatch(/Anil Sharma.*death/);
+
+    const marriage = validData();
+    (marriage.familyTrees[0].relationships.spouses[0] as Record<string, unknown>).marriageYear = 2027;
+    expect(findFutureDate(marriage as never, now)).toMatch(/marriage date/);
   });
 });

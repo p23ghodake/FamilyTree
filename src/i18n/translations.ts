@@ -13,6 +13,8 @@ type Translations = {
   lastNameRequired: string;
   invalidYear: string;
   deathBeforeBirth: string;
+  futureDate: string;
+  nameHasDigits: string;
   // Relationship section
   sectionRelationship: string;
   relNone: string;
@@ -435,6 +437,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     lastNameRequired: 'Last name is required',
     invalidYear: 'Must be a valid year',
     deathBeforeBirth: 'Death year cannot be before birth year',
+    futureDate: 'Date cannot be in the future',
+    nameHasDigits: 'Name cannot contain numbers',
     sectionRelationship: 'Relationship',
     relNone: 'None',
     relChildOf: 'Child of',
@@ -858,6 +862,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     lastNameRequired: 'आडनाव आवश्यक आहे',
     invalidYear: 'वैध वर्ष असणे आवश्यक आहे',
     deathBeforeBirth: 'मृत्यू वर्ष जन्म वर्षापूर्वी असू शकत नाही',
+    futureDate: 'तारीख भविष्यातील असू शकत नाही',
+    nameHasDigits: 'नावात अंक असू शकत नाहीत',
     sectionRelationship: 'नाते',
     relNone: 'काहीही नाही',
     relChildOf: 'यांचे मूल',

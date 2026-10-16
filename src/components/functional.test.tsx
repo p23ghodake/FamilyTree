@@ -229,6 +229,39 @@ it('rejects a known underage new spouse', () => {
   expect(context.dispatch).not.toHaveBeenCalled();
 });
 
+it('rejects names that contain numbers', () => {
+  openAddForm(t.relTileChild, /one Family/);
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(t.btnNext) }));
+  fireEvent.change(screen.getByPlaceholderText(t.placeholderFirstName), { target: { value: 'New2' } });
+  fireEvent.change(screen.getByPlaceholderText(t.placeholderLastName), { target: { value: 'Family' } });
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(t.btnNext) }));
+  expect(screen.getByText(t.nameHasDigits)).toBeTruthy();
+  expect(screen.getByRole('heading', { name: t.wizardQWho })).toBeTruthy();
+});
+
+it('rejects Marathi names with Devanagari digits and opens the Marathi editor', () => {
+  context.currentTree = {
+    ...context.currentTree!, members: context.currentTree!.members.map(member =>
+      member.id === 'one' ? { ...member, firstName_mr: 'राम२' } : member),
+  };
+  context.state.memberFormMode = 'edit';
+  context.state.memberFormTargetId = 'one';
+  render(<MemberFormModal />);
+  fireEvent.click(screen.getByRole('button', { name: t.btnSaveChanges }));
+  expect(screen.getByText(t.nameHasDigits)).toBeTruthy();
+  expect((screen.getByLabelText(t.labelFirstNameMr) as HTMLInputElement).value).toBe('राम२');
+  expect(context.dispatch).not.toHaveBeenCalled();
+});
+
+it('rejects a birth year in the future', () => {
+  openAddForm(t.relTileChild, /one Family/);
+  fillNamesAndContinue();
+  fireEvent.change(screen.getByLabelText(t.labelBirthYear), { target: { value: String(new Date().getFullYear() + 1) } });
+  fireEvent.click(screen.getByRole('button', { name: t.btnAddNamed('New') }));
+  expect(screen.getByText(t.futureDate)).toBeTruthy();
+  expect(context.dispatch).not.toHaveBeenCalled();
+});
+
 it('walks through the steps, hides death dates for living people and adds the member', () => {
   openAddForm(t.relTileChild, /one Family/);
   fireEvent.click(screen.getByRole('button', { name: new RegExp(t.btnNext) }));

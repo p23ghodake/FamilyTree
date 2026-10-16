@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { StyledFamilyTree } from '../../types/FamilyTypes';
 import { getAvatarFallback } from '../../processing/avatarFallback';
 import { getDisplayFirstName } from '../../processing/displayName';
+import { isFutureDate, isFutureYear, todayIso } from '../../processing/dataValidation';
 
 interface MarriageHistorySectionProps {
   editMemberId: string;
@@ -41,6 +42,8 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
 
   if (marriages.length === 0) return null;
 
+  const today = todayIso();
+
   return (
     <div className="member-form__section">
       <h3 className="member-form__section-title">
@@ -75,6 +78,7 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
               const saved = r.marriageDate ?? '';
               const draft = dateDrafts[spouseId] ?? saved;
               const afterEnd = !isCurrent && !!r.endYear && !!draft && parseInt(draft.slice(0, 4)) > r.endYear;
+              const draftInFuture = draft !== saved && isFutureDate(draft);
               return (
                 <div className="member-form__marriage-end-form">
                   <label>
@@ -83,14 +87,15 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                       type="date"
                       className="member-form__input"
                       value={/^\d{4}-\d{2}-\d{2}$/.test(draft) ? draft : ''}
-                      max={!isCurrent && r.endYear ? `${r.endYear}-12-31` : undefined}
+                      max={!isCurrent && r.endYear ? `${r.endYear}-12-31` : today}
+                      aria-invalid={draftInFuture || undefined}
                       onChange={e => setDateDrafts(d => ({ ...d, [spouseId]: e.target.value }))}
                     />
                   </label>
                   <button
                     type="button"
                     className="member-form__btn member-form__btn--primary"
-                    disabled={draft === saved || afterEnd}
+                    disabled={draft === saved || afterEnd || draftInFuture}
                     onClick={() => {
                       dispatch({
                         type: 'UPDATE_MARRIAGE_DATE',
@@ -106,6 +111,7 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                   >
                     {t.btnConfirm}
                   </button>
+                  {draftInFuture && <span className="mf-err" role="alert">{t.futureDate}</span>}
                 </div>
               );
             })()}
@@ -150,6 +156,7 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                   className="member-form__btn member-form__btn--primary member-form__marriage-end-confirm"
                   disabled={
                     endMarriageForm.endYear.length !== 4 ||
+                    isFutureYear(parseInt(endMarriageForm.endYear)) ||
                     (endMarriageForm.startYear !== null &&
                       parseInt(endMarriageForm.endYear) < endMarriageForm.startYear)
                   }
@@ -177,6 +184,9 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                 >
                   {t.btnCancel}
                 </button>
+                {isFutureYear(parseInt(endMarriageForm.endYear)) && (
+                  <span className="mf-err" role="alert">{t.futureDate}</span>
+                )}
               </div>
             )}
           </div>

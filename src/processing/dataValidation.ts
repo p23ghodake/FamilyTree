@@ -36,6 +36,53 @@ export function sanitizeImageUrl(url: string | null | undefined): string | null 
   return null;
 }
 
+/** True if the text contains any digit, in any script (e.g. 0-9 or Devanagari ०-९). */
+export function containsDigit(text: string | null | undefined): boolean {
+  return !!text && /\p{Nd}/u.test(text);
+}
+
+/** Local calendar date as "YYYY-MM-DD". */
+export function todayIso(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+export function isFutureYear(year: number | null | undefined, now: Date = new Date()): boolean {
+  return typeof year === 'number' && year > now.getFullYear();
+}
+
+/**
+ * True if an ISO date ("YYYY", "YYYY-MM" or "YYYY-MM-DD") lies after today.
+ * Partial dates are compared at their own precision, so the current month counts as not-future.
+ */
+export function isFutureDate(iso: string | null | undefined, now: Date = new Date()): boolean {
+  if (!iso || !/^\d{4}(-\d{2}(-\d{2})?)?$/.test(iso)) return false;
+  return iso > todayIso(now).slice(0, iso.length);
+}
+
+/**
+ * Returns a human-readable message for the first future birth/death/marriage date
+ * found in the data, or null if every date is today or earlier.
+ */
+export function findFutureDate(data: RawFamilyData, now: Date = new Date()): string | null {
+  for (const tree of data.familyTrees) {
+    for (const m of tree.members) {
+      const who = `"${`${m.firstName} ${m.lastName}`.trim() || m.id}"`;
+      if (isFutureYear(m.birthYear, now) || isFutureDate(m.birthDate, now)) return `${who} has a birth date in the future.`;
+      if (isFutureYear(m.deathYear, now) || isFutureDate(m.deathDate, now)) return `${who} has a death date in the future.`;
+    }
+    for (const s of tree.relationships?.spouses ?? []) {
+      if (isFutureYear(s.marriageYear, now) || isFutureDate(s.marriageDate, now)) {
+        return `Tree "${tree.familyTreeId}" has a marriage date in the future.`;
+      }
+      if (isFutureYear(s.endYear, now) || isFutureDate(s.endDate, now)) {
+        return `Tree "${tree.familyTreeId}" has a marriage end date in the future.`;
+      }
+    }
+  }
+  return null;
+}
+
 export interface ValidationResult {
   ok: boolean;
   /** Present and repaired when `ok` is true. */
