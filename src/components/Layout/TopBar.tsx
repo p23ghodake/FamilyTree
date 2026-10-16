@@ -142,7 +142,12 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
 
       await new Promise(r => requestAnimationFrame(r));
       const { toPng } = await import('html-to-image');
-      const dataUrl = await toPng(treeEl, { backgroundColor: '#ffffff', pixelRatio: 2 });
+      const dataUrl = await toPng(treeEl, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        // Animated line effects would be captured mid-frame; export the static lines only.
+        filter: node => !(node instanceof Element && node.classList.contains('conn-flow__fx')),
+      });
 
       const link = document.createElement('a');
       link.download = `family-tree-${currentTree?.familyTreeDisplayName ?? 'export'}.png`;

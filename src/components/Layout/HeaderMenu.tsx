@@ -2,10 +2,10 @@ import React from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { THEMES, ThemeName } from '../../theme/themeConfig';
-import { AvatarStyle } from '../../types/FamilyTypes';
+import { AvatarStyle, DisplaySettings } from '../../types/FamilyTypes';
 import {
   LanguagesIcon, SunIcon, UserIcon, DownloadIcon, ImageIcon,
-  PrinterIcon, RotateCcwIcon, LogInIcon, LogOutIcon, Loader2Icon,
+  PrinterIcon, RotateCcwIcon, LogInIcon, LogOutIcon, Loader2Icon, ActivityIcon,
 } from '../Icons';
 
 export interface HeaderMenuProps {
@@ -23,6 +23,90 @@ export interface HeaderMenuProps {
   onSignIn: () => void;
   onSignOut: () => void;
 }
+
+/** Admin-only: tree line style shown to every visitor. Each change is saved to the shared data. */
+const ConnectorSettings: React.FC = () => {
+  const { dispatch, displaySettings, canEdit, cloudReady, isSaving } = useFamilyTree();
+  const { t } = useLanguage();
+  const disabled = !canEdit || !cloudReady || isSaving;
+  const set = (payload: Partial<DisplaySettings>) => dispatch({ type: 'SET_DISPLAY_SETTINGS', payload });
+  const { connectorStyle, connectorShape, connectorSpeed, connectorTiming, connectorScope } = displaySettings;
+
+  return (
+    <div className="hdr-menu__group" aria-busy={isSaving}>
+      <label className="hdr-menu__row">
+        {isSaving ? <Loader2Icon size={16} /> : <ActivityIcon size={16} />}
+        <span>{t.settingsConnectorStyle}</span>
+        <select
+          className="hdr-menu__select"
+          value={connectorStyle}
+          disabled={disabled}
+          onChange={e => set({ connectorStyle: e.target.value as DisplaySettings['connectorStyle'] })}
+        >
+          <option value="static">{t.connectorStyleStatic}</option>
+          <option value="pulse">{t.connectorStylePulse}</option>
+          <option value="particles">{t.connectorStyleParticles}</option>
+        </select>
+      </label>
+      <label className="hdr-menu__row hdr-menu__row--sub">
+        <span>{t.settingsConnectorShape}</span>
+        <select
+          className="hdr-menu__select"
+          value={connectorShape}
+          disabled={disabled}
+          onChange={e => set({ connectorShape: e.target.value as DisplaySettings['connectorShape'] })}
+        >
+          <option value="elbow">{t.connectorShapeElbow}</option>
+          <option value="curve">{t.connectorShapeCurve}</option>
+        </select>
+      </label>
+      {connectorStyle !== 'static' && (
+        <>
+          <label className="hdr-menu__row hdr-menu__row--sub">
+            <span>{t.settingsConnectorSpeed}</span>
+            <select
+              className="hdr-menu__select"
+              value={connectorSpeed}
+              disabled={disabled}
+              onChange={e => set({ connectorSpeed: e.target.value as DisplaySettings['connectorSpeed'] })}
+            >
+              <option value="slow">{t.connectorSpeedSlow}</option>
+              <option value="normal">{t.connectorSpeedNormal}</option>
+              <option value="fast">{t.connectorSpeedFast}</option>
+            </select>
+          </label>
+          {connectorStyle === 'pulse' && (
+            <label className="hdr-menu__row hdr-menu__row--sub">
+              <span>{t.settingsConnectorTiming}</span>
+              <select
+                className="hdr-menu__select"
+                value={connectorTiming}
+                disabled={disabled}
+                onChange={e => set({ connectorTiming: e.target.value as DisplaySettings['connectorTiming'] })}
+              >
+                <option value="cascade">{t.connectorTimingCascade}</option>
+                <option value="together">{t.connectorTimingTogether}</option>
+              </select>
+            </label>
+          )}
+          <label className="hdr-menu__row hdr-menu__row--sub">
+            <span>{t.settingsConnectorScope}</span>
+            <select
+              className="hdr-menu__select"
+              value={connectorScope}
+              disabled={disabled}
+              onChange={e => set({ connectorScope: e.target.value as DisplaySettings['connectorScope'] })}
+            >
+              <option value="all">{t.connectorScopeAll}</option>
+              <option value="lineage">{t.connectorScopeLineage}</option>
+            </select>
+          </label>
+        </>
+      )}
+      <p className="hdr-menu__hint">{t.connectorSettingsHint}</p>
+    </div>
+  );
+};
 
 /** Settings, admin tools and account actions shared by the desktop menu and the mobile sheet. */
 const HeaderMenu: React.FC<HeaderMenuProps> = ({
@@ -94,6 +178,7 @@ const HeaderMenu: React.FC<HeaderMenuProps> = ({
         <>
           <div className="hdr-menu__divider" />
           <div className="hdr-menu__title">{t.settingsAdmin}</div>
+          <ConnectorSettings />
           <button type="button" className="hdr-menu__item" onClick={run(onExportJson)}>
             <DownloadIcon size={16} />{t.menuExportJson}
           </button>

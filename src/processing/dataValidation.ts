@@ -13,6 +13,7 @@ import {
   RawSpouseRelation,
   RawParentChildRelation,
 } from '../types/FamilyTypes';
+import { normalizeDisplaySettings } from './displaySettings';
 
 const VALID_GENDERS = new Set(['male', 'female', 'unknown']);
 
@@ -192,5 +193,6 @@ export function validateRawFamilyData(input: unknown): ValidationResult {
     familyTrees.push(result);
   }
 
-  return { ok: true, data: { familyTrees }, warnings };
+  const settings = input.settings === undefined ? undefined : normalizeDisplaySettings(input.settings);
+  return { ok: true, data: { familyTrees, ...(settings && { settings }) }, warnings };
 }

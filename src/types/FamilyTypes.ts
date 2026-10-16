@@ -55,8 +55,25 @@ export interface RawFamilyTree {
   relationships?: RawRelationships;
 }
 
+// ─── Site-wide display settings (only the family admin may change them) ───
+
+export type ConnectorStyle = 'static' | 'pulse' | 'particles';
+export type ConnectorShape = 'elbow' | 'curve';
+export type ConnectorSpeed = 'slow' | 'normal' | 'fast';
+export type ConnectorTiming = 'cascade' | 'together';
+export type ConnectorScope = 'all' | 'lineage';
+
+export interface DisplaySettings {
+  connectorStyle: ConnectorStyle;
+  connectorShape: ConnectorShape;
+  connectorSpeed: ConnectorSpeed;
+  connectorTiming: ConnectorTiming;
+  connectorScope: ConnectorScope;
+}
+
 export interface RawFamilyData {
   familyTrees: RawFamilyTree[];
+  settings?: DisplaySettings;
 }
 
 // ─── Processed / styled types ───
@@ -134,4 +151,6 @@ export interface StyledFamilyTree {
 
 export interface ProcessedFamilyData {
   familyTreesStyled: StyledFamilyTree[];
+  /** Absent when the data file has no settings; defaults apply. */
+  settings?: DisplaySettings;
 }

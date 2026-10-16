@@ -13,6 +13,7 @@ declare module 'html-to-image' {
       style?: Partial<CSSStyleDeclaration>;
       quality?: number;
       pixelRatio?: number;
+      filter?: (node: Node) => boolean;
     }
   ): Promise<string>;
   export function toJpeg(node: HTMLElement, options?: any): Promise<string>;

@@ -53,6 +53,7 @@ export const TreeBranch = React.memo<{
   return (
     <li
       role="treeitem"
+      data-branch-id={node.member.id}
       aria-selected={selectedId === node.member.id}
       aria-expanded={node.children.length > 0 ? true : undefined}
     >

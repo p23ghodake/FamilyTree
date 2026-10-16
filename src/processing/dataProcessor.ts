@@ -118,5 +118,5 @@ export function processAllFamilyData(raw: RawFamilyData): ProcessedFamilyData {
     };
   });
 
-  return { familyTreesStyled };
+  return { familyTreesStyled, ...(raw.settings && { settings: raw.settings }) };
 }

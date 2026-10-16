@@ -7,6 +7,7 @@ An interactive family tree in English and Marathi, published on GitHub Pages at 
 - **Header:** switch between **Tree**, **Trace** (find how two people are related), **Timeline** and **Statistics**, and toggle **Lineage** focus (click a member to highlight their direct ancestors, descendants and spouses). Editors also get **Add member**, **Undo** and **Redo**. Language, theme, avatar style, the guided tour and admin tools are in the settings menu. On phones, Trace and Lineage stay in the top bar and the rest move into a ☰ menu that opens from the bottom. The layout uses the visible screen height, so the zoom controls and bottom pop-ups are not hidden behind phone browser toolbars.
 - **Sibling order:** brothers and sisters appear left to right as sons first, then daughters, each eldest first. Siblings without a birth year come last in their group, in the order they were entered. Spouses stay beside their partner.
 - **Search and filters:** the round search button (or the `/` key) opens a compact search bar. Its filter button offers **Living only**, **Hide females**, **Marriage eligible** and a location filter. **Hide females is on by default**; **Clear** turns every filter off.
+- **Tree lines:** the admin chooses how the lines between parents and children look for everyone: **Static** (the original lines), **Energy pulse** (one glowing bead per line) or **Light particle flow** (a steady stream of dots), and the **line shape**: **Elbow** (right-angled lines with rounded corners, as before) or **Curved** (smooth S-curves from parents to each child). For the animated styles the admin also sets the **speed** (slow, normal or fast), the **pulse timing** (*Cascade*, one generation after another, or *Together*) and what to **animate** (*All lines*, or only the *Selected lineage* of the member a visitor clicks; before anyone is clicked, all lines animate). Animation starts at the oldest living members of each branch; lines below couples who have both died stay static. Visitors whose device asks for reduced motion, printouts and PNG exports always get the static lines. The choice is stored as `settings` in the shared family data file, so it applies as soon as it is saved, without redeploying the site.
 - **Member details:** clicking or tapping a person opens a compact life-timeline panel for everyone, including visitors. The header shows a 42px avatar, full name, generation, age, occupation and location. Below it, a year rail lists birth (with parents), marriages (former spouses marked), children and death in date order, followed by notes. Relatives are clickable. Colours follow the selected theme. Editing remains restricted to approved editors.
   The panel uses the selected language's labels and available names, without an alternate-language name. Long content is divided into compact Previous/Next pages rather than a scrolling panel. Free-text notes, occupation, and location remain as entered.
 - **Add and edit members:** a step-by-step form: **Relationship** (child, spouse, parent or not linked, with a searchable list of people), then **Who** (photo, names, gender), then **Dates & details** (all optional). The Marathi name is filled in automatically and can be edited. When adding a child or spouse from a person's menu, the relationship step is skipped. When editing, any step can be opened and saved directly. Uploaded photos are resized to 400 px JPEGs.
@@ -28,15 +29,17 @@ The recordings below use a fictional family (the Deshmukhs) and a demo editor ac
 
 ## Roles and permissions
 
-| Who | Browse | Add / edit members | Delete members | Reset shared data | Export JSON / PNG, Print |
-|---|---|---|---|---|---|
-| Guest (not signed in) | Bundled copy | – | – | – | – |
-| Read-only user (`READONLY_GITHUB_USERS`) | Live data | – | – | – | – |
-| Editor (`ALLOWED_GITHUB_USERS`) | Live data | ✓ | – | – | – |
-| Admin signed in with email/password | Live data | ✓ | – | – | ✓ |
-| Admin signed in **with GitHub** | Live data | ✓ | ✓ | ✓ | ✓ |
+| Who | Browse | Add / edit members | Delete members | Reset shared data | Export JSON / PNG, Print | Tree line style |
+|---|---|---|---|---|---|---|
+| Guest (not signed in) | Bundled copy | – | – | – | – | – |
+| Read-only user (`READONLY_GITHUB_USERS`) | Live data | – | – | – | – | – |
+| Editor (`ALLOWED_GITHUB_USERS`) | Live data | ✓ | – | – | – | – |
+| Admin signed in with email/password | Live data | ✓ | – | – | ✓ | ✓ |
+| Admin signed in **with GitHub** | Live data | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 Admins are the GitHub account `p23ghodake` and the GitHub account whose verified email is `ghodake.pankaj@gmail.com`. They must also be listed in `ALLOWED_GITHUB_USERS` to save anything. **Deleting members and Reset require a session signed in through GitHub**; an email/password session is refused even for the admin email. The Edge Function enforces this as well: it compares each save with the current file on GitHub and rejects saves that remove members unless the session signed in with GitHub on an admin account. Undoing your own *add* counts as a removal, so it is also limited to that admin.
+
+The **tree line style** (Settings → Admin → *Tree lines*) can be changed by either admin identity, with GitHub or email/password sign-in. Each change is saved to GitHub straight away. The Edge Function rejects any save that changes `settings` unless it comes from an admin, and editors' member saves keep the admin's settings unchanged. After updating, redeploy the function (`npx supabase functions deploy family-data`) so the server check is active.
 
 The frontend admin list is in `src/lib/admin.ts`. On the server, set the optional `ADMIN_USERS` Edge Function secret (comma-separated GitHub usernames or GitHub emails) to override the built-in list; keep both in sync.
 

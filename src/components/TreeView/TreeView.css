@@ -71,6 +71,18 @@
   padding: 0;
 }
 
+/* Positioning context for the animated line overlay */
+.tree-chart {
+  position: relative;
+}
+
+/* Curved line shape: the SVG overlay draws the parent-to-child lines instead (the node dots stay) */
+.tree-chart.tree-chart--curved li > ul::before,
+.tree-chart.tree-chart--curved li > ul > li::before,
+.tree-chart.tree-chart--curved li > ul > li::after {
+  display: none;
+}
+
 .tree-chart ul {
   display: flex;
   justify-content: center;

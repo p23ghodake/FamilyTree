@@ -4,12 +4,13 @@ import { useLanguage } from '../../context/LanguageContext';
 import { FocusIcon, Maximize2Icon } from '../Icons';
 import { buildTreeFromMembers, computeLineage } from '../../processing/treeBuilder';
 import { TreeBranch } from './TreeBranch';
+import ConnectorFlow from './ConnectorFlow';
 import { CONFIG } from '../../constants/config';
 import './TreeView.css';
 
 const TreeView: React.FC = () => {
-  const { currentTree, state, dispatch, matchedMemberIds, filteredMembers, advancedMatchedIds, relResult, debouncedSearchQuery, canEdit } = useFamilyTree();
-  const { t } = useLanguage();
+  const { currentTree, state, dispatch, matchedMemberIds, filteredMembers, advancedMatchedIds, relResult, debouncedSearchQuery, canEdit, displaySettings } = useFamilyTree();
+  const { t, lang } = useLanguage();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const treeChartRef = useRef<HTMLDivElement | null>(null);
 
@@ -473,7 +474,7 @@ const TreeView: React.FC = () => {
       >
         <div
           ref={treeChartRef}
-          className="tree-chart"
+          className={`tree-chart${displaySettings.connectorShape === 'curve' ? ' tree-chart--curved' : ''}`}
           style={{
             transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
             transformOrigin: 'top center',
@@ -505,6 +506,15 @@ const TreeView: React.FC = () => {
               />
             ))}
           </ul>
+          <ConnectorFlow
+            chartRef={treeChartRef}
+            treeNodes={treeNodes}
+            members={currentTree.members}
+            relationships={currentTree.relationships}
+            settings={displaySettings}
+            selectedId={state.selectedMemberId}
+            layoutKey={`${state.avatarStyle}|${lang}`}
+          />
         </div>
       </div>
 

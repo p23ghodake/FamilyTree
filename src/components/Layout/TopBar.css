@@ -344,6 +344,20 @@
   background: var(--border);
 }
 
+.hdr-menu__row--sub {
+  min-height: 32px;
+  padding-left: 34px;
+  color: var(--text-secondary);
+}
+
+.hdr-menu__select:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.hdr-menu__hint {
+  margin: 0 8px 4px 34px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .hdr-menu__lang button:focus-visible,
 .hdr-menu__swatch:focus-visible,
 .hdr-menu__item:focus-visible,

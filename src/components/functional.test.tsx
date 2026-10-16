@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 import { useFamilyTree, NO_FILTERS } from '../context/FamilyTreeContext';
 import { useAuth } from '../lib/AuthContext';
 import { translations } from '../i18n/translations';
+import { DEFAULT_DISPLAY_SETTINGS } from '../processing/displaySettings';
 import { processAllFamilyData } from '../processing/dataProcessor';
 import { buildTreeFromMembers } from '../processing/treeBuilder';
 import TopBar from './Layout/TopBar';
@@ -52,6 +53,7 @@ beforeEach(() => {
     debouncedSearchQuery: '', dispatch: jest.fn(), exportData: jest.fn(), importData: jest.fn(),
     loadSharedData: jest.fn().mockReturnValue(true), resetData: jest.fn(), undo: jest.fn(), redo: jest.fn(),
     styleNewMember: jest.fn(),
+    displaySettings: { ...DEFAULT_DISPLAY_SETTINGS },
   };
   (useFamilyTree as jest.Mock).mockImplementation(() => context);
   (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: false, signOut: jest.fn() });
@@ -93,6 +95,40 @@ it('shows reset only for admins and confirms the shared GitHub impact', () => {
   openSettings();
   fireEvent.click(screen.getByRole('button', { name: t.settingsResetShared }));
   expect(context.resetData).toHaveBeenCalledTimes(1);
+});
+
+it('shows the tree line style controls only to admins and saves each change', () => {
+  const view = render(<TopBar />);
+  const openSettings = () => fireEvent.click(screen.getByRole('button', { name: t.settingsTitle }));
+  openSettings();
+  expect(screen.queryByRole('combobox', { name: t.settingsConnectorStyle })).toBeNull();
+  fireEvent.keyDown(document.body, { key: 'Escape' });
+
+  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+  view.rerender(<TopBar />);
+  openSettings();
+  expect(screen.getByText(t.connectorSettingsHint)).toBeTruthy();
+  expect(screen.queryByRole('combobox', { name: t.settingsConnectorSpeed })).toBeNull();
+  fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorShape }), { target: { value: 'curve' } });
+  expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorShape: 'curve' } });
+  fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorStyle }), { target: { value: 'pulse' } });
+  expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorStyle: 'pulse' } });
+
+  context.displaySettings = { ...context.displaySettings, connectorStyle: 'pulse' };
+  view.rerender(<TopBar />);
+  fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorSpeed }), { target: { value: 'fast' } });
+  fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorTiming }), { target: { value: 'together' } });
+  fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorScope }), { target: { value: 'lineage' } });
+  expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorSpeed: 'fast' } });
+  expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorTiming: 'together' } });
+  expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorScope: 'lineage' } });
+
+  // Timing only applies to the pulse; controls lock while a save is running.
+  context.displaySettings = { ...context.displaySettings, connectorStyle: 'particles' };
+  context.isSaving = true;
+  view.rerender(<TopBar />);
+  expect(screen.queryByRole('combobox', { name: t.settingsConnectorTiming })).toBeNull();
+  expect((screen.getByRole('combobox', { name: t.settingsConnectorStyle }) as HTMLSelectElement).disabled).toBe(true);
 });
 
 it('toggles lineage focus from the desktop and phone top bar', () => {

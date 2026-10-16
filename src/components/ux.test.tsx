@@ -4,6 +4,7 @@ import { useFamilyTree, NO_FILTERS } from '../context/FamilyTreeContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { useAuth } from '../lib/AuthContext';
 import { translations } from '../i18n/translations';
+import { DEFAULT_DISPLAY_SETTINGS } from '../processing/displaySettings';
 import { processAllFamilyData } from '../processing/dataProcessor';
 import MemberDetailsPanel from './TreeView/MemberDetailsPanel';
 import FloatingSearch from './SearchBar/FloatingSearch';
@@ -59,6 +60,7 @@ beforeEach(() => {
     debouncedSearchQuery: '', dispatch: jest.fn(), exportData: jest.fn(), importData: jest.fn(),
     loadSharedData: jest.fn(), resetData: jest.fn(), undo: jest.fn(), redo: jest.fn(),
     styleNewMember: jest.fn(),
+    displaySettings: { ...DEFAULT_DISPLAY_SETTINGS },
   };
   (useFamilyTree as jest.Mock).mockImplementation(() => context);
   (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: false, signOut: jest.fn(), signInWithPassword: jest.fn(), signInWithGitHub: jest.fn() });

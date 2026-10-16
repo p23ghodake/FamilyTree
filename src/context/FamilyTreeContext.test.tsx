@@ -230,3 +230,65 @@ it('lets an authorized admin reload the latest data without saving', async () =>
   await waitFor(() => expect(getFamilyData).toHaveBeenCalledTimes(2));
   expect(saveFamilyData).not.toHaveBeenCalled();
 });
+describe('tree line style (admin display settings)', () => {
+  const emailAdmin = { id: 'mail-admin', email: 'ghodake.pankaj@gmail.com', email_confirmed_at: '2024-01-01', identities: [] };
+  const passwordToken = `h.${btoa(JSON.stringify({ amr: [{ method: 'password' }] }))}.s`;
+
+  it('defaults to the static lines when the data has no settings', async () => {
+    await mountEditor();
+    expect(context.displaySettings).toEqual({
+      connectorStyle: 'static', connectorShape: 'elbow', connectorSpeed: 'normal', connectorTiming: 'cascade', connectorScope: 'all',
+    });
+  });
+
+  it.each([
+    ['GitHub', adminUser, githubToken],
+    ['email', emailAdmin, passwordToken],
+  ])('lets the admin signed in with %s save a style for everyone', async (_label, user, token) => {
+    (useAuth as jest.Mock).mockReturnValue({ session: { user, access_token: token }, loading: false });
+    await mountEditor();
+    act(() => context.dispatch({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'fast' } }));
+    await waitFor(() => expect(context.displaySettings.connectorStyle).toBe('pulse'));
+    expect((saveFamilyData as jest.Mock).mock.calls[0][0].settings).toEqual({
+      connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'fast', connectorTiming: 'cascade', connectorScope: 'all',
+    });
+  });
+
+  it('refuses style changes from other editors but keeps the style when they save members', async () => {
+    (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser, access_token: githubToken }, loading: false });
+    (getFamilyData as jest.Mock).mockResolvedValue({
+      data: { ...rawData, settings: { connectorStyle: 'particles', connectorShape: 'curve', connectorSpeed: 'slow', connectorTiming: 'together', connectorScope: 'lineage' } },
+      sha: 'original', canEdit: true,
+    });
+    await mountEditor();
+    act(() => context.dispatch({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorStyle: 'static' } }));
+    await waitFor(() => expect(context.isSaving).toBe(false));
+    expect(saveFamilyData).not.toHaveBeenCalled();
+    expect(context.displaySettings.connectorStyle).toBe('particles');
+
+    const member = context.styleNewMember({ id: 'new', firstName: 'New', lastName: 'Family', gender: 'unknown' });
+    act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
+    await waitFor(() => expect(context.currentTree?.members).toHaveLength(3));
+    expect((saveFamilyData as jest.Mock).mock.calls[0][0].settings).toEqual({
+      connectorStyle: 'particles', connectorShape: 'curve', connectorSpeed: 'slow', connectorTiming: 'together', connectorScope: 'lineage',
+    });
+  });
+
+  it('keeps the chosen style when member changes are undone', async () => {
+    await mountEditor();
+    const member = context.styleNewMember({ id: 'new', firstName: 'New', lastName: 'Family', gender: 'unknown' });
+    act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
+    await waitFor(() => expect(context.currentTree?.members).toHaveLength(3));
+    act(() => context.dispatch({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorStyle: 'particles' } }));
+    await waitFor(() => expect(context.displaySettings.connectorStyle).toBe('particles'));
+    act(() => context.dispatch({ type: 'UNDO' }));
+    await waitFor(() => expect(context.currentTree?.members).toHaveLength(2));
+    expect(context.displaySettings.connectorStyle).toBe('particles');
+  });
+
+  it('round-trips settings through export', () => {
+    const settings = { connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'slow', connectorTiming: 'together', connectorScope: 'all' } as const;
+    expect(buildRawExport({ familyTreesStyled: [], settings }).settings).toEqual(settings);
+    expect(buildRawExport({ familyTreesStyled: [] })).not.toHaveProperty('settings');
+  });
+});

@@ -149,6 +149,23 @@ function memberIds(data: unknown): Set<string> {
   return ids;
 }
 
+// Site-wide display settings; keep in sync with src/processing/displaySettings.ts. The first value is the default.
+const SETTINGS_OPTIONS: Record<string, readonly string[]> = {
+  connectorStyle: ['static', 'pulse', 'particles'],
+  connectorShape: ['elbow', 'curve'],
+  connectorSpeed: ['normal', 'slow', 'fast'],
+  connectorTiming: ['cascade', 'together'],
+  connectorScope: ['all', 'lineage'],
+};
+
+function normalizeSettings(data: unknown): string {
+  const raw = (data as { settings?: unknown } | null)?.settings;
+  const source = typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  return Object.entries(SETTINGS_OPTIONS)
+    .map(([key, allowed]) => `${key}=${allowed.includes(source[key] as string) ? source[key] : allowed[0]}`)
+    .join('&');
+}
+
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -246,6 +263,8 @@ Deno.serve(async request => {
     : undefined;
   const canDelete = canEdit && signedInWithOAuth(token)
     && [login, githubEmail].some(id => !!id && admins.includes(id));
+  // Display settings: the admin GitHub account or the admin's verified email, with either sign-in method.
+  const canChangeSettings = canEdit && [login, email, githubEmail].some(id => !!id && admins.includes(id));
   if (!canView) {
     if (request.method === 'GET') return sendFamilyData(true, false);
     return jsonResponse({ error: `Your account (${identities.join(' / ') || 'unknown'}) is not allowed to change family data.` }, 403);
@@ -278,6 +297,9 @@ Deno.serve(async request => {
     const nextIds = memberIds(body.data);
     if ([...memberIds(currentData)].some(id => !nextIds.has(id))) {
       return jsonResponse({ error: 'Only the family admin signed in with GitHub can delete members.' }, 403);
+    }
+    if (!canChangeSettings && normalizeSettings(currentData) !== normalizeSettings(body.data)) {
+      return jsonResponse({ error: 'Only the family admin can change the tree line style.' }, 403);
     }
   }
 

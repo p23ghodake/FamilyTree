@@ -371,6 +371,25 @@ type Translations = {
   settingsTour: string;
   settingsAdmin: string;
   settingsResetShared: string;
+  settingsConnectorStyle: string;
+  connectorStyleStatic: string;
+  connectorStylePulse: string;
+  connectorStyleParticles: string;
+  settingsConnectorShape: string;
+  connectorShapeElbow: string;
+  connectorShapeCurve: string;
+  settingsConnectorSpeed: string;
+  connectorSpeedSlow: string;
+  connectorSpeedNormal: string;
+  connectorSpeedFast: string;
+  settingsConnectorTiming: string;
+  connectorTimingCascade: string;
+  connectorTimingTogether: string;
+  settingsConnectorScope: string;
+  connectorScopeAll: string;
+  connectorScopeLineage: string;
+  connectorSettingsHint: string;
+  connectorAdminOnly: string;
   accountMenu: (name: string) => string;
   wizardSteps: string;
   wizardStepRelation: string;
@@ -776,6 +795,25 @@ export const translations: Record<'en' | 'mr', Translations> = {
     settingsTour: 'Take the tour',
     settingsAdmin: 'Admin',
     settingsResetShared: 'Reset shared data…',
+    settingsConnectorStyle: 'Tree lines',
+    connectorStyleStatic: 'Static (current)',
+    connectorStylePulse: 'Energy pulse',
+    connectorStyleParticles: 'Light particle flow',
+    settingsConnectorShape: 'Line shape',
+    connectorShapeElbow: 'Elbow',
+    connectorShapeCurve: 'Curved',
+    settingsConnectorSpeed: 'Speed',
+    connectorSpeedSlow: 'Slow',
+    connectorSpeedNormal: 'Normal',
+    connectorSpeedFast: 'Fast',
+    settingsConnectorTiming: 'Pulse timing',
+    connectorTimingCascade: 'Cascade',
+    connectorTimingTogether: 'Together',
+    settingsConnectorScope: 'Animate',
+    connectorScopeAll: 'All lines',
+    connectorScopeLineage: 'Selected lineage',
+    connectorSettingsHint: 'Saved for everyone who views the tree.',
+    connectorAdminOnly: 'Only the family admin can change the tree line style.',
     accountMenu: (name) => `Account and settings for ${name}`,
     wizardSteps: 'Steps',
     wizardStepRelation: 'Relationship',
@@ -1180,6 +1218,25 @@ export const translations: Record<'en' | 'mr', Translations> = {
     settingsTour: 'दौरा सुरू करा',
     settingsAdmin: 'प्रशासक',
     settingsResetShared: 'सामायिक माहिती रीसेट करा…',
+    settingsConnectorStyle: 'वृक्ष रेषा',
+    connectorStyleStatic: 'स्थिर (सध्याची)',
+    connectorStylePulse: 'ऊर्जा स्पंद',
+    connectorStyleParticles: 'प्रकाश कण प्रवाह',
+    settingsConnectorShape: 'रेषेचा आकार',
+    connectorShapeElbow: 'कोनात्मक',
+    connectorShapeCurve: 'वक्र',
+    settingsConnectorSpeed: 'वेग',
+    connectorSpeedSlow: 'संथ',
+    connectorSpeedNormal: 'सामान्य',
+    connectorSpeedFast: 'जलद',
+    settingsConnectorTiming: 'स्पंदाची वेळ',
+    connectorTimingCascade: 'पिढीनुसार',
+    connectorTimingTogether: 'एकत्र',
+    settingsConnectorScope: 'अॅनिमेशन',
+    connectorScopeAll: 'सर्व रेषा',
+    connectorScopeLineage: 'निवडलेला वंश',
+    connectorSettingsHint: 'वृक्ष पाहणाऱ्या सर्वांसाठी जतन होते.',
+    connectorAdminOnly: 'वृक्ष रेषांची शैली फक्त कुटुंब प्रशासक बदलू शकतो.',
     accountMenu: (name) => `${name} यांचे खाते आणि सेटिंग्ज`,
     wizardSteps: 'पायऱ्या',
     wizardStepRelation: 'नाते',

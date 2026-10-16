@@ -8,9 +8,11 @@ import {
   RawFamilyData,
   RawFamilyMember,
   AvatarStyle,
+  DisplaySettings,
 } from '../types/FamilyTypes';
 import { processAllFamilyData } from '../processing/dataProcessor';
 import { validateRawFamilyData } from '../processing/dataValidation';
+import { normalizeDisplaySettings, sameDisplaySettings } from '../processing/displaySettings';
 import { computeAge, getAgeCategory } from '../processing/ageCalculation';
 import { getNodeColors } from '../processing/nodeStyling';
 import { getImageConfig } from '../processing/imageRules';
@@ -81,6 +83,7 @@ export function buildRawExport(data: ProcessedFamilyData): RawFamilyData {
         })),
       },
     })),
+    ...(data.settings && { settings: { ...data.settings } }),
   };
 }
 
@@ -196,6 +199,7 @@ type Action =
   | { type: 'DELETE_MEMBER'; payload: { treeId: string; memberId: string } }
   | { type: 'END_MARRIAGE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; endYear: number; endReason?: 'divorce' | 'death' | 'annulment' | 'separation' } }
   | { type: 'UPDATE_MARRIAGE_DATE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; marriageDate: string | null } }
+  | { type: 'SET_DISPLAY_SETTINGS'; payload: Partial<DisplaySettings> }
   | { type: 'UNDO' }
   | { type: 'REDO' };
 
@@ -206,6 +210,7 @@ const DATA_MUTATION_ACTIONS = new Set<Action['type']>([
   'DELETE_MEMBER',
   'END_MARRIAGE',
   'UPDATE_MARRIAGE_DATE',
+  'SET_DISPLAY_SETTINGS',
   'UNDO',
   'REDO',
 ]);
@@ -431,12 +436,20 @@ function reduceState(state: State, action: Action): State {
       try { localStorage.setItem(AVATAR_STYLE_KEY, action.payload); } catch {}
       return { ...state, avatarStyle: action.payload };
 
+    // Not part of undo history: settings are site-wide and owned by the admin.
+    case 'SET_DISPLAY_SETTINGS': {
+      if (!state.data) return state;
+      const settings = normalizeDisplaySettings({ ...normalizeDisplaySettings(state.data.settings), ...action.payload });
+      return { ...state, data: { ...state.data, settings } };
+    }
+
+    // Undo/redo restore members only; the current display settings stay as they are.
     case 'UNDO': {
       if (state.past.length === 0 || !state.data) return state;
       const past = [...state.past];
       const previous = past.pop()!;
       const future = [state.data, ...state.future];
-      return { ...state, data: previous, past, future };
+      return { ...state, data: { ...previous, settings: state.data.settings }, past, future };
     }
 
     case 'REDO': {
@@ -445,7 +458,7 @@ function reduceState(state: State, action: Action): State {
       const next = future.shift()!;
       const past = [...state.past, state.data];
       if (past.length > MAX_HISTORY) past.shift();
-      return { ...state, data: next, past, future };
+      return { ...state, data: { ...next, settings: state.data.settings }, past, future };
     }
 
     default:
@@ -479,6 +492,8 @@ interface FamilyTreeContextValue {
   canUndo: boolean;
   canRedo: boolean;
   styleNewMember: (raw: Partial<StyledFamilyMember> & { id: string; firstName: string; lastName: string; gender: 'male' | 'female' | 'unknown' }) => StyledFamilyMember;
+  /** Site-wide settings chosen by the admin, with defaults filled in. */
+  displaySettings: DisplaySettings;
 }
 
 const FamilyTreeContext = createContext<FamilyTreeContextValue | null>(null);
@@ -552,6 +567,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       if (!nextState.data || nextState.data === currentState.data) return;
       if (currentState.data && !canDeleteMembers(session) && removesMembers(currentState.data, nextState.data)) {
         toast.error(tRef.current.deleteAdminOnly, { id: 'family-save' });
+        return;
+      }
+      if (!isAdminUser(session.user) && !sameDisplaySettings(currentState.data?.settings, nextState.data.settings)) {
+        toast.error(tRef.current.connectorAdminOnly, { id: 'family-save' });
         return;
       }
 
@@ -654,6 +673,8 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => setDebouncedSearchQuery(state.searchQuery), CONFIG.ui.SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [state.searchQuery]);
+
+  const displaySettings = useMemo(() => normalizeDisplaySettings(state.data?.settings), [state.data?.settings]);
 
   const currentTree = useMemo(() =>
     state.data?.familyTreesStyled.find(t => t.familyTreeId === state.selectedTreeId) ?? null,
@@ -783,6 +804,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
 
     try {
       const processed = processAllFamilyData(result.data);
+      // Only the admin may bring in display settings; everyone else keeps the current ones.
+      if (!isAdminUser(session?.user) || !processed.settings) {
+        processed.settings = stateRef.current.data?.settings;
+      }
       dispatch({ type: 'IMPORT_DATA', payload: processed });
       if (result.warnings.length > 0) {
         toast(tRef.current.importRepaired(result.warnings.length), {
@@ -794,7 +819,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       console.error('Failed to process imported data:', e);
       toast.error(tRef.current.importProcessFailed, { id: 'import-error' });
     }
-  }, [dispatch]);
+  }, [dispatch, session]);
 
   // Style a raw member with computed fields (for add/edit)
   const styleNewMember = useCallback((
@@ -857,9 +882,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const canRedo = state.future.length > 0;
 
   const contextValue = useMemo<FamilyTreeContextValue>(
-    () => ({ state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember }),
+    () => ({ state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember],
+    [state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings],
   );
 
   return (
