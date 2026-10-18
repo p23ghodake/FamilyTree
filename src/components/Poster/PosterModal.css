@@ -68,6 +68,9 @@
   color: var(--text-muted);
 }
 
+.poster-field--check { cursor: pointer; user-select: none; }
+.poster-field--check input { accent-color: var(--accent, #6366f1); margin: 0; }
+
 .poster-field select {
   font: inherit;
   font-size: 12px;

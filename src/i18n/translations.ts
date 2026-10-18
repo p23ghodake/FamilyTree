@@ -360,6 +360,11 @@ type Translations = {
   posterDownload: string;
   posterDownloadHint: (width: number, height: number) => string;
   posterFamilyName: (surname: string) => string;
+  posterStyle: string;
+  posterThemeNames: { autumn: string; spring: string; summer: string; banyan: string };
+  posterShowYears: string;
+  posterAgedPaper: string;
+  posterLifeYears: (birth: number | null, death: number | null) => string;
   headerViews: string;
   headerAddMember: string;
   headerShareTree: string;
@@ -786,6 +791,11 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterDownload: 'Download image',
     posterDownloadHint: (width, height) => `High-resolution PNG (${width} × ${height} px)`,
     posterFamilyName: surname => (surname ? `The ${surname} Family` : 'Our Family'),
+    posterStyle: 'Style',
+    posterThemeNames: { autumn: 'Autumn', spring: 'Spring blossom', summer: 'Summer', banyan: 'Banyan' },
+    posterShowYears: 'Show years',
+    posterAgedPaper: 'Aged paper',
+    posterLifeYears: (birth, death) => (birth && death ? `${birth} – ${death}` : birth ? `b. ${birth}` : death ? `d. ${death}` : ''),
     headerViews: 'Views',
     headerAddMember: 'Add member',
     headerShareTree: 'Share tree',
@@ -1211,6 +1221,11 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterDownload: 'प्रतिमा डाउनलोड करा',
     posterDownloadHint: (width, height) => `उच्च रिझोल्यूशन PNG (${width} × ${height} px)`,
     posterFamilyName: surname => (surname ? `${surname} परिवार` : 'आमचा परिवार'),
+    posterStyle: 'शैली',
+    posterThemeNames: { autumn: 'शरद ऋतू', spring: 'वसंत बहर', summer: 'उन्हाळा', banyan: 'वटवृक्ष' },
+    posterShowYears: 'वर्षे दाखवा',
+    posterAgedPaper: 'जुना कागद',
+    posterLifeYears: (birth, death) => (birth && death ? `${birth} – ${death}` : birth ? `जन्म ${birth}` : death ? `निधन ${death}` : ''),
     headerViews: 'दृश्ये',
     headerAddMember: 'सदस्य जोडा',
     headerShareTree: 'वृक्ष शेअर करा',

@@ -182,6 +182,34 @@ it('offers only men as the poster starting person', () => {
   expect(picker.value).toBe('ram');
 });
 
+it('lets the poster switch style, show life years and drop the paper texture', () => {
+  const people = processAllFamilyData({ familyTrees: [{
+    familyTreeId: 'test', familyTreeDisplayName: 'Test Family',
+    members: [
+      { id: 'ram', firstName: 'ram', lastName: 'Family', gender: 'male' as const, birthYear: 1920, deathYear: 1990 },
+      { id: 'lav', firstName: 'lav', lastName: 'Family', gender: 'male' as const, birthYear: 1950, deathYear: null },
+    ],
+    relationships: { spouses: [], parentChild: [{ parentId: 'ram', childId: 'lav' }] },
+  }] });
+  context.currentTree = people.familyTreesStyled[0];
+  context.state = { ...context.state, data: people, selectedMemberId: 'ram' };
+  const view = render(<PosterModal onClose={jest.fn()} />);
+  const style = screen.getByLabelText(t.posterStyle) as HTMLSelectElement;
+  expect(Array.from(style.options).map(o => o.text)).toEqual(Object.values(t.posterThemeNames));
+  fireEvent.change(style, { target: { value: 'banyan' } });
+  expect(style.value).toBe('banyan');
+
+  expect(screen.queryByText(t.posterLifeYears(1920, 1990))).toBeNull();
+  fireEvent.click(screen.getByLabelText(t.posterShowYears));
+  expect(screen.getByText(t.posterLifeYears(1920, 1990))).toBeTruthy();
+  expect(screen.getByText(t.posterLifeYears(1950, null))).toBeTruthy();
+
+  const svg = view.baseElement.querySelector('.poster-sheet svg')!;
+  expect(svg.querySelector('[filter="url(#poster-grain)"]')).toBeTruthy();
+  fireEvent.click(screen.getByLabelText(t.posterAgedPaper));
+  expect(svg.querySelector('[filter="url(#poster-grain)"]')).toBeNull();
+});
+
 it('restores tree and viewport styles when PNG export fails', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
   (toPng as jest.Mock).mockRejectedValue(new Error('Image failed'));
