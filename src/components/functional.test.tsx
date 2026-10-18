@@ -14,6 +14,7 @@ import TreeLoader from './Layout/TreeLoader';
 import MemberFormModal from './TreeView/MemberFormModal';
 import { TreeBranch } from './TreeView/TreeBranch';
 import TimelineModal from './Timeline/TimelineModal';
+import PosterModal from './Poster/PosterModal';
 
 jest.mock('../context/FamilyTreeContext', () => ({
   ...jest.requireActual('../context/FamilyTreeContext'), useFamilyTree: jest.fn(),
@@ -163,6 +164,22 @@ it('shows the poster view only to admins', () => {
   (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
   view.rerender(<TopBar />);
   expect(screen.getByRole('button', { name: t.viewPoster })).toBeTruthy();
+});
+
+it('offers only men as the poster starting person', () => {
+  const people = processAllFamilyData({ familyTrees: [{
+    familyTreeId: 'test', familyTreeDisplayName: 'Test Family',
+    members: [['ram', 'male'], ['sita', 'female'], ['lav', 'male'], ['kush', 'male'], ['urmila', 'female']].map(([id, gender]) => ({
+      id, firstName: id, lastName: 'Family', gender: gender as 'male' | 'female', birthYear: 1980, deathYear: null,
+    })),
+    relationships: { spouses: [{ spouse1Id: 'ram', spouse2Id: 'sita' }], parentChild: [['ram', 'lav'], ['ram', 'kush'], ['ram', 'urmila']].map(([parentId, childId]) => ({ parentId, childId })) },
+  }] });
+  context.currentTree = people.familyTreesStyled[0];
+  context.state = { ...context.state, data: people, selectedMemberId: 'sita' };
+  render(<PosterModal onClose={jest.fn()} />);
+  const picker = screen.getByLabelText(t.posterStartFrom) as HTMLSelectElement;
+  expect(Array.from(picker.options).map(o => o.value).sort()).toEqual(['kush', 'lav', 'ram']);
+  expect(picker.value).toBe('ram');
 });
 
 it('restores tree and viewport styles when PNG export fails', async () => {

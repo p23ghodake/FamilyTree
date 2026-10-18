@@ -73,15 +73,20 @@ describe('buildPosterLayout couples and branches', () => {
   const layout = buildPosterLayout('gp', 4, members, rels, marriages);
   const at = (id: string) => layout.nodes.find(n => n.id === id)!;
 
-  it('puts the spouse on the same card instead of a separate node', () => {
-    expect(at('gp').spouseId).toBe('gm');
-    expect(at('dau').spouseId).toBe('sil');
-    expect(layout.nodes.some(n => n.id === 'gm' || n.id === 'dil' || n.id === 'sil')).toBe(false);
+  it('puts the wife on the same card instead of a separate node', () => {
+    expect(at('gp').spouseIds).toEqual(['gm']);
+    expect(at('son1').spouseIds).toEqual(['dil']);
+    expect(layout.nodes.some(n => n.id === 'gm' || n.id === 'dil')).toBe(false);
   });
 
-  it('shows a late spouse but never an ex', () => {
-    expect(at('son2').spouseId).toBe('late');
+  it('shows a late wife but never an ex', () => {
+    expect(at('son2').spouseIds).toEqual(['late']);
     expect(layout.nodes.some(n => n.id === 'ex')).toBe(false);
+  });
+
+  it('shows a daughter alone, without her husband', () => {
+    expect(at('dau').spouseIds).toEqual([]);
+    expect(layout.nodes.some(n => n.id === 'sil')).toBe(false);
   });
 
   it('collects children recorded under either parent', () => {
@@ -107,10 +112,59 @@ describe('buildPosterLayout couples and branches', () => {
   });
 });
 
+describe('buildPosterLayout blood line', () => {
+  const members = [
+    m('gp'), m('w1', 'female'), m('w2', 'female'), m('w3', 'female'), m('w4', 'female'),
+    m('son', 'male', 1950), m('dau', 'female', 1955), m('sil'), m('dk1'), m('dk2', 'female'),
+    m('step', 'male', 1945), m('half', 'male', 1960),
+  ];
+  const rels = pc([
+    ['gp', 'son'], ['w1', 'son'], ['gp', 'dau'], ['w1', 'dau'], ['w2', 'half'],
+    ['dau', 'dk1'], ['sil', 'dk1'], ['sil', 'dk2'], ['w2', 'step'],
+  ]);
+  const marriages = [
+    { spouse1Id: 'gp', spouse2Id: 'w2', marriageYear: 1958 },
+    { spouse1Id: 'w1', spouse2Id: 'gp', marriageYear: 1948, endYear: 1957, endReason: 'death' as const },
+    { spouse1Id: 'gp', spouse2Id: 'w3', endYear: 1947, endReason: 'divorce' as const },
+    { spouse1Id: 'gp', spouse2Id: 'w4', endYear: 1946, endReason: 'separation' as const },
+    { spouse1Id: 'dau', spouse2Id: 'sil' },
+  ];
+  const layout = buildPosterLayout('gp', 4, members, rels, marriages);
+  const ids = layout.nodes.filter(n => n.kind === 'person').map(n => n.id);
+
+  it('lists every wife not divorced or separated, earliest marriage first', () => {
+    expect(layout.nodes[0].spouseIds).toEqual(['w1', 'w2']);
+    expect(ids.some(id => id === 'w3' || id === 'w4')).toBe(false);
+  });
+
+  it("leaves out a daughter's husband and children", () => {
+    expect(ids).toContain('dau');
+    expect(ids.some(id => id === 'sil' || id === 'dk1' || id === 'dk2')).toBe(false);
+    expect(layout.nodes.find(n => n.id === 'dau')!.spouseIds).toEqual([]);
+  });
+
+  it("keeps a wife's children from another marriage", () => {
+    expect(ids).toEqual(expect.arrayContaining(['step', 'half', 'son']));
+  });
+
+  it('shows a chosen daughter alone, above her father line', () => {
+    const own = buildPosterLayout('dau', 3, members, rels, marriages);
+    expect(own.nodes.map(n => n.id)).toEqual(['gp', 'dau']);
+    expect(own.nodes[1].spouseIds).toEqual([]);
+  });
+});
+
 describe('findPosterRoot', () => {
   it('starts where the longest line first branches', () => {
     const rels = pc([['old', 'mid'], ['mid', 'a'], ['mid', 'b'], ['a', 'young'], ['other', 'x']]);
-    const ids = ['other', 'old', 'mid', 'a', 'b', 'young', 'x'].map(id => ({ id }));
+    const ids = ['other', 'old', 'mid', 'a', 'b', 'young', 'x'].map(id => ({ id, gender: 'male' as const }));
     expect(findPosterRoot(ids, rels)).toBe('mid');
+  });
+
+  it("does not follow a daughter's line", () => {
+    const rels = pc([['old', 'son'], ['old', 'dau'], ['dau', 'g1'], ['g1', 'g2'], ['g2', 'g3'], ['son', 's1'], ['son', 's2']]);
+    const people = ['old', 'son', 'dau', 'g1', 'g2', 'g3', 's1', 's2']
+      .map(id => ({ id, gender: id === 'dau' ? 'female' as const : 'male' as const }));
+    expect(findPosterRoot(people, rels)).toBe('old');
   });
 });

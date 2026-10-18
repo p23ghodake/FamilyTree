@@ -21,6 +21,8 @@ const POSTER_RATIO = 0.62;
 const ANCESTOR_RATIO = 0.45;
 const SINGLE_H = 44;
 const COUPLE_H = 76;
+/** Each extra wife adds one name line to the card. */
+const WIFE_LINE_H = 24;
 const MIN_CARD_W = 84;
 const MAX_CARD_W = 158;
 const CARD_PAD = 30;
@@ -106,6 +108,19 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+/** Long names may shrink to this share of the card font before their letters are squeezed. */
+const MIN_NAME_SCALE = 0.72;
+
+/** Fits one name into the card: names that fit keep their size; longer ones shrink, then squeeze as a last resort. */
+function fitName(text: string, lang: 'en' | 'mr', room: number): React.SVGProps<SVGTextElement> {
+  const natural = nameWidth(text, lang);
+  if (natural <= room) return {};
+  const scale = Math.max(MIN_NAME_SCALE, room / natural);
+  const fit: React.SVGProps<SVGTextElement> = { style: { fontSize: FONT[lang].size * scale } };
+  if (natural * scale > room) Object.assign(fit, { textLength: room, lengthAdjust: 'spacingAndGlyphs' });
+  return fit;
+}
+
 let measureContext: CanvasRenderingContext2D | null | undefined;
 
 /** Rendered width of a card name, falling back to an estimate where canvas is unavailable. */
@@ -133,9 +148,12 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const marriages = useMemo(() => currentTree?.relationships.spouses ?? [], [currentTree]);
   const byId = useMemo(() => new Map(members.map(m => [m.id, m])), [members]);
 
-  const [rootId, setRootId] = useState<string>(
-    () => state.selectedMemberId ?? findPosterRoot(members, parentChild) ?? members[0]?.id ?? '',
-  );
+  // The poster follows the sons' line, so it always starts from a man.
+  const [rootId, setRootId] = useState<string>(() => {
+    const isMale = (id: string | null | undefined): id is string => !!id && byId.get(id)?.gender === 'male';
+    return [state.selectedMemberId, findPosterRoot(members, parentChild)].find(isMale)
+      ?? members.find(m => m.gender === 'male')?.id ?? '';
+  });
   const [generations, setGenerations] = useState(4);
   const [fit, setFit] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -161,6 +179,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     const fatherOf = new Map<string, string>();
     parentChild.forEach(r => { if (byId.get(r.parentId)?.gender === 'male') fatherOf.set(r.childId, r.parentId); });
     return members
+      .filter(m => m.gender === 'male')
       .map(m => {
         const father = fatherOf.get(m.id);
         return { id: m.id, label: father ? `${nameOf(m.id)} (${nameOf(father)})` : nameOf(m.id) };
@@ -181,7 +200,11 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     () => buildPosterLayout(rootId, generations, members, parentChild, marriages),
     [rootId, generations, members, parentChild, marriages],
   );
-  const cardH = useCallback((n: PosterNode) => (n.kind === 'fork' ? 0 : n.spouseId ? COUPLE_H : SINGLE_H), []);
+  const cardH = useCallback(
+    (n: PosterNode) => (n.kind === 'fork' ? 0 : n.spouseIds.length ? COUPLE_H + (n.spouseIds.length - 1) * WIFE_LINE_H : SINGLE_H),
+    [],
+  );
+  const tallestCard = useMemo(() => Math.max(COUPLE_H, ...layout.nodes.map(cardH)), [layout, cardH]);
 
   const contentW = layout.slots * SLOT_W;
   const width = Math.max(contentW + SIDE_PAD * 2, MIN_W);
@@ -190,13 +213,13 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const titleH = Math.max(TITLE_H, titleSize * 2.4);
   const focusDepth = layout.focusDepth;
   const descGaps = Math.max(layout.levels - 1 - focusDepth, 0);
-  const fixedH = TOP_PAD + COUPLE_H / 2 + titleH;
+  const fixedH = TOP_PAD + tallestCard / 2 + titleH;
   // Stretch the levels so wide families still look like a poster rather than a thin strip.
   const levelH = descGaps + focusDepth
-    ? Math.min(MAX_LEVEL_H, Math.max(LEVEL_H, (width * POSTER_RATIO - fixedH - TRUNK_H) / (descGaps + ANCESTOR_RATIO * focusDepth + 0.8)))
-    : LEVEL_H;
+    ? Math.min(MAX_LEVEL_H, Math.max(LEVEL_H, tallestCard + 40, (width * POSTER_RATIO - fixedH - TRUNK_H) / (descGaps + ANCESTOR_RATIO * focusDepth + 0.8)))
+    : Math.max(LEVEL_H, tallestCard + 40);
   // Ancestors sit closer together on the trunk than the descendant levels above.
-  const ancestorGap = Math.max(COUPLE_H + 30, levelH * ANCESTOR_RATIO);
+  const ancestorGap = Math.max(tallestCard + 30, levelH * ANCESTOR_RATIO);
   const trunkH = Math.max(TRUNK_H, levelH * 0.6);
   const height = fixedH + descGaps * levelH + focusDepth * ancestorGap + trunkH;
   const groundY = height - titleH;
@@ -358,17 +381,17 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               {art.twigs.map((d, i) => <path key={`t${i}`} d={d} fill={BARK_DARK} />)}
               {art.leaves.map((leaf, i) => <Leaf key={`l${i}`} leaf={leaf} />)}
 
-              {/* Member cards: one per person, with the spouse on the same card */}
+              {/* Member cards: one per person, with his wives on the same card */}
               {layout.nodes.map(n => {
                 const m = byId.get(n.id);
                 if (!m || n.kind === 'fork') return null;
-                const spouse = n.spouseId ? byId.get(n.spouseId) : undefined;
+                const wives = n.spouseIds.flatMap(id => byId.get(id) ?? []);
                 const { x, y } = posOf(n);
-                const names = [m, ...(spouse ? [spouse] : [])].map(p => truncate(getDisplayFirstName(p, lang), NAME_MAX_CHARS));
+                const names = [m, ...wives].map(p => truncate(getDisplayFirstName(p, lang), NAME_MAX_CHARS));
                 const font = lang === 'mr' ? 'mr' : 'en';
                 const textW = Math.max(...names.map(s => nameWidth(s, font)));
                 const w = Math.min(MAX_CARD_W, Math.max(MIN_CARD_W, textW + CARD_PAD));
-                const squeeze = textW > w - CARD_PAD ? { textLength: w - CARD_PAD, lengthAdjust: 'spacingAndGlyphs' as const } : {};
+                const fits = names.map(s => fitName(s, font, w - CARD_PAD));
                 const h = cardH(n);
                 const female = m.gender === 'female';
                 const colors = female ? CARD_COLORS.female : CARD_COLORS.male;
@@ -378,14 +401,16 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                   <g key={`c-${n.id}`} className="poster-card" filter="url(#poster-banner-shadow)">
                     <title>{names.join(' ♥ ')}</title>
                     <path d={leafCard(x - w / 2, y - h / 2, w, h, female)} fill={focus ? '#fdfbea' : '#ffffff'} stroke={colors.edge} strokeWidth={focus ? 3 : 2} />
-                    {spouse ? (
+                    {wives.length ? (
                       <>
-                        <text x={x} y={y - 12} textAnchor="middle" className={nameClass} fill={colors.text} {...squeeze}>{names[0]}</text>
-                        <text x={x} y={y + 4} textAnchor="middle" className="poster-card__heart">♥</text>
-                        <text x={x} y={y + 25} textAnchor="middle" className={nameClass} fill={colors.text} {...squeeze}>{names[1]}</text>
+                        <text x={x} y={y - h / 2 + 26} textAnchor="middle" className={nameClass} fill={colors.text} {...fits[0]}>{names[0]}</text>
+                        <text x={x} y={y - h / 2 + 42} textAnchor="middle" className="poster-card__heart">♥</text>
+                        {names.slice(1).map((name, i) => (
+                          <text key={wives[i].id} x={x} y={y - h / 2 + 63 + i * WIFE_LINE_H} textAnchor="middle" className={nameClass} fill={colors.text} {...fits[i + 1]}>{name}</text>
+                        ))}
                       </>
                     ) : (
-                      <text x={x} y={y + 7} textAnchor="middle" className={nameClass} fill={colors.text} {...squeeze}>{names[0]}</text>
+                      <text x={x} y={y + 7} textAnchor="middle" className={nameClass} fill={colors.text} {...fits[0]}>{names[0]}</text>
                     )}
                   </g>
                 );

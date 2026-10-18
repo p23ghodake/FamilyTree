@@ -10,8 +10,8 @@ export interface PosterNode {
   stemId: string | null;
   /** 'fork' is an unlabelled branch point splitting a couple's sons from their daughters. */
   kind: 'person' | 'fork';
-  /** Shown on the same card as the person. */
-  spouseId: string | null;
+  /** Wives shown on the same card as the person; always empty for women. */
+  spouseIds: string[];
 }
 
 export interface PosterLayout {
@@ -25,16 +25,24 @@ export interface PosterLayout {
 }
 
 type Member = Pick<RawFamilyMember, 'id' | 'gender' | 'birthYear'>;
-type Marriage = Pick<RawSpouseRelation, 'spouse1Id' | 'spouse2Id' | 'endYear' | 'endReason'> & { status?: 'current' | 'former' };
+type Marriage = Pick<RawSpouseRelation, 'spouse1Id' | 'spouse2Id' | 'marriageYear' | 'endYear' | 'endReason'> & { status?: 'current' | 'former' };
 
-/** The spouse shown on a person's card: a current spouse, else one lost to death; never an ex. */
-function spouseFinder(marriages: Marriage[]): (id: string) => string | null {
+/**
+ * The poster follows the blood line through the sons: a woman is shown alone, without her husband or children.
+ * A man's card lists every wife whose marriage was not ended by divorce, annulment or separation, earliest first.
+ */
+function wifeFinder(members: Member[], marriages: Marriage[]): (id: string) => string[] {
+  const genderOf = new Map(members.map(m => [m.id, m.gender]));
   const ended = (s: Marriage) => s.status ? s.status === 'former' : s.endYear != null;
   return id => {
-    const own = marriages.filter(s => s.spouse1Id === id || s.spouse2Id === id);
-    const pick = own.find(s => !ended(s)) ?? own.find(s => s.endReason === 'death');
-    if (!pick) return null;
-    return pick.spouse1Id === id ? pick.spouse2Id : pick.spouse1Id;
+    if (genderOf.get(id) === 'female') return [];
+    const wives = marriages
+      .map((s, i) => ({ s, i, wife: s.spouse1Id === id ? s.spouse2Id : s.spouse2Id === id ? s.spouse1Id : null }))
+      .filter(({ s, wife }) => wife && wife !== id && genderOf.has(wife) && genderOf.get(wife) !== 'male'
+        && (!ended(s) || s.endReason === 'death'))
+      .sort((a, b) => (a.s.marriageYear ?? Infinity) - (b.s.marriageYear ?? Infinity) || a.i - b.i)
+      .map(({ wife }) => wife as string);
+    return Array.from(new Set(wives));
   };
 }
 
@@ -69,9 +77,9 @@ export function buildPosterLayout(
 ): PosterLayout {
   if (!members.some(m => m.id === rootId)) return { nodes: [], slots: 0, levels: 0, focusDepth: 0 };
 
-  const spouseOf = spouseFinder(marriages);
-  const down = descendantLayout(rootId, generations, members, parentChild, spouseOf);
-  const onTree = new Set(down.nodes.flatMap(n => (n.spouseId ? [n.id, n.spouseId] : [n.id])));
+  const wivesOf = wifeFinder(members, marriages);
+  const down = descendantLayout(rootId, generations, members, parentChild, wivesOf);
+  const onTree = new Set(down.nodes.flatMap(n => [n.id, ...n.spouseIds]));
   const chain: string[] = [];
   for (const id of ancestorLine(rootId, generations - 1, members, parentChild)) {
     if (onTree.has(id)) break;
@@ -80,7 +88,7 @@ export function buildPosterLayout(
   const k = chain.length;
   const x = down.nodes[0].x;
   const nodes: PosterNode[] = chain.map((id, i) => ({
-    id, depth: i, x, stemId: i ? chain[i - 1] : null, kind: 'person' as const, spouseId: spouseOf(id),
+    id, depth: i, x, stemId: i ? chain[i - 1] : null, kind: 'person' as const, spouseIds: wivesOf(id),
   }));
   down.nodes.forEach(n => nodes.push({ ...n, depth: n.depth + k, stemId: n.stemId ?? (k ? chain[k - 1] : null) }));
   return { nodes, slots: down.slots, levels: down.levels + k, focusDepth: k };
@@ -92,7 +100,7 @@ function descendantLayout(
   generations: number,
   members: Member[],
   parentChild: RawParentChildRelation[],
-  spouseOf: (id: string) => string | null,
+  wivesOf: (id: string) => string[],
 ): { nodes: PosterNode[]; slots: number; levels: number } {
   const byId = new Map(members.map((m, i) => [m.id, { m, i }]));
   const next = new Map<string, string[]>();
@@ -118,15 +126,15 @@ function descendantLayout(
   const placeGroup = (ids: string[], depth: number, stemId: string): number[] => ids.map(c => place(c, depth, stemId));
 
   const place = (id: string, depth: number, stemId: string | null): number => {
-    const spouseId = spouseOf(id);
+    const spouseIds = wivesOf(id);
     placed.add(id);
-    if (spouseId) placed.add(spouseId);
+    spouseIds.forEach(w => placed.add(w));
     levels = Math.max(levels, depth + 1);
-    const node: PosterNode = { id, depth, x: 0, stemId, kind: 'person', spouseId };
+    const node: PosterNode = { id, depth, x: 0, stemId, kind: 'person', spouseIds };
     nodes.push(node);
-    // A couple's children may be recorded under either parent.
-    const children = depth + 1 < generations
-      ? Array.from(new Set([...(next.get(id) ?? []), ...(spouseId ? next.get(spouseId) ?? [] : [])]))
+    // A couple's children may be recorded under either parent. Daughters' children belong to another family line.
+    const children = depth + 1 < generations && byId.get(id)!.m.gender !== 'female'
+      ? Array.from(new Set([id, ...spouseIds].flatMap(p => next.get(p) ?? [])))
         .filter(b => !placed.has(b)).sort(compare)
       : [];
     const daughters = children.filter(c => byId.get(c)!.m.gender === 'female');
@@ -136,7 +144,7 @@ function descendantLayout(
       slot += 1;
     } else if (sons.length && daughters.length) {
       const forkXs = ([['m', sons], ['f', daughters]] as const).map(([g, group]) => {
-        const fork: PosterNode = { id: `${id}~${g}`, depth: depth + 0.5, x: 0, stemId: id, kind: 'fork', spouseId: null };
+        const fork: PosterNode = { id: `${id}~${g}`, depth: depth + 0.5, x: 0, stemId: id, kind: 'fork', spouseIds: [] };
         nodes.push(fork);
         const xs = placeGroup(group, depth + 1, fork.id);
         fork.x = (xs[0] + xs[xs.length - 1]) / 2;
@@ -154,11 +162,14 @@ function descendantLayout(
   return { nodes, slots: slot, levels };
 }
 
-/** Where the longest descendant line first branches; a single-child chain makes a bare poster. */
-export function findPosterRoot(members: Pick<RawFamilyMember, 'id'>[], parentChild: RawParentChildRelation[]): string | null {
+/** Where the longest line through the sons first branches; a single-child chain makes a bare poster. */
+export function findPosterRoot(members: Pick<RawFamilyMember, 'id' | 'gender'>[], parentChild: RawParentChildRelation[]): string | null {
   const hasParent = new Set(parentChild.map(r => r.childId));
+  const women = new Set(members.filter(m => m.gender === 'female').map(m => m.id));
   const childrenOf = new Map<string, string[]>();
-  parentChild.forEach(r => childrenOf.set(r.parentId, [...(childrenOf.get(r.parentId) ?? []), r.childId]));
+  parentChild.forEach(r => {
+    if (!women.has(r.parentId)) childrenOf.set(r.parentId, [...(childrenOf.get(r.parentId) ?? []), r.childId]);
+  });
 
   const depthMemo = new Map<string, number>();
   const depth = (id: string, seen: Set<string>): number => {
