@@ -48,6 +48,13 @@ describe('buildPosterArt', () => {
     expect(blossoms(buildPosterArt(input()))).toBe(0);
     expect(blossoms(buildPosterArt(input({ theme: 'spring' })))).toBeGreaterThan(0);
   });
+
+  it('adds deterministic dappled light only in summer', () => {
+    const summer = buildPosterArt(input({ theme: 'summer' }));
+    expect(summer.dappled.length).toBeGreaterThan(0);
+    expect(summer.dappled).toEqual(buildPosterArt(input({ theme: 'summer' })).dappled);
+    expect(buildPosterArt(input({ theme: 'autumn' })).dappled).toHaveLength(0);
+  });
 });
 
 describe('mix', () => {

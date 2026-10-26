@@ -125,6 +125,8 @@ export interface PosterArt {
   drifting: LeafArt[];
   /** Soft foliage masses behind the branches that give the crown its outline. */
   canopy: { cx: number; cy: number; r: number }[];
+  /** Small sunlit openings in the summer canopy. */
+  dappled: { cx: number; cy: number; r: number; opacity: number }[];
   /** Hanging banyan roots. */
   aerialRoots: string[];
   ground: {
@@ -420,7 +422,7 @@ function aerialRoot(rand: () => number, from: Point, groundY: number): { d: stri
 /** Trunk, tapering limbs, leafy twigs, ground and fallen leaves around an already laid-out poster. */
 export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunkH, scale, minX, maxX, theme = 'autumn' }: PosterArtInput): PosterArt {
   const art: PosterArt = {
-    wood: [], twigs: [], backLeaves: [], leaves: [], fallen: [], drifting: [], canopy: [], aerialRoots: [],
+    wood: [], twigs: [], backLeaves: [], leaves: [], fallen: [], drifting: [], canopy: [], dappled: [], aerialRoots: [],
     ground: { cx: 0, cy: 0, rx: 0, mound: '', grass: '', pebbles: [], footings: [] },
   };
   if (nodes.length === 0) return art;
@@ -455,6 +457,20 @@ export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunk
     const { x, y } = posOf(n);
     art.canopy.push({ cx: x + (rand() - 0.5) * 40, cy: y - 30 - rand() * 30, r: 95 * scale * (0.85 + rand() * 0.5) });
   });
+  if (theme === 'summer') {
+    const count = Math.min(48, art.canopy.length * 2);
+    for (let i = 0; i < count; i++) {
+      const crown = art.canopy[i % art.canopy.length];
+      const angle = rand() * Math.PI * 2;
+      const radius = Math.sqrt(rand()) * crown.r * 0.68;
+      art.dappled.push({
+        cx: crown.cx + Math.cos(angle) * radius,
+        cy: crown.cy + Math.sin(angle) * radius,
+        r: 5 + rand() * 11,
+        opacity: 0.08 + rand() * 0.1,
+      });
+    }
+  }
 
   // Roots of varied length, some diving into the soil, then the trunk itself
   const top = widthOf(nodes[0]);

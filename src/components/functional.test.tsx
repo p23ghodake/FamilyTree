@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import LZString from 'lz-string';
 import { toPng } from 'html-to-image';
+import toast from 'react-hot-toast';
 import { useFamilyTree, NO_FILTERS } from '../context/FamilyTreeContext';
 import { useAuth } from '../lib/AuthContext';
 import { translations } from '../i18n/translations';
@@ -205,9 +206,47 @@ it('lets the poster switch style, show life years and drop the paper texture', (
   expect(screen.getByText(t.posterLifeYears(1950, null))).toBeTruthy();
 
   const svg = view.baseElement.querySelector('.poster-sheet svg')!;
-  expect(svg.querySelector('[filter="url(#poster-grain)"]')).toBeTruthy();
+  expect(svg.querySelector('#poster-paper-texture')).toBeTruthy();
   fireEvent.click(screen.getByLabelText(t.posterAgedPaper));
-  expect(svg.querySelector('[filter="url(#poster-grain)"]')).toBeNull();
+  expect(svg.querySelector('[fill="url(#poster-paper-texture)"]')).toBeNull();
+});
+
+it('keeps long poster names intact without showing a print-size option', () => {
+  const longName = 'RamchandraVithobaDeshmukh';
+  const people = processAllFamilyData({ familyTrees: [{
+    familyTreeId: 'test', familyTreeDisplayName: 'Test Family',
+    members: [
+      { id: 'ram', firstName: longName, lastName: 'Family', gender: 'male' as const, birthYear: null, deathYear: null },
+      { id: 'son', firstName: 'Son', lastName: 'Family', gender: 'male' as const, birthYear: null, deathYear: null },
+    ],
+    relationships: { spouses: [], parentChild: [{ parentId: 'ram', childId: 'son' }] },
+  }] });
+  context.currentTree = people.familyTreesStyled[0];
+  context.state = { ...context.state, data: people, selectedMemberId: 'ram' };
+  const view = render(<PosterModal onClose={jest.fn()} />);
+  const svg = view.baseElement.querySelector('.poster-sheet svg')!;
+  expect(Array.from(svg.querySelectorAll('text')).some(node => node.textContent === longName)).toBe(true);
+  expect(screen.queryByText('Print size')).toBeNull();
+});
+
+it('restores the poster download button when font inlining fails', async () => {
+  const fetchDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    writable: true,
+    value: jest.fn().mockRejectedValue(new Error('Font fetch failed')),
+  });
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    render(<PosterModal onClose={jest.fn()} />);
+    const download = screen.getByRole('button', { name: t.posterDownload }) as HTMLButtonElement;
+    fireEvent.click(download);
+    await waitFor(() => expect(download.disabled).toBe(false));
+    expect(toast.error).toHaveBeenCalledWith(t.alertExportFailed);
+  } finally {
+    if (fetchDescriptor) Object.defineProperty(globalThis, 'fetch', fetchDescriptor);
+    else Reflect.deleteProperty(globalThis, 'fetch');
+  }
 });
 
 it('restores tree and viewport styles when PNG export fails', async () => {

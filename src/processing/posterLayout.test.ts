@@ -36,6 +36,17 @@ describe('buildPosterLayout', () => {
     expect(layout.nodes.map(n => n.id).sort()).toEqual(['dad', 'gp', 'uncle']);
   });
 
+  it('allocates ordered leaf slots for many siblings at eight generations', () => {
+    const children = Array.from({ length: 16 }, (_, i) => m(`child-${i}`, 'male', 2000 - i));
+    const relations = children.map(child => ({ parentId: 'root', childId: child.id }));
+    const layout = buildPosterLayout('root', 8, [m('root'), ...children], relations);
+    const placed = layout.nodes.filter(n => n.depth === 1);
+    const eldestFirst = [...children].reverse();
+    expect(layout.slots).toBe(children.length);
+    expect(placed.map(n => n.id)).toEqual(eldestFirst.map(child => child.id));
+    expect(placed.map(n => n.x)).toEqual(eldestFirst.map((_, i) => i + 0.5));
+  });
+
   it('survives cycles and unknown roots', () => {
     const cyclic = pc([['a', 'b'], ['b', 'a']]);
     expect(buildPosterLayout('a', 8, [m('a'), m('b')], cyclic).nodes).toHaveLength(2);

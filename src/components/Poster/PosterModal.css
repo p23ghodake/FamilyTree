@@ -183,6 +183,8 @@
 
 /* ── Print only the poster ── */
 @media print {
+  @page poster-a3 { size: A3 landscape; margin: 12mm 16mm; }
+
   body.poster-printing #root { display: none !important; }
 
   body.poster-printing .poster-backdrop {
@@ -196,6 +198,7 @@
   body.poster-printing .poster-modal {
     width: auto;
     height: auto;
+    min-height: 0;
     border: none;
     box-shadow: none;
     overflow: visible;
@@ -207,6 +210,7 @@
   body.poster-printing .poster-scroll { overflow: visible; padding: 0; background: none; }
 
   body.poster-printing .poster-sheet {
+    page: poster-a3;
     width: 100% !important;
     height: auto !important;
     box-shadow: none;
@@ -214,7 +218,14 @@
     max-width: 100%;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
-  body.poster-printing .poster-sheet svg { width: 100%; height: auto; }
+  body.poster-printing .poster-sheet svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 24mm);
+  }
 }

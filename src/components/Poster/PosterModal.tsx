@@ -34,7 +34,6 @@ const CARD_JITTER = 8;
 const MIN_CARD_W = 84;
 const MAX_CARD_W = 158;
 const CARD_PAD = 30;
-const NAME_MAX_CHARS = 20;
 const SIDE_PAD = 110;
 const TOP_PAD = 150;
 const TRUNK_H = 90;
@@ -151,10 +150,6 @@ function serializeForExport(svg: SVGSVGElement, width: number, height: number): 
   return new XMLSerializer().serializeToString(clone);
 }
 
-function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
-
 /** Long names may shrink to this share of the card font before their letters are squeezed. */
 const MIN_NAME_SCALE = 0.72;
 
@@ -257,7 +252,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       .flatMap(id => byId.get(id) ?? [])
       .map((p: RawFamilyMember) => ({
         id: p.id,
-        name: truncate(getDisplayFirstName(p, lang), NAME_MAX_CHARS),
+        name: getDisplayFirstName(p, lang),
         years: showYears ? t.posterLifeYears(p.birthYear, p.deathYear) : '',
       })),
     [byId, lang, showYears, t],
@@ -278,7 +273,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const fixedH = TOP_PAD + tallestCard / 2 + titleH + FRAME;
   // Stretch the levels so wide families still look like a poster rather than a thin strip.
   const levelH = descGaps + focusDepth
-    ? Math.min(MAX_LEVEL_H, Math.max(LEVEL_H, tallestCard + 40, (width * POSTER_RATIO - fixedH - TRUNK_H) / (descGaps + ANCESTOR_RATIO * focusDepth + 0.8)))
+    ? Math.max(tallestCard + 40, Math.min(MAX_LEVEL_H, Math.max(LEVEL_H, (width * POSTER_RATIO - fixedH - TRUNK_H) / (descGaps + ANCESTOR_RATIO * focusDepth + 0.8))))
     : Math.max(LEVEL_H, tallestCard + 40);
   // Ancestors sit closer together on the trunk than the descendant levels above.
   const ancestorGap = Math.max(tallestCard + 30, levelH * ANCESTOR_RATIO);
@@ -326,8 +321,11 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     const svg = sheetRef.current?.querySelector('svg');
     if (!svg) return;
     setIsExporting(true);
-    const svgUrl = URL.createObjectURL(new Blob([await inlineFonts(serializeForExport(svg, exportSize.width, exportSize.height))], { type: 'image/svg+xml' }));
+    let svgUrl: string | null = null;
     try {
+      const serialized = serializeForExport(svg, exportSize.width, exportSize.height);
+      const withFonts = await inlineFonts(serialized);
+      svgUrl = URL.createObjectURL(new Blob([withFonts], { type: 'image/svg+xml' }));
       const img = new Image();
       img.src = svgUrl;
       await img.decode();
@@ -348,7 +346,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       console.error('Poster export failed:', err);
       toast.error(t.alertExportFailed);
     } finally {
-      URL.revokeObjectURL(svgUrl);
+      if (svgUrl) URL.revokeObjectURL(svgUrl);
       setIsExporting(false);
     }
   }, [exportSize, nameOf, rootId, t]);
@@ -368,7 +366,11 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
 
   const title = t.posterFamilyName(familyName);
   // Keep the title under the trunk, but fully on the sheet (rough width estimate for a script font).
-  const titleHalf = Math.max(160, title.length * titleSize * 0.24);
+  const maxTitleHalf = (width - FRAME_INSET * 2 - 30) / 2;
+  const titleHalf = Math.min(maxTitleHalf, Math.max(160, title.length * titleSize * 0.24));
+  const titleRoom = Math.max(1, titleHalf * 1.8);
+  const titleTextWidth = textWidth(title, "'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive", titleSize);
+  const titleFit = titleTextWidth > titleRoom ? { textLength: titleRoom, lengthAdjust: 'spacingAndGlyphs' as const } : {};
   const titleX = Math.min(width - titleHalf - FRAME_INSET - 30, Math.max(titleHalf + FRAME_INSET + 30, rootPos.x));
   const titleY = groundY + TITLE_GAP + titleSize * 1.45;
   const frameCorners = [
@@ -482,6 +484,10 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                   <stop offset="0.6" stopColor={spec.canopy} stopOpacity={0.09} />
                   <stop offset="1" stopColor={spec.canopy} stopOpacity={0} />
                 </radialGradient>
+                <radialGradient id="poster-dapple">
+                  <stop offset="0" stopColor="#fff4bd" stopOpacity={0.9} />
+                  <stop offset="1" stopColor="#fff4bd" stopOpacity={0} />
+                </radialGradient>
                 <radialGradient id="poster-ground-shadow">
                   <stop offset="0" stopColor={BARK_DARK} stopOpacity={0.22} />
                   <stop offset="1" stopColor={BARK_DARK} stopOpacity={0} />
@@ -490,15 +496,19 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                   <stop offset="0.55" stopColor="#a07a4f" stopOpacity={0} />
                   <stop offset="1" stopColor="#a07a4f" stopOpacity={0.3} />
                 </radialGradient>
-                {/* Aged paper: fine fibres plus large faint stains */}
-                <filter id="poster-grain" x="0" y="0" width="100%" height="100%">
-                  <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={7} />
-                  <feColorMatrix type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.31  0 0 0 0 0.2  0.32 0 0 0 -0.1" />
-                </filter>
-                <filter id="poster-stains" x="0" y="0" width="100%" height="100%">
-                  <feTurbulence type="fractalNoise" baseFrequency="0.005" numOctaves={3} seed={3} />
-                  <feColorMatrix type="matrix" values="0 0 0 0 0.55  0 0 0 0 0.4  0 0 0 0 0.22  0.55 0 0 0 -0.25" />
-                </filter>
+                <linearGradient id="poster-background" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stopColor="#f5f0e5" />
+                  <stop offset="0.7" stopColor={PAPER} />
+                  <stop offset="1" stopColor="#e9dcc5" />
+                </linearGradient>
+                <pattern id="poster-paper-texture" width="128" height="128" patternUnits="userSpaceOnUse">
+                  <path d="M8 17l17-3M62 31l24 2M94 8l15-2M17 72l21-3M74 88l19 2M101 117l18-4M45 119l10 1"
+                    stroke="#9c805d" strokeWidth="1" opacity="0.16" />
+                  <circle cx="39" cy="44" r="1.7" fill="#8c6944" opacity="0.12" />
+                  <circle cx="111" cy="58" r="1.2" fill="#8c6944" opacity="0.14" />
+                  <circle cx="57" cy="99" r="1.5" fill="#8c6944" opacity="0.1" />
+                  <path d="M21 28c9 4 12 7 15 13M83 101c6 3 8 6 10 11" fill="none" stroke="#8c6944" strokeWidth="1.2" opacity="0.1" />
+                </pattern>
                 <filter id="poster-cast" x="-5%" y="-5%" width="110%" height="110%">
                   <feColorMatrix type="matrix" values="0 0 0 0 0.18  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.2 0" />
                   <feGaussianBlur stdDeviation="3.5" />
@@ -507,16 +517,19 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                   <feDropShadow dx="2" dy="3" stdDeviation="2.5" floodColor="#2f2117" floodOpacity="0.4" />
                 </filter>
               </defs>
-              <rect width={width} height={height} fill={PAPER} />
+              <rect width={width} height={height} fill="url(#poster-background)" />
               {agedPaper && (
                 <>
-                  <rect width={width} height={height} filter="url(#poster-stains)" />
-                  <rect width={width} height={height} filter="url(#poster-grain)" />
+                  <rect width={width} height={height} fill="url(#poster-paper-texture)" />
                   <rect width={width} height={height} fill="url(#poster-vignette)" />
                 </>
               )}
 
               {art.canopy.map((c, i) => <circle key={`c${i}`} cx={c.cx.toFixed(1)} cy={c.cy.toFixed(1)} r={c.r.toFixed(1)} fill="url(#poster-canopy)" />)}
+              {art.dappled.map((spot, i) => (
+                <circle key={`dp${i}`} cx={spot.cx.toFixed(1)} cy={spot.cy.toFixed(1)} r={spot.r.toFixed(1)}
+                  fill="url(#poster-dapple)" opacity={spot.opacity.toFixed(2)} />
+              ))}
               {/* The whole tree again, blurred and offset, as its shadow on the paper */}
               <use href="#poster-tree" transform={`translate(${SHADOW_OFFSET.x} ${SHADOW_OFFSET.y})`} filter="url(#poster-cast)" />
               <ellipse cx={art.ground.cx} cy={art.ground.cy} rx={art.ground.rx} ry={18} fill="url(#poster-ground-shadow)" />
@@ -574,8 +587,9 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                 const nameClass = `poster-card__name--${font}`;
                 const holes = [left + w * 0.24, left + w * 0.76];
                 const nail = { x, y: top - 12 };
+                const tilt = (rng(`poster-card:${n.id}`)() - 0.5) * 5;
                 return (
-                  <g key={`c-${n.id}`} className="poster-card">
+                  <g key={`c-${n.id}`} className="poster-card" transform={`rotate(${tilt.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`}>
                     <title>{people.map(p => p.name).join(' ♥ ')}</title>
                     <g filter="url(#poster-banner-shadow)">
                       <path d={leafCard(left, top, w, h, female)} fill={focus ? 'url(#poster-tag-focus)' : 'url(#poster-tag)'} stroke={colors.edge} strokeWidth={focus ? 3 : 2} />
@@ -612,7 +626,9 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               ))}
 
               {/* Title */}
-              <text x={titleX} y={titleY} textAnchor="middle" className="poster-title-text" style={{ fontSize: titleSize }}>{title}</text>
+              <rect x={titleX - titleHalf} y={titleY - titleSize * 1.05} width={titleHalf * 2} height={titleSize * 1.75}
+                rx={12} fill="#f8f1e4" fillOpacity={0.88} stroke={BARK_DARK} strokeOpacity={0.38} />
+              <text x={titleX} y={titleY} textAnchor="middle" className="poster-title-text" style={{ fontSize: titleSize }} {...titleFit}>{title}</text>
               <g transform={`translate(${titleX} ${titleY + titleSize * 0.5}) scale(${titleSize / 40})`}>
                 <path d="M-150,0 C-80,-6 80,-6 150,0" stroke={BARK_DARK} strokeWidth={1.4} fill="none" />
                 {[-120, -80, -40, 40, 80, 120].map((dx, i) => (
