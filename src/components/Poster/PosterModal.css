@@ -28,9 +28,12 @@
 
 /* ── Header ── */
 .poster-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title actions"
+    "controls controls";
   align-items: center;
-  flex-wrap: wrap;
   gap: 10px 14px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
@@ -38,9 +41,11 @@
 }
 
 .poster-header__left {
+  grid-area: title;
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .poster-header__icon { color: var(--accent, #6366f1); }
@@ -53,11 +58,12 @@
 }
 
 .poster-controls {
+  grid-area: controls;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  flex: 1;
+  min-width: 0;
 }
 
 .poster-field {
@@ -83,10 +89,13 @@
 }
 
 .poster-header__actions {
+  grid-area: actions;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 6px;
-  margin-left: auto;
+  min-width: 0;
 }
 
 .poster-action {
@@ -102,6 +111,8 @@
   color: var(--text-primary);
   cursor: pointer;
 }
+
+.poster-action--icon { padding: 5px 8px; }
 
 .poster-action:hover:not(:disabled) { background: var(--bg-hover); }
 .poster-action:disabled { opacity: 0.5; cursor: default; }
@@ -143,6 +154,10 @@
   background: var(--bg-secondary);
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  display: flex;
+  flex-direction: column;
+  /* Two-finger pinch is handled by the poster, not the browser's page zoom. */
+  touch-action: pan-x pan-y;
 }
 
 .poster-hint {
@@ -153,7 +168,9 @@
 }
 
 .poster-sheet {
-  margin: 0 auto;
+  /* Auto margins centre a zoomed-out poster and still let a larger one scroll from its edge. */
+  margin: auto;
+  flex: none;
   background: #f8f1e4;
   border-radius: 6px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
@@ -162,9 +179,12 @@
 
 .poster-sheet svg { display: block; }
 
+/* Zoomed far out: skip detail too small to see. Screen only; print and PNG export keep everything. */
+@media screen {
+  .poster-sheet--far .poster-detail { display: none; }
+}
+
 .poster-scroll--fit {
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
 
@@ -178,7 +198,33 @@
 @media (max-width: 640px) {
   .poster-backdrop { padding: 0; align-items: flex-end; }
   .poster-modal { width: 100vw; height: 94vh; border-radius: 14px 14px 0 0; }
+  .poster-header { padding: 10px 12px; gap: 8px 10px; }
+  .poster-controls { gap: 8px; }
   .poster-action span { display: none; }
+}
+
+@media (max-width: 420px) {
+  .poster-field:not(.poster-field--check) {
+    flex: 1 1 125px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .poster-field select { width: 100%; max-width: 100%; }
+}
+
+@media (max-width: 340px) {
+  .poster-header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "actions"
+      "controls";
+  }
+
+  .poster-header__actions { justify-content: flex-start; }
 }
 
 /* ── Print only the poster ── */

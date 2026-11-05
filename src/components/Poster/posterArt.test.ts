@@ -49,6 +49,38 @@ describe('buildPosterArt', () => {
     expect(blossoms(buildPosterArt(input({ theme: 'spring' })))).toBeGreaterThan(0);
   });
 
+  it('draws bark grain on the trunk and forked, tapering roots', () => {
+    const art = buildPosterArt(input());
+    expect(art.wood.filter(p => p.grain).length).toBeGreaterThan(3);
+    expect(art.wood.length).toBeGreaterThanOrEqual(7 * 2 + 1);
+    expect(JSON.stringify(art)).not.toMatch(/NaN|undefined/);
+  });
+
+  it('uses more than the original leaf shapes and varies leaf tone', () => {
+    const art = buildPosterArt(input());
+    const shapes = new Set(art.leaves.map(l => l.shape));
+    expect(shapes.size).toBeGreaterThan(2);
+    expect(new Set(art.leaves.map(l => l.color)).size).toBeGreaterThan(8);
+  });
+
+  it('keeps leaves off name tags and spreads sibling limbs', () => {
+    const inp = input();
+    const art = buildPosterArt(inp);
+    const tags = layout.nodes.filter(n => n.kind !== 'fork').map(n => ({ ...inp.posOf(n), h: inp.cardH(n) / 2 }));
+    [...art.leaves, ...art.backLeaves].forEach(l =>
+      expect(tags.some(t => Math.abs(l.x - t.x) < 42 && Math.abs(l.y - t.y) < t.h)).toBe(false));
+    expect(JSON.stringify(art)).not.toMatch(/NaN/);
+  });
+
+  it('grows berries, golden leaves and leaf clusters with varied sizes', () => {
+    const art = buildPosterArt(input());
+    expect(art.berries.length).toBeGreaterThan(0);
+    art.berries.forEach(b => expect(b.r).toBeGreaterThan(0));
+    expect(new Set(art.leaves.map(l => l.size.toFixed(1))).size).toBeGreaterThan(20);
+    expect(new Set(art.leaves.map(l => l.shape)).size).toBeGreaterThan(3);
+    expect(JSON.stringify(art)).not.toMatch(/NaN/);
+  });
+
   it('adds deterministic dappled light only in summer', () => {
     const summer = buildPosterArt(input({ theme: 'summer' }));
     expect(summer.dappled.length).toBeGreaterThan(0);

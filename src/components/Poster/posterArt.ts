@@ -1,7 +1,7 @@
 import { PosterNode } from '../../processing/posterLayout';
 
 export type Point = { x: number; y: number };
-export type LeafShape = 'oak' | 'round' | 'banyan' | 'blossom';
+export type LeafShape = 'oak' | 'round' | 'banyan' | 'blossom' | 'lance' | 'ovate';
 export type PosterTheme = 'autumn' | 'spring' | 'summer' | 'banyan';
 
 export const PAPER = '#f8f1e4';
@@ -26,60 +26,72 @@ export interface ThemeSpec {
   fallen: { count: number; colors: string[]; shapes: LeafShape[] };
   drifting: number;
   aerialRoots: boolean;
+  /** Small round fruit hanging in clusters from the twigs. */
+  berries: string[];
+  /** Muted golden leaves mixed in among the greens. */
+  gold: string[];
 }
 
 export const THEMES: Record<PosterTheme, ThemeSpec> = {
   autumn: {
     inner: ['#7d8a4a', '#8f9a5b', '#a8ad6e', '#97904f'],
     outer: ['#a7744a', '#8e6040', '#b8683f', '#7d5a3d', '#d9b85a', '#e6cc7f', '#d08a4e', '#c9763f'],
-    shapes: ['oak', 'oak', 'round'],
+    shapes: ['oak', 'oak', 'round', 'ovate', 'lance'],
     canopy: '#b9905a',
     grass: '#8a8a4a',
     fallen: { count: 26, colors: ['#a7744a', '#b8683f', '#d9b85a', '#d08a4e', '#8e6040', '#c9763f'], shapes: ['oak', 'round'] },
     drifting: 9,
     aerialRoots: false,
+    berries: ['#b5462f', '#c9633a', '#8f3a2a'],
+    gold: ['#d9b85a', '#c9a24c'],
   },
   spring: {
-    inner: ['#5f8f3e', '#6fa04a', '#7fae55'],
-    outer: ['#9cc46a', '#b4d47e', '#a7cf73', '#c4dd8f'],
-    shapes: ['round', 'round', 'oak'],
+    inner: ['#5f8f3e', '#6fa04a', '#7fae55', '#5f7f55', '#6f8f6a'],
+    outer: ['#9cc46a', '#b4d47e', '#a7cf73', '#c4dd8f', '#a3b88f', '#8fae85'],
+    shapes: ['round', 'round', 'oak', 'ovate', 'lance'],
     accent: { shape: 'blossom', colors: ['#f4b6c6', '#f7cdd8', '#fbe3e9', '#eea0b6'], chance: 0.42 },
     canopy: '#a9cf7e',
     grass: '#6f9f45',
     fallen: { count: 16, colors: ['#f4b6c6', '#f7cdd8', '#fbe3e9'], shapes: ['blossom'] },
     drifting: 10,
     aerialRoots: false,
+    berries: ['#e0a63a', '#d98f3a', '#c9a24c'],
+    gold: ['#d6c077', '#c8b365'],
   },
   summer: {
-    inner: ['#2f5d2a', '#3b6b30', '#355f2c', '#456f35'],
-    outer: ['#4f7f36', '#5e8f3c', '#6d9a42', '#7aa64a', '#8cb257'],
-    shapes: ['oak', 'round', 'round'],
+    inner: ['#2f5d2a', '#3b6b30', '#355f2c', '#456f35', '#3f6a4f', '#2f5a4a'],
+    outer: ['#4f7f36', '#5e8f3c', '#6d9a42', '#7aa64a', '#8cb257', '#6f9a7c', '#86ae96'],
+    shapes: ['oak', 'round', 'round', 'ovate', 'lance'],
     canopy: '#5d8a44',
     grass: '#4f7f36',
     fallen: { count: 6, colors: ['#6d9a42', '#8cb257'], shapes: ['round'] },
     drifting: 3,
     aerialRoots: false,
+    berries: ['#c8913a', '#d6a444', '#a8532f'],
+    gold: ['#cdb468', '#bfa55a'],
   },
   banyan: {
-    inner: ['#2c5228', '#355f2e', '#2f5a30', '#3d6a34'],
-    outer: ['#4a7a38', '#58873f', '#6b9446', '#7d9f4c', '#a9a94f'],
-    shapes: ['banyan'],
+    inner: ['#2c5228', '#355f2e', '#2f5a30', '#3d6a34', '#35604a'],
+    outer: ['#4a7a38', '#58873f', '#6b9446', '#7d9f4c', '#a9a94f', '#6a9580', '#8db39b'],
+    shapes: ['banyan', 'banyan', 'banyan', 'ovate'],
     accent: { shape: 'round', colors: ['#c0432f', '#d0573a', '#b33a2b'], chance: 0.05 },
     canopy: '#4f7c40',
     grass: '#5b8a3c',
     fallen: { count: 10, colors: ['#a9a94f', '#c9b75a', '#8a9a45'], shapes: ['banyan'] },
     drifting: 4,
     aerialRoots: true,
+    berries: ['#c0432f', '#d0573a', '#d99a3a'],
+    gold: ['#c9b75a', '#bba54f'],
   },
 };
 
 export const POSTER_THEMES = Object.keys(THEMES) as PosterTheme[];
 
 const LEAF_SIZE = 16;
-const LEAVES_PER_TWIG: [number, number] = [10, 15];
+const LEAVES_PER_TWIG: [number, number] = [12, 17];
 const BACK_LEAF_SHARE = 0.3;
-const TWIG_SPACING = 40;
-const MAX_TWIGS_PER_LIMB = 6;
+const TWIG_SPACING = 28;
+const MAX_TWIGS_PER_LIMB = 9;
 const TWIG_WIDTH = 2.8;
 const TRUNK_K = 9;
 const MAX_LIMB = 80;
@@ -109,6 +121,8 @@ export interface WoodPiece {
   light: string;
   /** Broken bark cracks. */
   cracks: string;
+  /** Long, unbroken lines that follow the limb like the grain of the wood. */
+  grain: string;
   knots: Knot[];
 }
 
@@ -127,6 +141,8 @@ export interface PosterArt {
   canopy: { cx: number; cy: number; r: number }[];
   /** Small sunlit openings in the summer canopy. */
   dappled: { cx: number; cy: number; r: number; opacity: number }[];
+  /** Small fruit clusters on the twigs. */
+  berries: { cx: number; cy: number; r: number; color: string }[];
   /** Hanging banyan roots. */
   aerialRoots: string[];
   ground: {
@@ -160,7 +176,7 @@ export interface PosterArtInput {
 const fmt = (n: number) => n.toFixed(1);
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
-function outline(half: (x: number) => number, steps = 22): { body: string; upper: string } {
+function outline(half: (x: number) => number, steps = 22): { body: string; upper: string; lower: string } {
   const top: string[] = [];
   const bottom: string[] = [];
   for (let i = 0; i <= steps; i++) {
@@ -169,7 +185,8 @@ function outline(half: (x: number) => number, steps = 22): { body: string; upper
     top.push(`${x.toFixed(3)},${(-h).toFixed(3)}`);
     bottom.push(`${x.toFixed(3)},${h.toFixed(3)}`);
   }
-  return { body: `M${top.join('L')}L${bottom.reverse().join('L')}Z`, upper: `M${top.join('L')}Z` };
+  const lower = `M${bottom.join('L')}Z`;
+  return { body: `M${top.join('L')}L${bottom.reverse().join('L')}Z`, upper: `M${top.join('L')}Z`, lower };
 }
 
 const circle = (cx: number, cy: number, r: number) =>
@@ -180,10 +197,16 @@ const round = outline(x => 0.4 * Math.max(0, Math.sin(Math.PI * x ** 0.8)) ** 0.
 // Broad, glossy banyan (vad) leaf with a short blunt tip.
 const banyan = outline(x => 0.34 * Math.max(0, Math.sin(Math.PI * x ** 0.9)) ** 0.75 * (1 - 0.25 * x ** 6), 30);
 
+// Slender willow-like leaf and a pointed egg-shaped leaf, to break up the round and oak outlines.
+const lance = outline(x => 0.17 * Math.max(0, Math.sin(Math.PI * x ** 0.75)) ** 0.9 * (1 - 0.15 * x), 26);
+const ovate = outline(x => 0.31 * Math.max(0, Math.sin(Math.PI * x ** 0.7)) ** 0.8 * (1 - 0.35 * x ** 3), 26);
+
 export interface LeafDef {
   body: string;
   /** Upper half, lightened to give the leaf a fold. */
   half?: string;
+  /** Lower half, darkened like pigment pooling on one side. */
+  lower?: string;
   vein?: string;
   /** Flower centre. */
   centre?: string;
@@ -191,11 +214,14 @@ export interface LeafDef {
 
 /** Unit-length leaf drawings pointing along +x with the stem at 0,0. Drawn once in <defs> and reused. */
 export const LEAF_DEFS: Record<LeafShape, LeafDef> = {
-  oak: { body: oak.body, half: oak.upper, vein: 'M0.02,0Q0.5,-0.02 0.94,0' },
-  round: { body: round.body, half: round.upper, vein: 'M0.02,0Q0.45,-0.03 0.86,0' },
+  oak: { body: oak.body, half: oak.upper, lower: oak.lower, vein: 'M0.02,0Q0.5,-0.02 0.94,0' },
+  round: { body: round.body, half: round.upper, lower: round.lower, vein: 'M0.02,0Q0.45,-0.03 0.86,0' },
+  lance: { body: lance.body, half: lance.upper, lower: lance.lower, vein: 'M0.02,0Q0.5,-0.015 0.95,0' },
+  ovate: { body: ovate.body, half: ovate.upper, lower: ovate.lower, vein: 'M0.02,0Q0.5,-0.02 0.92,0M0.3,0L0.45,-0.1M0.3,0L0.45,0.1M0.55,0L0.68,-0.08M0.55,0L0.68,0.08' },
   banyan: {
     body: banyan.body,
     half: banyan.upper,
+    lower: banyan.lower,
     vein: 'M0.02,0Q0.5,-0.02 0.95,0M0.3,0L0.42,-0.16M0.3,0L0.42,0.16M0.55,0L0.67,-0.15M0.55,0L0.67,0.15',
   },
   blossom: {
@@ -285,8 +311,42 @@ function woodPiece(curve: Curve, taper: Taper): WoodPiece {
     shade: band(curve, taper, -lit, -lit * 0.05),
     light: band(curve, taper, lit * 0.25, lit * 0.62),
     cracks: '',
+    grain: '',
     knots: [],
   };
+}
+
+/** Long, unbroken, gently waving lines that run the whole length of a limb. */
+function barkGrain(rand: () => number, curve: Curve, taper: Taper, lanes: number[]): string {
+  const steps = Math.min(40, Math.max(8, Math.round(curveLength(curve) / 10)));
+  return lanes.map(lane => {
+    const phase = rand() * Math.PI * 2;
+    const freq = 1.5 + rand() * 2;
+    const amp = 0.05 + rand() * 0.06;
+    const start = 0.02 + rand() * 0.1;
+    const end = 0.88 + rand() * 0.1;
+    const pts: string[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const s = start + ((end - start) * i) / steps;
+      const p = bez(curve, s);
+      const n = normalAt(curve, s);
+      const o = (widthAt(taper, s) / 2) * (lane + amp * Math.sin(phase + s * freq * Math.PI * 2));
+      pts.push(`${fmt(p.x + n.x * o)},${fmt(p.y + n.y * o)}`);
+    }
+    return `M${pts.join('L')}`;
+  }).join('');
+}
+
+/** Stable 0..1 value from a position, so tones vary without disturbing the seeded random stream. */
+function hash01(x: number, y: number): number {
+  const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+/** Lightens or darkens a leaf colour by up to 15% depending on where it sits, like uneven wash. */
+function tone(color: string, x: number, y: number): string {
+  const h = hash01(x, y);
+  return mix(color, h < 0.5 ? '#ffffff' : '#1d2a12', Math.abs(h - 0.5) * 0.3);
 }
 
 function curveLength(curve: Curve): number {
@@ -367,10 +427,11 @@ function scatterLeaf(rand: () => number, x: number, y: number, size: number, opa
 }
 
 /** A small tapered twig carrying 10–15 leaves; some sit behind the wood for depth. */
-function twig(rand: () => number, x: number, y: number, angleDeg: number, length: number, scale: number, palette: Palette, art: PosterArt) {
+function twig(rand: () => number, x: number, y: number, angleDeg: number, length: number, scale: number, palette: Palette, art: PosterArt, depth = 0) {
   const leafSize = LEAF_SIZE * scale;
   const [lo, hi] = LEAVES_PER_TWIG;
-  const count = lo + Math.floor(rand() * (hi - lo + 1));
+  // Side shoots carry fewer leaves than the twig they grow from.
+  const count = depth ? 5 + Math.floor(rand() * 4) : lo + Math.floor(rand() * (hi - lo + 1));
   const len = Math.max(length, count * leafSize * 0.34);
   const a = (angleDeg * Math.PI) / 180;
   const dx = Math.cos(a);
@@ -382,7 +443,18 @@ function twig(rand: () => number, x: number, y: number, angleDeg: number, length
     { x: x + dx * len * 0.7 - dy * bend * 0.6, y: y + dy * len * 0.7 + dx * bend * 0.6 },
     { x: x + dx * len, y: y + dy * len },
   ];
-  art.twigs.push(taperPath(curve, TWIG_WIDTH * Math.sqrt(scale), 0.45));
+  art.twigs.push(taperPath(curve, TWIG_WIDTH * Math.sqrt(scale) * (depth ? 0.6 : 1), 0.45));
+  if (depth < 1) {
+    // Thin side shoots leave the twig alternately and fan out, giving the layered, branching look.
+    const shoots = 2 + Math.floor(rand() * 3);
+    for (let s = 0; s < shoots; s++) {
+      const t = 0.25 + (0.55 * (s + rand() * 0.6)) / shoots;
+      const p = bez(curve, t);
+      const d = bezD(curve, t);
+      const along = (Math.atan2(d.y, d.x) * 180) / Math.PI;
+      twig(rand, p.x, p.y, along + (s % 2 ? 1 : -1) * (35 + rand() * 30), len * (0.4 + rand() * 0.25), scale, palette, art, depth + 1);
+    }
+  }
   for (let i = 0; i < count; i++) {
     const last = i === count - 1;
     const t = last ? 1 : 0.22 + 0.72 * (i / (count - 1));
@@ -390,7 +462,9 @@ function twig(rand: () => number, x: number, y: number, angleDeg: number, length
     const d = bezD(curve, t);
     const along = (Math.atan2(d.y, d.x) * 180) / Math.PI;
     const back = !last && rand() < BACK_LEAF_SHARE;
-    const { color, shape } = pickLeaf(rand, palette, p.x, p.y);
+    const picked = pickLeaf(rand, palette, p.x, p.y);
+    const { shape } = picked;
+    const color = tone(picked.color, p.x, p.y);
     (back ? art.backLeaves : art.leaves).push({
       x: p.x,
       y: p.y,
@@ -401,6 +475,44 @@ function twig(rand: () => number, x: number, y: number, angleDeg: number, length
       shape,
       opacity: back ? 0.85 : 0.8 + rand() * 0.18,
     });
+    // Extras use position-based hashes rather than the seeded stream, so existing placement is unchanged.
+    const h = hash01(p.x * 1.7, p.y * 0.9);
+    if (!last && h < 0.3) {
+      // A smaller leaf opposite, so leaves come in loose clusters instead of single files.
+      const pal = palette.theme;
+      const list = hash01(p.y, p.x) < 0.5 ? pal.inner : pal.outer;
+      art.leaves.push({
+        x: p.x, y: p.y,
+        angle: along + (i % 2 ? -1 : 1) * (40 + h * 90),
+        size: leafSize * (0.4 + h * 1.2),
+        squash: 0.5 + h,
+        color: tone(list[Math.floor(hash01(p.x, p.y * 2) * list.length)], p.x, p.y),
+        shape: pal.shapes[Math.floor(hash01(p.x * 3, p.y) * pal.shapes.length)],
+        opacity: 0.85,
+      });
+    }
+    if (!last && h > 0.94) {
+      const gold = palette.theme.gold;
+      art.leaves.push({
+        x: p.x, y: p.y, angle: along + (h - 0.97) * 900, size: leafSize * (0.9 + h * 0.3), squash: 0.7,
+        color: gold[Math.floor(hash01(p.x, p.y) * gold.length)], shape: 'ovate', opacity: 0.9,
+      });
+    }
+    if (i > 2 && !last && h > 0.52 && h < 0.62) {
+      const colors = palette.theme.berries;
+      const side = i % 2 ? 1 : -1;
+      const cx0 = p.x + -d.y / (Math.hypot(d.x, d.y) || 1) * side * leafSize * 0.5;
+      const cy0 = p.y + d.x / (Math.hypot(d.x, d.y) || 1) * side * leafSize * 0.5;
+      const n = 3 + Math.floor(h * 40) % 3;
+      for (let b = 0; b < n; b++) {
+        art.berries.push({
+          cx: cx0 + (hash01(b + p.x, p.y) - 0.5) * leafSize * 0.8,
+          cy: cy0 + (hash01(p.x, b + p.y) - 0.5) * leafSize * 0.8,
+          r: Math.max(1.4, leafSize * (0.1 + hash01(b, p.x + p.y) * 0.06)),
+          color: colors[(b + i) % colors.length],
+        });
+      }
+    }
   }
 }
 
@@ -422,7 +534,7 @@ function aerialRoot(rand: () => number, from: Point, groundY: number): { d: stri
 /** Trunk, tapering limbs, leafy twigs, ground and fallen leaves around an already laid-out poster. */
 export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunkH, scale, minX, maxX, theme = 'autumn' }: PosterArtInput): PosterArt {
   const art: PosterArt = {
-    wood: [], twigs: [], backLeaves: [], leaves: [], fallen: [], drifting: [], canopy: [], dappled: [], aerialRoots: [],
+    wood: [], twigs: [], backLeaves: [], leaves: [], fallen: [], drifting: [], canopy: [], dappled: [], berries: [], aerialRoots: [],
     ground: { cx: 0, cy: 0, rx: 0, mound: '', grass: '', pebbles: [], footings: [] },
   };
   if (nodes.length === 0) return art;
@@ -455,7 +567,9 @@ export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunk
   nodes.forEach(n => {
     if (n.depth < focusDepth || n.kind === 'fork') return;
     const { x, y } = posOf(n);
-    art.canopy.push({ cx: x + (rand() - 0.5) * 40, cy: y - 30 - rand() * 30, r: 95 * scale * (0.85 + rand() * 0.5) });
+    // Outer masses sag a little so the crown reads as a rounded dome rather than a flat row.
+    const edge = Math.min(1, Math.abs(x - midX) / halfSpan) ** 2;
+    art.canopy.push({ cx: x + (rand() - 0.5) * 40, cy: y - 30 - rand() * 30 + 28 * scale * edge, r: 95 * scale * (0.85 + rand() * 0.5) });
   });
   if (theme === 'summer') {
     const count = Math.min(48, art.canopy.length * 2);
@@ -490,6 +604,9 @@ export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunk
   const mTop = groundY + 1;
   const surface = (x: number) => mTop + 13 * Math.min(1, Math.abs(x - base.x) / moundRx) ** 2;
   art.ground = { ...art.ground, cx: base.x + SHADOW_OFFSET.x * 2, cy: groundY + 12, rx: flare * 3.2 + 80 };
+  // Own stream for the added bark grain and rootlets, so earlier drawing choices stay where they were.
+  const grainRand = rng(`${nodes[0].id}:${nodes.length}:grain`);
+  const rootCurves: { curve: Curve; taper: Taper; dir: number }[] = [];
   for (let i = 0; i < 7; i++) {
     const dir = i % 2 ? 1 : -1;
     const sx = base.x + dir * flare * (0.12 + rand() * 0.28);
@@ -502,10 +619,29 @@ export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunk
       { x: sx + dir * reach * 0.6, y: surface(sx + dir * reach * 0.6) - 2 },
       { x: ex, y: ey },
     ];
-    art.wood.push(woodPiece(curve, { w0: flare * (0.26 + rand() * 0.14), w1: 2, ease: 0.7, collar: 0 }));
+    const rootTaper: Taper = { w0: flare * (0.26 + rand() * 0.14), w1: 2, ease: 0.7, collar: 0 };
+    const root = woodPiece(curve, rootTaper);
+    if (rootTaper.w0 > 12) root.grain = barkGrain(grainRand, curve, rootTaper, [-0.4, 0.35]);
+    art.wood.push(root);
+    rootCurves.push({ curve, taper: rootTaper, dir });
   }
+  // Each root forks once: a thinner rootlet leaves it part-way along and creeps on over the soil.
+  rootCurves.forEach(({ curve, taper, dir }, i) => {
+    const t = 0.35 + 0.2 * grainRand();
+    const p = bez(curve, t);
+    const len = moundRx * (0.2 + 0.25 * grainRand());
+    const ex = p.x + dir * len;
+    const fork: Curve = [
+      { x: p.x, y: p.y },
+      { x: p.x + dir * len * 0.3, y: p.y + 1 },
+      { x: p.x + dir * len * 0.65, y: surface(p.x + dir * len * 0.65) },
+      { x: ex, y: surface(ex) + 3 + (i % 3) },
+    ];
+    art.wood.push(woodPiece(fork, { w0: Math.max(3, widthAt(taper, t) * 0.6), w1: 1.4, ease: 0.7, collar: 0 }));
+  });
   const trunkPiece = woodPiece(trunk, trunkTaper);
   trunkPiece.cracks = barkCracks(rand, trunk, trunkTaper, [-0.62, -0.3, 0.02, 0.32, 0.6]);
+  trunkPiece.grain = barkGrain(grainRand, trunk, trunkTaper, [-0.78, -0.46, -0.16, 0.16, 0.46, 0.78]);
   addKnots(rand, trunk, trunkTaper, 2, trunkPiece);
   art.wood.push(trunkPiece);
 
@@ -538,8 +674,12 @@ export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunk
     const stem = byId.get(n.stemId!)!;
     const from = posOf(stem);
     const to = posOf(n);
+    // Siblings leave the parent a few pixels apart, in left-to-right order, instead of from one point.
+    const sibs = kids.get(stem.id) ?? [];
+    const rank = sibs.indexOf(n) - (sibs.length - 1) / 2;
+    const spread = stem.kind === 'fork' ? 0 : rank * Math.min(12, 30 / Math.max(1, sibs.length)) * scale;
     // Start from the middle of the card so a thick limb's end stays hidden behind it.
-    const p0 = { x: from.x, y: from.y };
+    const p0 = { x: from.x + spread, y: from.y };
     const p3 = { x: to.x, y: to.y + inset(n) };
     const dx = p3.x - p0.x;
     const dy = p0.y - p3.y;
@@ -564,8 +704,9 @@ export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunk
     const piece = woodPiece(curve, taper);
     art.wood.push(piece);
     // Round off the limb's end where it splits at a bare fork.
-    if (toFork) art.wood.push({ body: circle(curve[3].x, curve[3].y, taper.w1 * 0.54), shade: '', light: '', cracks: '', knots: [] });
+    if (toFork) art.wood.push({ body: circle(curve[3].x, curve[3].y, taper.w1 * 0.54), shade: '',     light: '', cracks: '', grain: '', knots: [] });
     if (taper.w0 > 10) {
+          piece.grain = barkGrain(grainRand, curve, taper, onTrunk ? [-0.7, -0.2, 0.2, 0.7] : [-0.6, 0, 0.6]);
       piece.cracks = barkCracks(rand, curve, taper, onTrunk ? [-0.5, -0.1, 0.3, 0.6] : [-0.35, 0.3]);
       if (onTrunk || taper.w0 > 24) addKnots(rand, curve, taper, onTrunk ? 1 : rand() < 0.5 ? 1 : 0, piece);
     }
@@ -616,5 +757,11 @@ export function buildPosterArt({ nodes, focusDepth, posOf, cardH, groundY, trunk
     const leaf = scatterLeaf(rand, minX + rand() * (maxX - minX), focusY - rand() * trunkH, LEAF_SIZE * scale * (0.6 + rand() * 0.4), 0.6, fallen.colors, fallen.shapes);
     art.drifting.push({ ...leaf, squash: 0.35 + rand() * 0.4 });
   }
+  // Leaves whose centre would sit under a name tag are dropped, so foliage never crowds the text.
+  const tags = nodes.filter(n => n.kind !== 'fork' && cardH(n) > 0).map(n => ({ ...posOf(n), h: cardH(n) / 2 }));
+  const clearOfTags = (l: { x: number; y: number }) => !tags.some(t => Math.abs(l.x - t.x) < 42 && Math.abs(l.y - t.y) < t.h);
+  art.leaves = art.leaves.filter(clearOfTags);
+  art.backLeaves = art.backLeaves.filter(clearOfTags);
+  art.berries = art.berries.filter(b => clearOfTags({ x: b.cx, y: b.cy }));
   return art;
 }

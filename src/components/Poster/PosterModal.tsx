@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal, flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { useDialog } from '../useDialog';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { buildPosterLayout, findPosterRoot, PosterNode } from '../../processing/posterLayout';
-import { DownloadIcon, ImageIcon, Maximize2Icon, PrinterIcon, XIcon } from '../Icons';
+import { DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, PrinterIcon, XIcon } from '../Icons';
 import {
   BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, POSTER_THEMES, PosterTheme,
   rng, SHADOW_OFFSET, SOIL, THEMES,
@@ -44,6 +44,12 @@ const FRAME = 44;
 const FRAME_INSET = 20;
 const MIN_W = 760;
 const GENERATION_CHOICES = [2, 3, 4, 5, 6, 7, 8];
+/** Zoom is a multiple of the poster's drawn size; Fit shows the whole sheet. */
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 3;
+/** Below this share of the drawn size, fine detail is too small to see and is hidden on screen only. */
+const FAR_SCALE = 0.3;
+const ZOOM_STEP = 1.25;
 // Hanging tags: sons in green, daughters in rose, mirrored corner shapes.
 const CARD_COLORS = {
   male: { edge: '#6a994e', text: '#24402a' },
@@ -203,6 +209,9 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   // Paper texture is realistic but noisy, which makes the PNG several times larger.
   const [agedPaper, setAgedPaper] = useState(true);
   const [fit, setFit] = useState(true);
+  const [zoom, setZoom] = useState(1);
+  const [far, setFar] = useState(false);
+  const zoomAnchor = useRef<{ fx: number; fy: number; cx: number; cy: number } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   // Card widths are measured with the card fonts, so re-render once they have loaded.
   const [, setFontsLoaded] = useState(0);
@@ -284,13 +293,16 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const artScale = Math.min(1.8, Math.max(1, levelH / 150));
 
   const posOf = useCallback(
-    (n: PosterNode): Point => ({
-      x: offsetX + n.x * SLOT_W,
-      y: n.depth <= focusDepth
-        ? rootY - n.depth * ancestorGap
-        : rootY - focusDepth * ancestorGap - (n.depth - focusDepth) * levelH
-          + (n.kind === 'person' ? (rng(n.id)() - 0.5) * 2 * CARD_JITTER : 0),
-    }),
+    (n: PosterNode): Point => {
+      const x = offsetX + n.x * SLOT_W;
+      return {
+        x,
+        y: n.depth <= focusDepth
+          ? rootY - n.depth * ancestorGap
+          : rootY - focusDepth * ancestorGap - (n.depth - focusDepth) * levelH
+            + (n.kind === 'person' ? (rng(n.id)() - 0.5) * 2 * CARD_JITTER : 0),
+      };
+    },
     [offsetX, rootY, levelH, ancestorGap, focusDepth],
   );
 
@@ -310,12 +322,98 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const root = layout.nodes[0];
   const rootPos = root ? posOf(root) : { x: width / 2, y: rootY };
 
-  useEffect(() => {
+  // Zoom about a screen point (default: the middle of the view), keeping that point of the poster fixed.
+  const zoomBy = useCallback((factor: number, clientX?: number, clientY?: number) => {
+    const scroller = scrollRef.current;
+    const sheet = sheetRef.current;
+    if (!scroller || !sheet) return;
+    const rect = sheet.getBoundingClientRect();
+    const fitScale = Math.min(rect.width / width, rect.height / height);
+    const current = fit ? (fitScale > 0 ? fitScale : 1) : zoom;
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current * factor));
+    if (next === current && !fit) return;
+    const box = scroller.getBoundingClientRect();
+    const cx = clientX ?? box.left + box.width / 2;
+    const cy = clientY ?? box.top + box.height / 2;
+    const w = width * current;
+    const h = height * current;
+    const left = rect.left + (rect.width - w) / 2;
+    const top = rect.top + (rect.height - h) / 2;
+    const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+    zoomAnchor.current = { fx: w > 0 ? clamp01((cx - left) / w) : 0.5, fy: h > 0 ? clamp01((cy - top) / h) : 0.5, cx, cy };
+    flushSync(() => { setFit(false); setZoom(next); });
+  }, [fit, zoom, width, height]);
+  const zoomByRef = useRef(zoomBy);
+  zoomByRef.current = zoomBy;
+
+  useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el || fit) return;
-    el.scrollLeft = rootPos.x - el.clientWidth / 2;
+    const anchor = zoomAnchor.current;
+    zoomAnchor.current = null;
+    if (anchor && sheetRef.current) {
+      const rect = sheetRef.current.getBoundingClientRect();
+      el.scrollLeft += rect.left + anchor.fx * rect.width - anchor.cx;
+      el.scrollTop += rect.top + anchor.fy * rect.height - anchor.cy;
+      return;
+    }
+    el.scrollLeft = rootPos.x * zoom - el.clientWidth / 2;
     el.scrollTop = el.scrollHeight;
-  }, [fit, rootPos.x, layout]);
+  }, [fit, zoom, rootPos.x, layout]);
+
+  // Hide fine detail on screen once the poster is shown very small. The class sits on the wrapper, not the
+  // <svg>, so the PNG export (which clones only the <svg>) and print always keep full detail.
+  useLayoutEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    const measure = () => {
+      if (!fit) return setFar(zoom < FAR_SCALE);
+      const rect = sheet.getBoundingClientRect();
+      setFar(rect.width > 0 && rect.height > 0 && Math.min(rect.width / width, rect.height / height) < FAR_SCALE);
+    };
+    measure();
+    if (!fit || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(sheet);
+    return () => observer.disconnect();
+  }, [fit, zoom, width, height]);
+
+  // Ctrl/⌘ + wheel (also a trackpad pinch) and a two-finger pinch zoom the poster. These need
+  // non-passive native listeners so the browser's own page zoom and scrolling can be cancelled.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      zoomByRef.current(Math.exp(-Math.max(-100, Math.min(100, e.deltaY)) * 0.002), e.clientX, e.clientY);
+    };
+    let last = 0;
+    const gap = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const onTouchStart = (e: TouchEvent) => { last = e.touches.length === 2 ? gap(e.touches) : 0; };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return;
+      e.preventDefault();
+      const now = gap(e.touches);
+      if (last > 0 && now > 0) {
+        zoomByRef.current(now / last, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2);
+      }
+      last = now;
+    };
+    const onTouchEnd = () => { last = 0; };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, []);
 
   const handleDownload = useCallback(async () => {
     const svg = sheetRef.current?.querySelector('svg');
@@ -416,8 +514,14 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               <input type="checkbox" checked={agedPaper} onChange={e => setAgedPaper(e.target.checked)} />
               <span>{t.posterAgedPaper}</span>
             </label>
-            <button type="button" className="poster-action" aria-pressed={fit} onClick={() => setFit(v => !v)}>
+            <button type="button" className="poster-action" aria-pressed={fit} onClick={() => { setZoom(1); setFit(v => !v); }}>
               <Maximize2Icon size={14} /><span>{t.posterFit}</span>
+            </button>
+            <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}>
+              <MinusIcon size={14} />
+            </button>
+            <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(ZOOM_STEP)} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}>
+              <PlusIcon size={14} />
             </button>
           </div>
 
@@ -446,7 +550,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
           {layout.nodes.length <= 1 && (
             <p className="poster-hint" role="status">{t.posterNoRelatives}</p>
           )}
-          <div ref={sheetRef} className="poster-sheet" style={fit ? undefined : { width, height }}>
+          <div ref={sheetRef} className={`poster-sheet${far ? ' poster-sheet--far' : ''}`} style={fit ? undefined : { width: Math.round(width * zoom), height: Math.round(height * zoom) }}>
             <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={title}>
               <defs>
                 <style>{SVG_STYLE}</style>
@@ -456,7 +560,8 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                     <g key={shape} id={`poster-leaf-${shape}`}>
                       <path d={def.body} />
                       {def.half && <path d={def.half} fill="#ffffff" opacity={0.14} />}
-                      {def.vein && <path d={def.vein} fill="none" stroke="#2a1d12" strokeOpacity={0.4} strokeWidth={0.035} strokeLinecap="round" />}
+                      {def.lower && <path d={def.lower} fill="#1d2a12" opacity={0.12} />}
+                      {def.vein && <path className="poster-detail" d={def.vein} fill="none" stroke="#2a1d12" strokeOpacity={0.4} strokeWidth={0.035} strokeLinecap="round" />}
                       {def.centre && <path d={def.centre} fill="#e8b84a" />}
                     </g>
                   );
@@ -542,9 +647,10 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                     <path d={piece.body} fill="url(#poster-bark)" />
                     {piece.shade && <path d={piece.shade} fill={SHADOW_INK} opacity={0.42} />}
                     {piece.light && <path d={piece.light} fill="#d9b48a" opacity={0.2} />}
-                    {piece.cracks && <path d={piece.cracks} stroke={SHADOW_INK} strokeWidth={1.1} strokeLinecap="round" fill="none" opacity={0.5} />}
+                    {piece.grain && <path className="poster-detail" d={piece.grain} stroke={SHADOW_INK} strokeWidth={0.8} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.3} />}
+                    {piece.cracks && <path className="poster-detail" d={piece.cracks} stroke={SHADOW_INK} strokeWidth={1.1} strokeLinecap="round" fill="none" opacity={0.5} />}
                     {piece.knots.map((k, j) => (
-                      <g key={j} transform={`translate(${k.cx.toFixed(1)} ${k.cy.toFixed(1)}) rotate(${k.angle.toFixed(1)})`}>
+                      <g key={j} className="poster-detail" transform={`translate(${k.cx.toFixed(1)} ${k.cy.toFixed(1)}) rotate(${k.angle.toFixed(1)})`}>
                         <ellipse rx={k.rx * 1.7} ry={k.ry * 1.9} fill="none" stroke={SHADOW_INK} strokeWidth={0.9} opacity={0.35} />
                         <ellipse rx={k.rx} ry={k.ry} fill={SHADOW_INK} opacity={0.55} />
                         <ellipse rx={k.rx * 0.45} ry={k.ry * 0.4} fill="#1f150f" opacity={0.6} />
@@ -554,17 +660,22 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                 ))}
                 {art.twigs.map((d, i) => <path key={`t${i}`} d={d} fill={BARK_DARK} />)}
                 {art.leaves.map((leaf, i) => <Leaf key={`l${i}`} leaf={leaf} />)}
+                {art.berries.map((b, i) => (
+                  <circle key={`f${i}`} cx={b.cx.toFixed(1)} cy={b.cy.toFixed(1)} r={b.r.toFixed(1)} fill={b.color} stroke="#3a1d12" strokeOpacity={0.35} strokeWidth={0.5} />
+                ))}
               </g>
 
               {/* Soil mound over the root tips, with grass and pebbles */}
               {art.ground.mound && <path d={art.ground.mound} fill="url(#poster-soil)" />}
               {art.ground.footings.map((f, i) => <ellipse key={`ft${i}`} cx={f.x} cy={f.y} rx={9} ry={3.5} fill="url(#poster-soil)" />)}
-              {art.ground.pebbles.map((p, i) => (
-                <ellipse key={`p${i}`} cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry} transform={`rotate(${p.angle.toFixed(1)} ${p.cx.toFixed(1)} ${p.cy.toFixed(1)})`}
-                  fill="#a39784" stroke="#6f6252" strokeWidth={0.8} />
-              ))}
-              {art.ground.grass && <path d={art.ground.grass} stroke={spec.grass} strokeWidth={1.3} strokeLinecap="round" fill="none" />}
-              {art.fallen.map((leaf, i) => <Leaf key={`f${i}`} leaf={leaf} />)}
+              <g className="poster-detail">
+                {art.ground.pebbles.map((p, i) => (
+                  <ellipse key={`p${i}`} cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry} transform={`rotate(${p.angle.toFixed(1)} ${p.cx.toFixed(1)} ${p.cy.toFixed(1)})`}
+                    fill="#a39784" stroke="#6f6252" strokeWidth={0.8} />
+                ))}
+                {art.ground.grass && <path d={art.ground.grass} stroke={spec.grass} strokeWidth={1.3} strokeLinecap="round" fill="none" />}
+                {art.fallen.map((leaf, i) => <Leaf key={`f${i}`} leaf={leaf} />)}
+              </g>
 
               {/* Member cards: hanging name tags, one per person, with his wives on the same tag */}
               {layout.nodes.map(n => {
@@ -611,7 +722,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                 );
               })}
 
-              {art.drifting.map((leaf, i) => <Leaf key={`d${i}`} leaf={leaf} />)}
+              <g className="poster-detail">{art.drifting.map((leaf, i) => <Leaf key={`d${i}`} leaf={leaf} />)}</g>
 
               {/* Decorative frame */}
               <rect x={FRAME_INSET} y={FRAME_INSET} width={width - FRAME_INSET * 2} height={height - FRAME_INSET * 2} fill="none" stroke={BARK_DARK} strokeWidth={2} opacity={0.55} />

@@ -73,6 +73,7 @@ export const SunriseIcon: React.FC<IconProps> = (p) => <Icon {...p}><path d="M12
 export const FocusIcon: React.FC<IconProps> = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></Icon>;
 export const HelpCircleIcon: React.FC<IconProps> = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></Icon>;
 export const PlusIcon: React.FC<IconProps> = (p) => <Icon {...p}><path d="M5 12h14"/><path d="M12 5v14"/></Icon>;
+export const MinusIcon: React.FC<IconProps> = (p) => <Icon {...p}><path d="M5 12h14"/></Icon>;
 export const CheckIcon: React.FC<IconProps> = (p) => <Icon {...p}><path d="M20 6 9 17l-5-5"/></Icon>;
 export const MailIcon: React.FC<IconProps> = (p) => <Icon {...p}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-10 5L2 7"/></Icon>;
 export const ShareIcon: React.FC<IconProps> = (p) => <Icon {...p}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></Icon>;

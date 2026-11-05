@@ -211,6 +211,75 @@ it('lets the poster switch style, show life years and drop the paper texture', (
   expect(svg.querySelector('[fill="url(#poster-paper-texture)"]')).toBeNull();
 });
 
+const posterFamily = () => {
+  const people = processAllFamilyData({ familyTrees: [{
+    familyTreeId: 'test', familyTreeDisplayName: 'Test Family',
+    members: [
+      { id: 'ram', firstName: 'Ram', lastName: 'Family', gender: 'male' as const, birthYear: 1920, deathYear: null },
+      { id: 'sita', firstName: 'Sita', lastName: 'Family', gender: 'female' as const, birthYear: 1925, deathYear: null },
+      { id: 'uma', firstName: 'Uma', lastName: 'Family', gender: 'female' as const, birthYear: 1935, deathYear: null },
+      { id: 'lav', firstName: 'Lav', lastName: 'Family', gender: 'male' as const, birthYear: 1950, deathYear: null },
+    ],
+    relationships: {
+      spouses: [{ spouse1Id: 'ram', spouse2Id: 'sita' }, { spouse1Id: 'ram', spouse2Id: 'uma' }],
+      parentChild: [{ parentId: 'ram', childId: 'lav' }],
+    },
+  }] });
+  context.currentTree = people.familyTreesStyled[0];
+  context.state = { ...context.state, data: people, selectedMemberId: 'ram' };
+};
+
+it('zooms the poster with buttons and Ctrl + wheel, and Fit returns to the whole sheet', () => {
+  posterFamily();
+  const view = render(<PosterModal onClose={jest.fn()} />);
+  const scroller = view.baseElement.querySelector('.poster-scroll') as HTMLElement;
+  const sheet = view.baseElement.querySelector('.poster-sheet') as HTMLElement;
+  const widthNow = () => parseInt(sheet.style.width, 10);
+  expect(scroller.classList.contains('poster-scroll--fit')).toBe(true);
+
+  fireEvent.click(screen.getByRole('button', { name: t.tooltipZoomIn }));
+  expect(scroller.classList.contains('poster-scroll--fit')).toBe(false);
+  const zoomedIn = widthNow();
+  fireEvent.click(screen.getByRole('button', { name: t.tooltipZoomOut }));
+  const one = widthNow();
+  fireEvent.click(screen.getByRole('button', { name: t.tooltipZoomOut }));
+  expect(zoomedIn).toBeGreaterThan(one);
+  expect(one).toBeGreaterThan(widthNow());
+
+  const before = widthNow();
+  expect(fireEvent.wheel(scroller, { ctrlKey: true, deltaY: -100 })).toBe(false);
+  expect(widthNow()).toBeGreaterThan(before);
+  // A plain wheel still scrolls the poster.
+  const after = widthNow();
+  expect(fireEvent.wheel(scroller, { deltaY: -100 })).toBe(true);
+  expect(widthNow()).toBe(after);
+
+  fireEvent.click(screen.getByRole('button', { name: t.posterFit }));
+  expect(scroller.classList.contains('poster-scroll--fit')).toBe(true);
+});
+
+it('hides fine detail on screen only when the poster is zoomed far out', () => {
+  posterFamily();
+  const view = render(<PosterModal onClose={jest.fn()} />);
+  const sheet = view.baseElement.querySelector('.poster-sheet') as HTMLElement;
+  const svg = sheet.querySelector('svg')!;
+  expect(sheet.classList.contains('poster-sheet--far')).toBe(false);
+  expect(svg.querySelectorAll('.poster-detail').length).toBeGreaterThan(0);
+
+  const zoomOut = screen.getByRole('button', { name: t.tooltipZoomOut });
+  for (let i = 0; i < 4; i++) fireEvent.click(zoomOut);
+  expect(sheet.classList.contains('poster-sheet--far')).toBe(false);
+  for (let i = 0; i < 2; i++) fireEvent.click(zoomOut);
+  expect(sheet.classList.contains('poster-sheet--far')).toBe(true);
+  // Detail is hidden by a class on the wrapper, so the SVG itself (which the PNG export copies) is untouched.
+  expect(svg.classList.contains('poster-sheet--far')).toBe(false);
+  expect(svg.querySelectorAll('.poster-detail').length).toBeGreaterThan(0);
+
+  fireEvent.click(screen.getByRole('button', { name: t.tooltipZoomIn }));
+  fireEvent.click(screen.getByRole('button', { name: t.tooltipZoomIn }));
+  expect(sheet.classList.contains('poster-sheet--far')).toBe(false);
+});
+
 it('keeps long poster names intact without showing a print-size option', () => {
   const longName = 'RamchandraVithobaDeshmukh';
   const people = processAllFamilyData({ familyTrees: [{
