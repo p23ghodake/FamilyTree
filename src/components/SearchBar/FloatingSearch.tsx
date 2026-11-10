@@ -289,7 +289,8 @@ const FloatingSearch: React.FC = () => {
                   key={m.id}
                   type="button"
                   className={`floating-search__item${i === activeIdx ? ' floating-search__item--active' : ''}${state.selectedMemberId === m.id ? ' floating-search__item--selected' : ''}`}
-                  onMouseDown={e => { e.preventDefault(); selectItem(m.id); }}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => selectItem(m.id)}
                   onMouseEnter={() => setActiveIdx(i)}
                 >
                   <img

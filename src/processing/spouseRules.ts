@@ -1,17 +1,17 @@
 import { StyledFamilyTree } from '../types/FamilyTypes';
+import { daysInMonth, isValidIsoDate } from './dateValidation';
 
 const MIN_CHILD_AGE = { male: 21, female: 18 } as const;
 
 // Accepts "YYYY-MM-DD" or "YYYY-MM" (treated as the last day of the month, the youngest possible age)
 function parseBirthDate(value: string | null | undefined): Date | null {
-  const match = value?.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  if (month < 1 || month > 12) return null;
-  const day = match[3] ? Number(match[3]) : new Date(year, month, 0).getDate();
-  const date = new Date(year, month - 1, day);
-  return date.getMonth() === month - 1 ? date : null;
+  if (!isValidIsoDate(value) || value.length === 4) return null;
+  const [year, month, suppliedDay] = value.split('-').map(Number);
+  const day = suppliedDay ?? daysInMonth(year, month);
+  const date = new Date(0);
+  date.setFullYear(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+  return date;
 }
 
 export function ageOnDate(birthDate: string | null | undefined, now: Date = new Date()): number | null {

@@ -6,6 +6,7 @@ import {
   MapPinIcon, BriefcaseIcon, TrophyIcon, MaleIcon, FemaleIcon, UserIcon,
 } from '../Icons';
 import { getDisplayFirstName } from '../../processing/displayName';
+import { isMemberDeceased } from '../../processing/ageCalculation';
 import './StatsPanel.css';
 
 const StatsPanel: React.FC<{ visible: boolean }> = ({ visible }) => {
@@ -45,7 +46,7 @@ const StatsPanel: React.FC<{ visible: boolean }> = ({ visible }) => {
     const minYear = birthYears.length > 0 ? Math.min(...birthYears) : 0;
     const maxYear = birthYears.length > 0 ? Math.max(...birthYears) : 0;
 
-    const deceased = members.filter(m => m.age !== null && m.deathYear !== null);
+    const deceased = members.filter(m => m.age !== null && isMemberDeceased(m));
     const avgLifespan = deceased.length > 0
       ? Math.round(deceased.reduce((sum, m) => sum + m.age!, 0) / deceased.length)
       : null;

@@ -226,8 +226,8 @@ it('loads the limited, read-only view for visitors', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false });
   (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: '', canEdit: false, limited: true });
   render(<FamilyTreeProvider><Probe /></FamilyTreeProvider>);
-  await waitFor(() => expect(context.limitedView).toBe(true));
-  expect(context.state.data).not.toBeNull();
+  await waitFor(() => expect(context.state.data).not.toBeNull());
+  expect(context.limitedView).toBe(true);
   expect(context.canEdit).toBe(false);
   expect(context.cloudReady).toBe(false);
 });
@@ -241,6 +241,45 @@ it('lets an authorized admin reload the latest data without saving', async () =>
   await waitFor(() => expect(getFamilyData).toHaveBeenCalledTimes(2));
   expect(saveFamilyData).not.toHaveBeenCalled();
 });
+it('round-trips deceased status through styling, export, undo, redo and import', async () => {
+  await mountEditor();
+  const member = context.styleNewMember({
+    id: 'deceased', firstName: 'Deceased', lastName: 'Family', gender: 'male',
+    birthYear: 1950, deathYear: null, isDeceased: true,
+  });
+  expect(member.age).toBeNull();
+  act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
+  await waitFor(() => expect(context.currentTree?.members).toHaveLength(3));
+  expect(buildRawExport(context.state.data!).familyTrees[0].members[2].isDeceased).toBe(true);
+  act(() => context.undo());
+  await waitFor(() => expect(context.currentTree?.members).toHaveLength(2));
+  act(() => context.redo());
+  await waitFor(() => expect(context.currentTree?.members[2].isDeceased).toBe(true));
+  const imported = buildRawExport(context.state.data!);
+  imported.familyTrees[0].members[0].isDeceased = true;
+  act(() => context.importData(JSON.stringify(imported)));
+  await waitFor(() => expect(context.currentTree?.members[0].isDeceased).toBe(true));
+  expect(context.currentTree?.members[0].age).toBeNull();
+  expect((saveFamilyData as jest.Mock).mock.calls[3][0].familyTrees[0].members[0].isDeceased).toBe(true);
+});
+
+it('rejects impossible dates in mutations and imports before any save', async () => {
+  await mountEditor();
+  const member = context.styleNewMember({
+    id: 'invalid', firstName: 'Invalid', lastName: 'Family', gender: 'male',
+    birthYear: 1950, birthDate: '1950-02-31',
+  });
+  act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
+  await waitFor(() => expect(context.isSaving).toBe(false));
+  expect(saveFamilyData).not.toHaveBeenCalled();
+  expect(context.currentTree?.members).toHaveLength(2);
+  const imported = buildRawExport(context.state.data!);
+  imported.familyTrees[0].members[0].birthDate = '1970-04-31';
+  act(() => context.importData(JSON.stringify(imported)));
+  expect(saveFamilyData).not.toHaveBeenCalled();
+  expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('calendar date'), expect.anything());
+});
+
 describe('tree line style (admin display settings)', () => {
   const emailAdmin = { id: 'mail-admin', email: 'ghodake.pankaj@gmail.com', email_confirmed_at: '2024-01-01', identities: [] };
   const passwordToken = `h.${btoa(JSON.stringify({ amr: [{ method: 'password' }] }))}.s`;

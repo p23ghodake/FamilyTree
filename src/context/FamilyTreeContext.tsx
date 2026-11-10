@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useState, useMemo, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useLayoutEffect, useState, useMemo, useCallback, useRef, ReactNode } from 'react';
 import { produce } from 'immer';
 import toast from 'react-hot-toast';
 import {
@@ -13,7 +13,8 @@ import {
 import { processAllFamilyData } from '../processing/dataProcessor';
 import { findFutureDate, validateRawFamilyData } from '../processing/dataValidation';
 import { normalizeDisplaySettings, sameDisplaySettings } from '../processing/displaySettings';
-import { computeAge, getAgeCategory } from '../processing/ageCalculation';
+import { computeAge, getAgeCategory, isMemberDeceased } from '../processing/ageCalculation';
+import { yearFromDate } from '../processing/dateValidation';
 import { getNodeColors } from '../processing/nodeStyling';
 import { getImageConfig } from '../processing/imageRules';
 import { computeRelationship, RelationshipResult } from '../processing/relationshipFinder';
@@ -62,6 +63,7 @@ export function buildRawExport(data: ProcessedFamilyData): RawFamilyData {
           occupation: m.occupation ?? null,
           location: m.location ?? null,
         };
+        if (m.isDeceased !== undefined) raw.isDeceased = m.isDeceased;
         if (m.firstName_mr) raw.firstName_mr = m.firstName_mr;
         if (m.lastName_mr)  raw.lastName_mr  = m.lastName_mr;
         if (m.birthDate)    raw.birthDate    = m.birthDate;
@@ -85,6 +87,18 @@ export function buildRawExport(data: ProcessedFamilyData): RawFamilyData {
     })),
     ...(data.settings && { settings: { ...data.settings } }),
   };
+}
+
+function restrictData(data: ProcessedFamilyData | null): ProcessedFamilyData | null {
+  if (!data) return null;
+  const raw = buildRawExport(data);
+  raw.familyTrees.forEach(tree => {
+    tree.members = tree.members.map(({ birthDate, ...member }) => ({
+      ...member,
+      birthYear: member.birthYear ?? yearFromDate(birthDate),
+    }));
+  });
+  return processAllFamilyData(raw);
 }
 
 // ─── Member form mode ───
@@ -179,6 +193,7 @@ const initialState: State = {
 
 type Action =
   | { type: 'SET_DATA'; payload: ProcessedFamilyData }
+  | { type: 'RESET_ACCESS'; sharedPreview?: boolean }
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'SELECT_TREE'; payload: string }
   | { type: 'SELECT_MEMBER'; payload: string | null }
@@ -231,6 +246,16 @@ function reducer(state: State, action: Action): State {
 
 function reduceState(state: State, action: Action): State {
   switch (action.type) {
+    case 'RESET_ACCESS':
+      return {
+        ...state,
+        data: action.sharedPreview ? state.data : restrictData(state.data),
+        past: [],
+        future: [],
+        memberFormMode: null,
+        memberFormTargetId: null,
+        error: null,
+      };
     case 'SET_DATA':
       return {
         ...state,
@@ -503,6 +528,9 @@ const FamilyTreeContext = createContext<FamilyTreeContextValue | null>(null);
 export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const [state, reducerDispatch] = useReducer(reducer, initialState);
   const { session, loading: authLoading } = useAuth();
+  const userId = session?.user.id ?? null;
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
   const { t } = useLanguage();
   const tRef = useRef(t);
   tRef.current = t;
@@ -527,6 +555,22 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     cloudReadyRef.current = ready;
     setCloudReady(ready);
   }, []);
+
+  const applyRemoteData = useCallback((remote: Awaited<ReturnType<typeof getFamilyData>>) => {
+    const result = validateRawFamilyData(remote.data);
+    if (!result.ok || !result.data) throw new Error(result.error ?? 'GitHub family data is invalid.');
+    const limited = remote.limited === true || userIdRef.current === null;
+    const processed = processAllFamilyData(result.data);
+    const payload = limited ? restrictData(processed)! : processed;
+    shaRef.current = limited ? null : remote.sha;
+    canEditRef.current = !limited && remote.canEdit === true;
+    setLimitedView(limited);
+    setCanEdit(canEditRef.current);
+    stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload });
+    reducerDispatch({ type: 'SET_DATA', payload });
+    setCloudReadyState(!limited);
+    setCloudError(null);
+  }, [setCloudReadyState]);
 
   const dispatch = useCallback((action: Action) => {
     if (!DATA_MUTATION_ACTIONS.has(action.type)) {
@@ -575,7 +619,12 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const savedSha = await saveFamilyData(buildRawExport(nextState.data), shaRef.current);
+        const raw = buildRawExport(nextState.data);
+        const validated = validateRawFamilyData(raw);
+        if (!validated.ok) throw new Error(validated.error ?? 'Invalid family data.');
+        const futureDateError = findFutureDate(raw);
+        if (futureDateError) throw new Error(futureDateError);
+        const savedSha = await saveFamilyData(raw, shaRef.current);
         if (generation !== conflictGenerationRef.current) return;
         shaRef.current = savedSha;
         stateRef.current = reducer(stateRef.current, action);
@@ -583,22 +632,16 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (generation !== conflictGenerationRef.current) return;
         if (error instanceof FamilyDataServiceError && error.status === 409) {
-          conflictGenerationRef.current += 1;
+          const refreshGeneration = ++conflictGenerationRef.current;
+          shaRef.current = null;
           setCloudReadyState(false);
           try {
             const latest = await getFamilyData();
-            const validated = validateRawFamilyData(latest.data);
-            if (!validated.ok || !validated.data) {
-              throw new Error(validated.error ?? 'The latest GitHub family data is invalid.');
-            }
-            const refreshed = processAllFamilyData(validated.data);
-            shaRef.current = latest.sha;
-            stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload: refreshed });
-            reducerDispatch({ type: 'SET_DATA', payload: refreshed });
-            setCloudReadyState(true);
-            setCloudError(null);
+            if (refreshGeneration !== conflictGenerationRef.current || sharedPreviewRef.current) return;
+            applyRemoteData(latest);
             toast.error(tRef.current.saveConflict, { id: 'family-save-conflict', duration: 8000 });
           } catch (refreshError) {
+            if (refreshGeneration !== conflictGenerationRef.current || sharedPreviewRef.current) return;
             const message = refreshError instanceof Error ? refreshError.message : 'Unknown error';
             setCloudError(message);
             toast.error(tRef.current.saveConflictReloadFailed(message), { id: 'family-save-conflict', duration: 8000 });
@@ -615,7 +658,22 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       savingRef.current = false;
       setIsSaving(false);
     });
-  }, [session, setCloudReadyState]);
+  }, [session, setCloudReadyState, applyRemoteData]);
+
+  // Redact privileged data and invalidate in-flight work before a different identity can paint.
+  useLayoutEffect(() => {
+    if (authLoading) return;
+    conflictGenerationRef.current += 1;
+    shaRef.current = null;
+    canEditRef.current = false;
+    setCanEdit(false);
+    setCloudReadyState(false);
+    setLimitedView(!sharedPreviewRef.current || userId === null);
+    setCloudError(null);
+    const action: Action = { type: 'RESET_ACCESS', sharedPreview: sharedPreviewRef.current };
+    stateRef.current = reducer(stateRef.current, action);
+    reducerDispatch(action);
+  }, [authLoading, userId, setCloudReadyState]);
 
   // Apply theme whenever it changes (including on mount)
   useEffect(() => {
@@ -625,35 +683,21 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   // Everyone loads through the family-data function; visitors receive a limited, read-only view.
   useEffect(() => {
     if (authLoading) return;
-    if (sharedPreviewRef.current) {
-      setLimitedView(!session);
-      return;
-    }
-    conflictGenerationRef.current += 1;
+    if (sharedPreviewRef.current) return;
+    const generation = ++conflictGenerationRef.current;
     let active = true;
 
     shaRef.current = null;
+    canEditRef.current = false;
     setCanEdit(false);
     setCloudReadyState(false);
     setCloudError(null);
 
     getFamilyData().then(remote => {
-      if (!active || sharedPreviewRef.current) return;
-      const result = validateRawFamilyData(remote.data);
-      if (!result.ok || !result.data) {
-        throw new Error(result.error ?? 'GitHub family data is invalid.');
-      }
-      const processed = processAllFamilyData(result.data);
-      const limited = remote.limited === true;
-      shaRef.current = limited ? null : remote.sha;
-      setLimitedView(limited);
-      setCanEdit(!limited && remote.canEdit === true);
-      stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload: processed });
-      reducerDispatch({ type: 'SET_DATA', payload: processed });
-      setCloudReadyState(!limited);
-      setCloudError(null);
+      if (!active || generation !== conflictGenerationRef.current || sharedPreviewRef.current) return;
+      applyRemoteData(remote);
     }).catch(error => {
-      if (!active || sharedPreviewRef.current) return;
+      if (!active || generation !== conflictGenerationRef.current || sharedPreviewRef.current) return;
       console.error('Failed to load family data:', error);
       const message = error instanceof Error ? error.message : 'Failed to load family data';
       setCloudError(message);
@@ -665,7 +709,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     });
 
     return () => { active = false; };
-  }, [authLoading, session, reloadKey, setCloudReadyState]);
+  }, [authLoading, userId, reloadKey, setCloudReadyState, applyRemoteData]);
 
   // Debounced search query — used for filtering to avoid O(n) scan on every keystroke.
   // Trimmed so stray spaces around a name neither break matching nor count as a search.
@@ -703,12 +747,12 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     const occQuery = f.occupation.toLowerCase();
     return new Set(
       members.filter(m => {
-        if (f.livingOnly && m.deathYear !== null) return false;
+        if (f.livingOnly && isMemberDeceased(m)) return false;
         if (f.location && m.location !== f.location) return false;
         if (f.gender !== 'all' && m.gender !== f.gender) return false;
         if (f.occupation && !(m.occupation ?? '').toLowerCase().includes(occQuery)) return false;
         if (f.marriageEligible) {
-          if (m.deathYear !== null) return false;                        // must be living
+          if (isMemberDeceased(m)) return false;                        // must be living
           if (m.age === null || m.gender === 'unknown') return false;    // age + gender must be known
           const minAge = m.gender === 'female' ? 18 : 21;
           if (m.age < minAge) return false;                             // below legal age
@@ -832,7 +876,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     raw: Partial<StyledFamilyMember> & { id: string; firstName: string; lastName: string; gender: 'male' | 'female' | 'unknown' }
   ): StyledFamilyMember => {
     const treeAccentHex = currentTree?.treeAccentColorHex ?? '#3B82F6';
-    const age = computeAge(raw.birthYear ?? null, raw.deathYear ?? null);
+    const birthYear = raw.birthYear ?? yearFromDate(raw.birthDate);
+    const deathYear = raw.deathYear ?? yearFromDate(raw.deathDate);
+    const age = computeAge(birthYear, deathYear, isMemberDeceased(raw));
     const ageCategory = getAgeCategory(age);
     const colors = getNodeColors(ageCategory, treeAccentHex);
     const imageConfig = getImageConfig(raw.imageUrl ?? undefined, raw.gender, ageCategory, colors.nodeBorderColorHex, raw.isPrimaryInTree);
@@ -841,11 +887,11 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     let generationIndex: number | null = null;
     if (raw.generationIndex !== undefined) {
       generationIndex = raw.generationIndex;
-    } else if (raw.birthYear && currentTree) {
+    } else if (birthYear && currentTree) {
       const birthYears = currentTree.members.filter(m => m.birthYear).map(m => m.birthYear!);
       if (birthYears.length > 0) {
         const minYear = Math.min(...birthYears);
-        generationIndex = Math.floor((raw.birthYear - minYear) / 30) + 1;
+        generationIndex = Math.floor((birthYear - minYear) / 30) + 1;
       }
     }
 
@@ -858,8 +904,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       middleName: raw.middleName,
       middleName_mr: raw.middleName_mr,
       gender: raw.gender,
-      birthYear: raw.birthYear ?? null,
-      deathYear: raw.deathYear ?? null,
+      birthYear,
+      deathYear,
+      isDeceased: raw.isDeceased,
       birthDate: raw.birthDate ?? null,
       deathDate: raw.deathDate ?? null,
       imageUrl: raw.imageUrl ?? null,

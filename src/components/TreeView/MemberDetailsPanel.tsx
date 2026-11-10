@@ -3,6 +3,7 @@ import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { StyledFamilyMember } from '../../types/FamilyTypes';
 import { getDisplayFirstName } from '../../processing/displayName';
+import { isMemberDeceased } from '../../processing/ageCalculation';
 import { PencilIcon, XIcon } from '../Icons';
 import { MemberAvatar } from './MemberAvatar';
 import './MemberDetailsPanel.css';
@@ -73,7 +74,7 @@ const MemberDetailsPanel: React.FC = () => {
     if (!match) return null;
     return [match[2] ? String(Number(match[2])) : '', t.months[Number(match[1]) - 1]].filter(Boolean).join(' ');
   };
-  const isDeceased = member?.deathYear != null;
+  const isDeceased = member ? isMemberDeceased(member) : false;
   const select = (id: string) => dispatch({ type: 'SELECT_MEMBER', payload: id });
 
   const generation = member?.generationIndex != null ? t.genFormat(member.generationIndex) : null;

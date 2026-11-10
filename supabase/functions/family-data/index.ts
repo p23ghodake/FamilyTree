@@ -1,3 +1,5 @@
+import { findInvalidDate } from '../_shared/dateValidation.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
@@ -284,6 +286,9 @@ Deno.serve(async request => {
   if (!body.data || typeof body.data !== 'object' || typeof body.sha !== 'string' || !body.sha) {
     return jsonResponse({ error: 'A family data object and current file SHA are required.' }, 400);
   }
+
+  const dateError = findInvalidDate(body.data);
+  if (dateError) return jsonResponse({ error: dateError }, 400);
 
   if (!canDelete) {
     const current = await readFamilyFile(githubToken);

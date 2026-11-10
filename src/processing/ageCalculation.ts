@@ -1,10 +1,15 @@
-import { AgeCategory } from '../types/FamilyTypes';
+import { AgeCategory, RawFamilyMember } from '../types/FamilyTypes';
 import { CONFIG } from '../constants/config';
 
-export function computeAge(birthYear: number | null, deathYear: number | null): number | null {
+export function isMemberDeceased(member: Partial<Pick<RawFamilyMember, 'isDeceased' | 'deathYear' | 'deathDate'>>): boolean {
+  return member.isDeceased === true || member.deathYear != null || !!member.deathDate;
+}
+
+export function computeAge(birthYear: number | null, deathYear: number | null, deceased = false): number | null {
   if (birthYear === null || birthYear === undefined) return null;
-  const currentYear = new Date().getFullYear();
-  return deathYear ? deathYear - birthYear : currentYear - birthYear;
+  if (deathYear != null) return deathYear - birthYear;
+  if (deceased) return null;
+  return new Date().getFullYear() - birthYear;
 }
 
 export function getAgeCategory(age: number | null): AgeCategory {

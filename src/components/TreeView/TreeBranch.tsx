@@ -2,6 +2,7 @@ import React from 'react';
 import { PersonNode } from './PersonNode';
 import { TreeNode } from '../../processing/treeBuilder';
 import { StyledFamilyMember, AvatarStyle } from '../../types/FamilyTypes';
+import { isMemberDeceased } from '../../processing/ageCalculation';
 
 // ─── Recursive Tree Branch ───
 
@@ -46,7 +47,7 @@ export const TreeBranch = React.memo<{
   // Marriage badge: shown when filter is active + member is living + age-eligible (spouse check is in filter)
   const isBadgeEligible = (m: StyledFamilyMember): boolean => {
     if (!marriageFilterActive || !marriageMatchedIds.has(m.id)) return false;
-    if (m.deathYear !== null || m.age === null || m.gender === 'unknown') return false;
+    if (isMemberDeceased(m) || m.age === null || m.gender === 'unknown') return false;
     return m.age >= (m.gender === 'female' ? 18 : 21);
   };
 

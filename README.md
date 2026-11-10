@@ -1,6 +1,6 @@
 # FamilyTree
 
-An interactive family tree in English and Marathi, published on GitHub Pages at https://p23ghodake.github.io/FamilyTree/. Anyone can browse; approved family editors sign in to add and update members, and changes are saved back to this repository.
+An interactive family tree in English and Marathi, published on GitHub Pages at https://p23ghodake.github.io/FamilyTree/. Anyone can browse; approved family editors sign in to add and update members, and changes are saved to the separate `p23ghodake/FamilyTree-Data` repository by default.
 
 ## Features
 
@@ -11,7 +11,7 @@ An interactive family tree in English and Marathi, published on GitHub Pages at 
 - **Tree lines:** the admin chooses how the lines between parents and children look for everyone: **Static** (the original lines), **Energy pulse** (one glowing bead per line) or **Light particle flow** (a steady stream of dots), and the **line shape**: **Elbow** (right-angled lines with rounded corners, as before) or **Curved** (smooth S-curves from parents to each child). For the animated styles the admin also sets the **speed** (slow, normal or fast), the **pulse timing** (*Cascade*, one generation after another, or *Together*) and what to **animate** (*All lines*, or only the *Selected lineage* of the member a visitor clicks; before anyone is clicked, all lines animate). Animation starts at the oldest living members of each branch; lines below couples who have both died stay static. Visitors whose device asks for reduced motion, printouts and PNG exports always get the static lines. The choice is stored as `settings` in the shared family data file, so it applies as soon as it is saved, without redeploying the site.
 - **Member details:** clicking or tapping a person opens a compact life-timeline panel for everyone, including visitors. The header shows a 42px avatar, full name, generation, age, occupation and location. Below it, a year rail lists birth (with parents), marriages (former spouses marked), children and death in date order, followed by notes. Relatives are clickable. Colours follow the selected theme. Editing remains restricted to approved editors.
   The panel uses the selected language's labels and available names, without an alternate-language name. Long content is divided into compact Previous/Next pages rather than a scrolling panel. Free-text notes, occupation, and location remain as entered.
-- **Add and edit members:** a step-by-step form: **Relationship** (child, spouse, parent or not linked, with a searchable list of people), then **Who** (photo, names, gender), then **Dates & details** (all optional). The Marathi name is filled in automatically and can be edited. When adding a child or spouse from a person's menu, the relationship step is skipped. When editing, any step can be opened and saved directly. Uploaded photos are resized to 400 px JPEGs.
+- **Add and edit members:** a step-by-step form: **Relationship** (child, spouse, parent or not linked, with a searchable list of people), then **Who** (photo, names, gender), then **Dates & details** (all optional). The Marathi name is filled in automatically and can be edited. When adding a child or spouse from a person's menu, the relationship step is skipped. When editing, any step can be opened and saved directly. Uploaded photos are resized to 400 px JPEGs. Turn off **Living** to record a death even when its date is unknown; this is saved as the optional `isDeceased` flag. Older records still infer deceased status from a death year or date. Year-only and year/month dates are supported, but impossible calendar dates and death dates definitely before birth are rejected. An unknown death year does not produce an estimated current age.
 - **Sign in:** choose **Continue with GitHub** or **Continue with email**. Errors are shown inside the form, with a Caps Lock warning on the password field.
 - **Sharing:** share links open a read-only snapshot of the tree (see below).
 - **Accessibility:** dialogs trap keyboard focus, close with Escape and return focus to where you were. All text is available in English and Marathi.
@@ -32,13 +32,13 @@ The recordings below use a fictional family (the Deshmukhs) and a demo editor ac
 
 | Who | Browse | Add / edit members | Delete members | Reset shared data | Export JSON / PNG, Print | Tree line style |
 |---|---|---|---|---|---|---|
-| Guest (not signed in) | Bundled copy | – | – | – | – | – |
+| Guest (not signed in) | Limited live data | – | – | – | – | – |
 | Read-only user (`READONLY_GITHUB_USERS`) | Live data | – | – | – | – | – |
 | Editor (`ALLOWED_GITHUB_USERS`) | Live data | ✓ | – | – | – | – |
 | Admin signed in with email/password | Live data | ✓ | – | – | ✓ | ✓ |
 | Admin signed in **with GitHub** | Live data | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-Admins are the GitHub account `p23ghodake` and the GitHub account whose verified email is `ghodake.pankaj@gmail.com`. They must also be listed in `ALLOWED_GITHUB_USERS` to save anything. **Deleting members and Reset require a session signed in through GitHub**; an email/password session is refused even for the admin email. The Edge Function enforces this as well: it compares each save with the current file on GitHub and rejects saves that remove members unless the session signed in with GitHub on an admin account. Undoing your own *add* counts as a removal, so it is also limited to that admin.
+Admins are the GitHub account `p23ghodake` and the GitHub account whose verified email is `ghodake.pankaj@gmail.com`. They must also be listed in `ALLOWED_GITHUB_USERS` to save anything. **Deleting members requires a session signed in through GitHub**; an email/password session is refused even for the admin email. The Reset/reload control is also shown only to an admin signed in with GitHub. The Edge Function enforces the deletion restriction: it compares each save with the current file on GitHub and rejects saves that remove members unless the session signed in with GitHub on an admin account. Undoing your own *add* counts as a removal, so it is also limited to that admin.
 
 The **tree line style** (Settings → Admin → *Tree lines*) can be changed by either admin identity, with GitHub or email/password sign-in. Each change is saved to GitHub straight away. The Edge Function rejects any save that changes `settings` unless it comes from an admin, and editors' member saves keep the admin's settings unchanged. After updating, redeploy the function (`npx supabase functions deploy family-data`) so the server check is active.
 
@@ -46,13 +46,13 @@ The frontend admin list is in `src/lib/admin.ts`. On the server, set the optiona
 
 ## GitHub-backed family data
 
-Family data remains in `src/data/g_familyData.json` in this repository. The React app authenticates with Supabase GitHub OAuth and calls the `family-data` Edge Function; that function verifies the Supabase user and uses a fine-grained GitHub token to read or update the file through the GitHub Contents API. No family-data database/table is used.
+By default, family data is the root file `g_familyData.json` in `p23ghodake/FamilyTree-Data`, not a bundled file in this application repository. Ensure that repository and its valid family-data JSON file exist before deploying. The React app calls the `family-data` Edge Function for everyone; approved users receive full data and visitors receive a read-only view without exact birth dates. Editors authenticate with Supabase, and the function uses a server-side fine-grained GitHub token to read or update the file through the GitHub Contents API. No family-data database/table is used.
 
 ### Supabase and GitHub setup
 
 1. Create a Supabase project. In **Authentication → Providers → GitHub**, enable GitHub and enter a GitHub OAuth App client ID and client secret. In the OAuth App, set its callback URL to `https://<project-ref>.supabase.co/auth/v1/callback`.
 2. In Supabase **Authentication → URL Configuration**, allow the production redirect `https://p23ghodake.github.io/FamilyTree/` and local redirect `http://localhost:3000/`.
-3. Create a GitHub fine-grained personal access token restricted to `p23ghodake/FamilyTree`, with **Contents: Read and write** only. Do not put it in React `.env` files or GitHub Pages variables.
+3. Create a GitHub fine-grained personal access token restricted to `p23ghodake/FamilyTree-Data`, with **Contents: Read and write** only. If you override `DATA_REPO`, scope the token to that data repository instead. Do not put it in React `.env` files or GitHub Pages variables.
 4. Add the token as the Edge Function secret named `GITHUB_TOKEN` in Supabase **Project Settings → Edge Functions → Secrets**, or create an untracked `supabase/.env` containing `GITHUB_TOKEN=<token>` and run `supabase secrets set --env-file supabase/.env`. This file is ignored by Git and is not a React environment file. Supabase supplies `SUPABASE_URL` and `SUPABASE_ANON_KEY` to the function.
 5. Copy the Supabase project URL and browser-safe anon/publishable key into a local `.env` file using `.env.example` as a template. These two `REACT_APP_` values are public browser configuration, not secrets.
 6. In the GitHub repository's **Settings → Secrets and variables → Actions → Variables**, define `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` with those same public values. The Pages workflow injects them at build time.
@@ -69,7 +69,7 @@ npx supabase link --project-ref <project-ref>
 npx supabase functions deploy family-data
 ```
 
-Set the `ALLOWED_GITHUB_USERS` Edge Function secret to a comma-separated list of GitHub usernames allowed to read/write data (for example `npx supabase secrets set ALLOWED_GITHUB_USERS=user1,user2`); other signed-in users get a 403. Entries may be GitHub usernames or emails (for email/password users created in Supabase Authentication → Users). Optionally set `READONLY_GITHUB_USERS` for users who can load data but not save changes.
+Set the `ALLOWED_GITHUB_USERS` Edge Function secret to a comma-separated list of GitHub usernames allowed to read/write data (for example `npx supabase secrets set ALLOWED_GITHUB_USERS=user1,user2`); other signed-in users receive the limited view and get a 403 if they try to save. Entries may be GitHub usernames or emails (for email/password users created in Supabase Authentication → Users). Optionally set `READONLY_GITHUB_USERS` for users who can load data but not save changes.
 
 Authorization uses the verified GitHub provider identity or a confirmed email, not editable user metadata. The sign-in method used for delete and reset permissions is read from the validated access token. Redeploy the `family-data` Edge Function after updating its authorization code:
 
@@ -77,13 +77,13 @@ Authorization uses the verified GitHub provider identity or a confirmed email, n
 npx supabase functions deploy family-data --project-ref <project-ref>
 ```
 
-Set or update the `GITHUB_TOKEN` Edge Function secret in the Supabase Dashboard, or use the ignored `supabase/.env` method above. The function keeps JWT verification enabled; it also validates each access token with Supabase Auth. Its Contents API target is `src/data/g_familyData.json` in `p23ghodake/FamilyTree`.
+Set or update the `GITHUB_TOKEN` Edge Function secret in the Supabase Dashboard, or use the ignored `supabase/.env` method above. The function keeps JWT verification enabled; it also validates each access token with Supabase Auth. Its default Contents API target is `g_familyData.json` in `p23ghodake/FamilyTree-Data`. Optional Edge Function secrets `DATA_REPO` (repository name under `p23ghodake`) and `DATA_FILE_PATH` (path within that repository) override these defaults; the GitHub token must have access to the chosen repository. Calendar-date and chronological-order validation also runs before the function saves a file; redeploy it when updating this validation.
 
 ### Shared snapshots and reset
 
 Shared links open read-only snapshots without importing or saving them to GitHub. Keep the link's `tree` query parameter to reopen the same snapshot after a reload. Legacy links containing processed tree data are also supported.
 
-The Reset control is shown only to the admin signed in with GitHub who has edit access. After explicit confirmation, it replaces **all shared family trees on GitHub** with the original bundled dataset, affecting every user. It is not a browser-only reset. Data-changing controls remain locked until the current save finishes.
+The Reset control is shown only to the admin signed in with GitHub who has edit access. After explicit confirmation, it reloads the currently saved GitHub data and clears local undo/redo history. It does not write to GitHub or replace the data with a bundled dataset. Data-changing controls remain locked until the current save finishes.
 
 ### GitHub Pages deployment
 
@@ -109,4 +109,4 @@ node node_modules/typescript/bin/tsc --noEmit
 node node_modules/react-scripts/bin/react-scripts.js test --watchAll=false --ci --runInBand
 ```
 
-Main test files: `src/components/functional.test.tsx`, `src/components/ux.test.tsx`, `src/context/FamilyTreeContext.test.tsx`, `src/lib/admin.test.ts` and the `src/processing/*.test.ts` files.
+Main test files: `src/components/functional.test.tsx`, `src/components/ux.test.tsx`, `src/components/persistence.test.tsx`, `src/context/FamilyTreeContext.test.tsx`, `src/services/familyDataValidation.test.ts`, `src/lib/admin.test.ts` and the `src/processing/*.test.ts` files. The persistence tests mock Supabase responses, and the server-write tests execute the Edge Function handler with mocked HTTP requests; neither contacts production services.

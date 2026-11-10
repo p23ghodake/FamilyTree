@@ -12,6 +12,7 @@ type Translations = {
   firstNameRequired: string;
   lastNameRequired: string;
   invalidYear: string;
+  invalidDate: string;
   deathBeforeBirth: string;
   futureDate: string;
   nameHasDigits: string;
@@ -441,7 +442,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     firstNameRequired: 'First name is required',
     lastNameRequired: 'Last name is required',
     invalidYear: 'Must be a valid year',
-    deathBeforeBirth: 'Death year cannot be before birth year',
+    invalidDate: 'Must be a valid calendar date with a year',
+    deathBeforeBirth: 'Death date cannot be before birth date',
     futureDate: 'Date cannot be in the future',
     nameHasDigits: 'Name cannot contain numbers',
     sectionRelationship: 'Relationship',
@@ -871,7 +873,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     firstNameRequired: 'पहिले नाव आवश्यक आहे',
     lastNameRequired: 'आडनाव आवश्यक आहे',
     invalidYear: 'वैध वर्ष असणे आवश्यक आहे',
-    deathBeforeBirth: 'मृत्यू वर्ष जन्म वर्षापूर्वी असू शकत नाही',
+    invalidDate: 'वर्षासह वैध दिनांक असणे आवश्यक आहे',
+    deathBeforeBirth: 'मृत्यू दिनांक जन्म दिनांकापूर्वी असू शकत नाही',
     futureDate: 'तारीख भविष्यातील असू शकत नाही',
     nameHasDigits: 'नावात अंक असू शकत नाहीत',
     sectionRelationship: 'नाते',

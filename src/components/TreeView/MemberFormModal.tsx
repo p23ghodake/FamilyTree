@@ -9,7 +9,8 @@ import { findDuplicates } from '../../processing/duplicateDetection';
 import { containsDigit, isFutureDate, isFutureYear, sanitizeImageUrl } from '../../processing/dataValidation';
 import toast from 'react-hot-toast';
 import { ageOnDate, getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
-import { computeAge } from '../../processing/ageCalculation';
+import { computeAge, isMemberDeceased } from '../../processing/ageCalculation';
+import { daysInMonth, eventDate, isDateDefinitelyBefore, isValidIsoDate, isValidYear } from '../../processing/dateValidation';
 import YearPicker from '../YearPicker';
 import { RelationshipSection, RelationshipType } from './RelationshipSection';
 import { PhotoUploadSection } from './PhotoUploadSection';
@@ -118,8 +119,6 @@ type NameKey = 'firstName' | 'lastName' | 'firstName_mr' | 'lastName_mr';
 const NAME_KEYS: NameKey[] = ['firstName', 'lastName', 'firstName_mr', 'lastName_mr'];
 const MAX_YEAR = new Date().getFullYear();
 
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
-
 // ─── Modal Component ───
 
 const MemberFormModal: React.FC = () => {
@@ -156,7 +155,7 @@ const MemberFormModal: React.FC = () => {
     if (!memberFormMode) return;
     if (isEdit && editMember) {
       setFields(memberToFields(editMember));
-      setLiving(editMember.deathYear === null && !editMember.deathDate);
+      setLiving(!isMemberDeceased(editMember));
     } else {
       const lastName = targetMember?.lastName ?? '';
       setFields({ ...EMPTY_FIELDS, lastName });
@@ -209,17 +208,27 @@ const MemberFormModal: React.FC = () => {
     NAME_KEYS.forEach(key => {
       if (!errs[key] && containsDigit(fields[key])) errs[key] = t.nameHasDigits;
     });
-    const by = parseInt(fields.birthYear);
-    const dy = living ? NaN : parseInt(fields.deathYear);
-    if (fields.birthYear && (isNaN(by) || by < 1000)) errs.birthYear = t.invalidYear;
-    if (!living && fields.deathYear && (isNaN(dy) || dy < 1000)) errs.deathYear = t.invalidYear;
-    if (!errs.birthYear && (isFutureYear(by) || isFutureDate(buildIsoDate(fields.birthYear, fields.birthMonth, fields.birthDay)))) {
-      errs.birthYear = t.futureDate;
+    const by = Number(fields.birthYear);
+    const dy = living || !fields.deathYear ? NaN : Number(fields.deathYear);
+    const birthDate = buildIsoDate(fields.birthYear, fields.birthMonth, fields.birthDay);
+    const deathDate = living ? null : buildIsoDate(fields.deathYear, fields.deathMonth, fields.deathDay);
+    for (const kind of ['birth', 'death'] as const) {
+      if (kind === 'death' && living) continue;
+      const yearKey = `${kind}Year` as const;
+      const year = fields[yearKey];
+      const month = fields[`${kind}Month`];
+      const day = fields[`${kind}Day`];
+      const date = kind === 'birth' ? birthDate : deathDate;
+      if (year && (!/^\d{4}$/.test(year) || !isValidYear(Number(year)) || Number(year) < 1000)) {
+        errs[yearKey] = t.invalidYear;
+      } else if ((month && !year) || (day && !month) || (date && !isValidIsoDate(date))) {
+        errs[yearKey] = t.invalidDate;
+      } else if (isFutureYear(Number(year)) || isFutureDate(date)) {
+        errs[yearKey] = t.futureDate;
+      }
     }
-    if (!living && !errs.deathYear && (isFutureYear(dy) || isFutureDate(buildIsoDate(fields.deathYear, fields.deathMonth, fields.deathDay)))) {
-      errs.deathYear = t.futureDate;
-    }
-    if (!errs.deathYear && fields.birthYear && !isNaN(by) && !isNaN(dy) && dy < by) {
+    if (!errs.birthYear && !errs.deathYear && !living &&
+        isDateDefinitelyBefore(eventDate(isNaN(dy) ? null : dy, deathDate), eventDate(fields.birthYear ? by : null, birthDate))) {
       errs.deathYear = t.deathBeforeBirth;
     }
     const url = fields.imageUrl.trim();
@@ -233,7 +242,7 @@ const MemberFormModal: React.FC = () => {
     const addingSpouse = memberFormMode === 'addSpouse' || (isStandaloneAdd && relationType === 'spouseOf');
     if (addingSpouse) {
       const newAge = ageOnDate(buildIsoDate(fields.birthYear, fields.birthMonth, fields.birthDay))
-        ?? computeAge(fields.birthYear ? by : null, isNaN(dy) ? null : dy);
+        ?? computeAge(fields.birthYear ? by : null, isNaN(dy) ? null : dy, !living);
       const minAge = fields.gender === 'female' ? 18 : 21;
       if (newAge !== null && newAge < minAge) {
         errs.birthYear = t.belowMarriageAge(`${fields.firstName} ${fields.lastName}`, newAge, minAge);
@@ -291,6 +300,7 @@ const MemberFormModal: React.FC = () => {
       gender: fields.gender,
       birthYear: fields.birthYear ? parseInt(fields.birthYear) : null,
       deathYear: !living && fields.deathYear ? parseInt(fields.deathYear) : null,
+      isDeceased: !living,
       birthDate: buildIsoDate(fields.birthYear, fields.birthMonth, fields.birthDay),
       deathDate: living ? null : buildIsoDate(fields.deathYear, fields.deathMonth, fields.deathDay),
       occupation: fields.occupation.trim() || null,
@@ -409,6 +419,9 @@ const MemberFormModal: React.FC = () => {
     const yearKey = isBirth ? 'birthYear' : 'deathYear';
     const monthKey = isBirth ? 'birthMonth' : 'deathMonth';
     const dayKey = isBirth ? 'birthDay' : 'deathDay';
+    const maxDay = fields[monthKey] ? daysInMonth(Number(fields[yearKey]) || 2000, Number(fields[monthKey])) : 31;
+    const days = Array.from({ length: maxDay }, (_, i) => i + 1);
+    const retainedInvalidDay = Number(fields[dayKey]) > maxDay;
     return (
       <div className="mf-field">
         <span className="mf-label">
@@ -443,7 +456,8 @@ const MemberFormModal: React.FC = () => {
             aria-label={isBirth ? t.labelBirthDay : t.labelDeathDay}
           >
             <option value="">{t.labelDay}</option>
-            {DAYS.map(d => <option key={d} value={String(d)}>{d}</option>)}
+            {days.map(d => <option key={d} value={String(d)}>{d}</option>)}
+            {retainedInvalidDay && <option value={fields[dayKey]} disabled>{fields[dayKey]}</option>}
           </select>
         </div>
         {errors[yearKey] && <span className="mf-err" role="alert">{errors[yearKey]}</span>}

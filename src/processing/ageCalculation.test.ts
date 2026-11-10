@@ -1,4 +1,4 @@
-import { computeAge, getAgeCategory } from './ageCalculation';
+import { computeAge, getAgeCategory, isMemberDeceased } from './ageCalculation';
 
 describe('computeAge', () => {
   const CURRENT_YEAR = new Date().getFullYear(); // dynamic so tests never go stale
@@ -29,6 +29,22 @@ describe('computeAge', () => {
 
   it('returns 0 when born and died in the same year (current)', () => {
     expect(computeAge(CURRENT_YEAR, CURRENT_YEAR)).toBe(0);
+  });
+});
+
+describe('deceased status', () => {
+  it('preserves an explicit death without inventing a current age', () => {
+    expect(isMemberDeceased({ isDeceased: true, deathYear: null })).toBe(true);
+    expect(computeAge(1950, null, true)).toBeNull();
+    expect(computeAge(1950, 2020, true)).toBe(70);
+  });
+
+  it('continues inferring legacy deaths from either date field', () => {
+    expect(isMemberDeceased({ deathYear: 2020 })).toBe(true);
+    expect(isMemberDeceased({ deathDate: '2020-04' })).toBe(true);
+    expect(isMemberDeceased({ isDeceased: false, deathYear: 2020 })).toBe(true);
+    expect(isMemberDeceased({ isDeceased: false, deathYear: null })).toBe(false);
+    expect(isMemberDeceased({})).toBe(false);
   });
 });
 

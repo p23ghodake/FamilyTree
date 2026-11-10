@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useFamilyTree, AdvancedFilters, countActiveFilters } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { isMemberDeceased } from '../../processing/ageCalculation';
 import { ActivityIcon, HeartIcon, MapPinIcon, UserIcon } from '../Icons';
 import './FilterPanel.css';
 
@@ -20,7 +21,7 @@ const FilterPanel: React.FC = () => {
     const members = currentTree?.members ?? [];
     const spouses = currentTree?.relationships.spouses ?? [];
     return members.filter(m => {
-      if (m.deathYear !== null || m.age === null || m.gender === 'unknown') return false;
+      if (isMemberDeceased(m) || m.age === null || m.gender === 'unknown') return false;
       if (m.age < (m.gender === 'female' ? 18 : 21)) return false;
       return !spouses.some(r => (r.spouse1Id === m.id || r.spouse2Id === m.id) && r.status === 'current');
     }).length;

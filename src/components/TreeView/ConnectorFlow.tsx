@@ -1,9 +1,10 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { DisplaySettings, StyledFamilyMember, StyledRelationships } from '../../types/FamilyTypes';
 import { TreeNode, computeLineage } from '../../processing/treeBuilder';
+import { isMemberDeceased } from '../../processing/ageCalculation';
 import './ConnectorFlow.css';
 
-/** Anyone with no death year is living, unless born so long ago that the year is just missing. */
+/** Avoid animating historical branches whose death information was never recorded. */
 const MAX_PLAUSIBLE_AGE = 110;
 const CORNER_RADIUS = 14;
 const SPEED_FACTOR: Record<DisplaySettings['connectorSpeed'], number> = { slow: 2, normal: 1, fast: 0.55 };
@@ -87,7 +88,7 @@ const ConnectorFlow: React.FC<ConnectorFlowProps> = ({
   const livingParentOf = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const living = new Set(members
-      .filter(m => m.deathYear == null && !(m.birthYear && currentYear - m.birthYear > MAX_PLAUSIBLE_AGE))
+      .filter(m => !isMemberDeceased(m) && !(m.birthYear && currentYear - m.birthYear > MAX_PLAUSIBLE_AGE))
       .map(m => m.id));
     const parents = new Map<string, Set<string>>();
     const add = (parentId: string, childId: string) => {

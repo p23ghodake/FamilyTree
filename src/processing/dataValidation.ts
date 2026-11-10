@@ -14,6 +14,7 @@ import {
   RawParentChildRelation,
 } from '../types/FamilyTypes';
 import { normalizeDisplaySettings } from './displaySettings';
+import { eventDate, isDateDefinitelyBefore, validateEventDate } from './dateValidation';
 
 const VALID_GENDERS = new Set(['male', 'female', 'unknown']);
 
@@ -119,6 +120,16 @@ function validateMember(
   }
   if (member.birthYear !== null && typeof member.birthYear !== 'number') member.birthYear = null;
   if (member.deathYear !== null && typeof member.deathYear !== 'number') member.deathYear = null;
+  if (member.isDeceased !== undefined && typeof member.isDeceased !== 'boolean') {
+    return { error: `Member "${member.id}" has an invalid deceased status.` };
+  }
+  for (const kind of ['birth', 'death'] as const) {
+    const error = validateEventDate(member[`${kind}Year`], member[`${kind}Date`]);
+    if (error) return { error: `Member "${member.id}" ${kind} ${error}` };
+  }
+  if (isDateDefinitelyBefore(eventDate(member.deathYear, member.deathDate), eventDate(member.birthYear, member.birthDate))) {
+    return { error: `Member "${member.id}" has a death date before birth.` };
+  }
 
   const safeImage = sanitizeImageUrl(member.imageUrl);
   if (member.imageUrl && !safeImage) {
@@ -200,6 +211,15 @@ function validateTree(raw: unknown, index: number, warnings: string[]): RawFamil
     }
     return ok;
   });
+
+  for (const relation of validSpouses as unknown as RawSpouseRelation[]) {
+    const marriageError = validateEventDate(relation.marriageYear, relation.marriageDate);
+    const endError = validateEventDate(relation.endYear, relation.endDate);
+    if (marriageError || endError) return { error: `${treeLabel}: marriage ${marriageError ?? endError}` };
+    if (isDateDefinitelyBefore(eventDate(relation.endYear, relation.endDate), eventDate(relation.marriageYear, relation.marriageDate))) {
+      return { error: `${treeLabel}: a marriage ends before it begins.` };
+    }
+  }
 
   const tree: RawFamilyTree = {
     familyTreeId: raw.familyTreeId,

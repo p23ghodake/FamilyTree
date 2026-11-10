@@ -11,6 +11,8 @@ export interface RawFamilyMember {
   gender: 'male' | 'female' | 'unknown';
   birthYear: number | null;
   deathYear: number | null;
+  /** Records deceased status even when the death date is unknown. */
+  isDeceased?: boolean;
   /** Full birth date in ISO format: "YYYY-MM-DD", "YYYY-MM", or omitted if only year known */
   birthDate?: string | null;
   /** Full death date in ISO format: "YYYY-MM-DD", "YYYY-MM", or omitted if only year known */

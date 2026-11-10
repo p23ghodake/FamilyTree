@@ -6,7 +6,8 @@ import {
   StyledFamilyTree,
   StyledFamilyMember,
 } from '../types/FamilyTypes';
-import { computeAge, getAgeCategory } from './ageCalculation';
+import { computeAge, getAgeCategory, isMemberDeceased } from './ageCalculation';
+import { yearFromDate } from './dateValidation';
 import { detectGenerations } from './generationDetection';
 import { getTreeAccent, getNodeColors } from './nodeStyling';
 import { getImageConfig } from './imageRules';
@@ -72,7 +73,11 @@ function enrichMembersFromRelationships(tree: RawFamilyTree): RawFamilyMember[] 
 export function processAllFamilyData(raw: RawFamilyData): ProcessedFamilyData {
   const familyTreesStyled: StyledFamilyTree[] = raw.familyTrees.map((tree, treeIndex) => {
     // Enrich members from separate relationships (if present)
-    const enrichedMembers = enrichMembersFromRelationships(tree);
+    const enrichedMembers = enrichMembersFromRelationships(tree).map(member => ({
+      ...member,
+      birthYear: member.birthYear ?? yearFromDate(member.birthDate),
+      deathYear: member.deathYear ?? yearFromDate(member.deathDate),
+    }));
 
     // Generation detection
     const generationMap = detectGenerations(enrichedMembers);
@@ -82,7 +87,7 @@ export function processAllFamilyData(raw: RawFamilyData): ProcessedFamilyData {
 
     // Process each member
     const members: StyledFamilyMember[] = enrichedMembers.map(m => {
-      const age = computeAge(m.birthYear, m.deathYear);
+      const age = computeAge(m.birthYear, m.deathYear, isMemberDeceased(m));
       const ageCategory = getAgeCategory(age);
       const generationIndex = generationMap.get(m.id) ?? null;
       const colors = getNodeColors(ageCategory, treeAccent.hex);

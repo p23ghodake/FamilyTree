@@ -222,7 +222,7 @@ describe('search panel', () => {
     render(<FloatingSearch />);
     expect(screen.getByRole('status').textContent).toBe(en.tracerStep1);
     act(() => screen.getByRole('textbox', { name: en.searchPlaceholder }).focus());
-    fireEvent.mouseDown(results()[2]);
+    fireEvent.click(results()[2]);
     expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_REL_NODE', payload: 'child' });
     expect(screen.getByRole('textbox')).toBeTruthy();
   });
