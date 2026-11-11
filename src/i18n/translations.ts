@@ -366,6 +366,21 @@ type Translations = {
   posterShowYears: string;
   posterAgedPaper: string;
   posterLifeYears: (birth: number | null, death: number | null) => string;
+  posterCustomize: string;
+  posterCloseCustomization: string;
+  posterFamilyControls: string;
+  posterAppearance: string;
+  posterLineageHint: string;
+  posterFindPerson: string;
+  posterNoMatches: string;
+  posterChooseMatch: string;
+  posterNameStyle: string;
+  posterHeritageNames: string;
+  posterReadableNames: string;
+  posterFitShort: string;
+  posterZoomLevel: string;
+  posterResetView: string;
+  posterDone: string;
   headerViews: string;
   headerAddMember: string;
   headerShareTree: string;
@@ -798,6 +813,21 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterShowYears: 'Show years',
     posterAgedPaper: 'Aged paper',
     posterLifeYears: (birth, death) => (birth && death ? `${birth} – ${death}` : birth ? `b. ${birth}` : death ? `d. ${death}` : ''),
+    posterCustomize: 'Customize',
+    posterCloseCustomization: 'Close customization',
+    posterFamilyControls: 'Family',
+    posterAppearance: 'Appearance',
+    posterLineageHint: 'This poster follows the sons’ line. Daughters are shown without expanding their families.',
+    posterFindPerson: 'Find a starting person',
+    posterNoMatches: 'No matching starting people.',
+    posterChooseMatch: 'Choose a matching person',
+    posterNameStyle: 'Name style',
+    posterHeritageNames: 'Heritage script',
+    posterReadableNames: 'Readable',
+    posterFitShort: 'Fit',
+    posterZoomLevel: 'Zoom level',
+    posterResetView: 'Reset to 100% view',
+    posterDone: 'Done',
     headerViews: 'Views',
     headerAddMember: 'Add member',
     headerShareTree: 'Share tree',
@@ -1229,6 +1259,21 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterShowYears: 'वर्षे दाखवा',
     posterAgedPaper: 'जुना कागद',
     posterLifeYears: (birth, death) => (birth && death ? `${birth} – ${death}` : birth ? `जन्म ${birth}` : death ? `निधन ${death}` : ''),
+    posterCustomize: 'सानुकूल करा',
+    posterCloseCustomization: 'सानुकूल पर्याय बंद करा',
+    posterFamilyControls: 'कुटुंब',
+    posterAppearance: 'स्वरूप',
+    posterLineageHint: 'हे पोस्टर मुलांच्या वंशरेषेनुसार आहे. मुली दाखवल्या जातात, पण त्यांच्या कुटुंबांचा विस्तार केला जात नाही.',
+    posterFindPerson: 'सुरुवातीची व्यक्ती शोधा',
+    posterNoMatches: 'जुळणारी सुरुवातीची व्यक्ती सापडली नाही.',
+    posterChooseMatch: 'जुळणारी व्यक्ती निवडा',
+    posterNameStyle: 'नावांची शैली',
+    posterHeritageNames: 'पारंपरिक शैली',
+    posterReadableNames: 'सुवाच्य',
+    posterFitShort: 'बसवा',
+    posterZoomLevel: 'झूम पातळी',
+    posterResetView: 'दृश्य १००% वर आणा',
+    posterDone: 'पूर्ण',
     headerViews: 'दृश्ये',
     headerAddMember: 'सदस्य जोडा',
     headerShareTree: 'वृक्ष शेअर करा',

@@ -195,10 +195,11 @@ it('lets the poster switch style, show life years and drop the paper texture', (
   context.currentTree = people.familyTreesStyled[0];
   context.state = { ...context.state, data: people, selectedMemberId: 'ram' };
   const view = render(<PosterModal onClose={jest.fn()} />);
-  const style = screen.getByLabelText(t.posterStyle) as HTMLSelectElement;
-  expect(Array.from(style.options).map(o => o.text)).toEqual(Object.values(t.posterThemeNames));
-  fireEvent.change(style, { target: { value: 'banyan' } });
-  expect(style.value).toBe('banyan');
+  expect(screen.getByRole('group', { name: t.posterStyle })).toBeTruthy();
+  expect(screen.getAllByRole('radio').map(radio => (radio as HTMLInputElement).value)).toEqual(['autumn', 'spring', 'summer', 'banyan']);
+  const banyan = screen.getByRole('radio', { name: t.posterThemeNames.banyan }) as HTMLInputElement;
+  fireEvent.click(banyan);
+  expect(banyan.checked).toBe(true);
 
   expect(screen.queryByText(t.posterLifeYears(1920, 1990))).toBeNull();
   fireEvent.click(screen.getByLabelText(t.posterShowYears));

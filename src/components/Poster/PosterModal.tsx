@@ -7,11 +7,13 @@ import { useAuth } from '../../lib/AuthContext';
 import { useDialog } from '../useDialog';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { buildPosterLayout, findPosterRoot, PosterNode } from '../../processing/posterLayout';
-import { DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, PrinterIcon, XIcon } from '../Icons';
+import { DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, PrinterIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
 import {
-  BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, POSTER_THEMES, PosterTheme,
+  BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, PosterTheme,
   rng, SHADOW_OFFSET, SOIL, THEMES,
 } from './posterArt';
+import PosterThemePicker from './PosterThemePicker';
+import { getPosterCardFootprint, getPosterNameFont, getPosterTextMetrics, PosterNameFont, PosterNameStyle, PosterTextMetrics } from './posterText';
 import { RawFamilyMember } from '../../types/FamilyTypes';
 import greatVibesLatin from '@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2';
 import yatraOneDevanagari from '@fontsource/yatra-one/files/yatra-one-devanagari-400-normal.woff2';
@@ -25,15 +27,16 @@ const POSTER_RATIO = 0.62;
 const ANCESTOR_RATIO = 0.45;
 const COUPLE_H = 80;
 const CARD_PAD_Y = 11;
-const NAME_ROW = 22;
 const YEARS_ROW = 13;
-const HEART_ROW = 14;
+const HEART_ROW = 18;
 const WIFE_GAP = 2;
 /** Cards are nudged up or down a little so generations don't sit on ruler-straight lines. */
 const CARD_JITTER = 8;
 const MIN_CARD_W = 84;
-const MAX_CARD_W = 158;
 const CARD_PAD = 30;
+const CARD_GAP = 16;
+const TEXT_GAP = 4;
+const YEARS_SPACING = 0.3;
 const SIDE_PAD = 110;
 const TOP_PAD = 150;
 const TRUNK_H = 90;
@@ -86,10 +89,11 @@ const SVG_STYLE = `
   @font-face { font-family: '${FONT.en.family}'; src: url(${greatVibesLatin}) format('woff2'); }
   @font-face { font-family: '${FONT.mr.family}'; src: url(${yatraOneDevanagari}) format('woff2'); unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+25CC, U+A8E0-A8FF; }
   @font-face { font-family: '${FONT.mr.family}'; src: url(${yatraOneLatin}) format('woff2'); unicode-range: U+0000-00FF; }
+  .poster-card text { text-rendering: geometricPrecision; -webkit-text-size-adjust: none; text-size-adjust: none; }
   .poster-card__name--en { font-family: '${FONT.en.family}', 'Brush Script MT', cursive; font-size: ${FONT.en.size}px; }
   .poster-card__name--mr { font-family: '${FONT.mr.family}', 'Nirmala UI', 'Mangal', sans-serif; font-size: ${FONT.mr.size}px; }
   .poster-card__heart { font-family: Georgia, serif; font-size: 12px; fill: ${HEART}; }
-  .poster-card__years { font-family: ${YEARS_FONT.family}; font-size: ${YEARS_FONT.size}px; letter-spacing: 0.3px; }
+  .poster-card__years { font-family: ${YEARS_FONT.family}; font-size: ${YEARS_FONT.size}px; letter-spacing: ${YEARS_SPACING}px; }
   .poster-title-text { font-family: 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive; fill: ${BARK_DARK}; }
 `;
 
@@ -97,7 +101,9 @@ const SVG_STYLE = `
 async function inlineFonts(svgText: string): Promise<string> {
   let out = svgText;
   for (const url of FONT_FILES) {
-    const blob = await (await fetch(url)).blob();
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Poster font download failed');
+    const blob = await response.blob();
     const data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -111,23 +117,27 @@ async function inlineFonts(svgText: string): Promise<string> {
 
 interface CardPerson { id: string; name: string; years: string }
 type CardRow = { kind: 'name' | 'years' | 'heart'; person: number; baseline: number };
+interface CardLayout { people: CardPerson[]; rows: CardRow[]; h: number; w: number }
 
 /** Stacks the names (and optional years) on a card: the man first, then a heart, then each wife. */
-function cardRows(people: CardPerson[]): { rows: CardRow[]; h: number } {
+function cardRows(people: CardPerson[], font: PosterNameFont, fontRevision: number): { rows: CardRow[]; h: number } {
   const rows: CardRow[] = [];
   let y = CARD_PAD_Y;
   people.forEach((p, i) => {
     if (i === 1) {
-      rows.push({ kind: 'heart', person: i, baseline: y + 11 });
-      y += HEART_ROW;
+      const heart = textMetrics('♥', YEARS_FONT.family, 12, fontRevision);
+      rows.push({ kind: 'heart', person: i, baseline: y + heart.ascent });
+      y += Math.max(HEART_ROW, heart.ascent + heart.descent + TEXT_GAP);
     } else if (i > 1) {
       y += WIFE_GAP;
     }
-    rows.push({ kind: 'name', person: i, baseline: y + 17 });
-    y += NAME_ROW;
+    const name = textMetrics(p.name, font.family, font.size, fontRevision);
+    rows.push({ kind: 'name', person: i, baseline: y + name.ascent });
+    y += Math.max(font.lineHeight, name.ascent + name.descent + TEXT_GAP);
     if (p.years) {
-      rows.push({ kind: 'years', person: i, baseline: y + 8 });
-      y += YEARS_ROW;
+      const years = textMetrics(p.years, YEARS_FONT.family, YEARS_FONT.size, fontRevision);
+      rows.push({ kind: 'years', person: i, baseline: y + years.ascent });
+      y += Math.max(YEARS_ROW, years.ascent + years.descent + TEXT_GAP);
     }
   });
   return { rows, h: y + CARD_PAD_Y };
@@ -156,41 +166,119 @@ function serializeForExport(svg: SVGSVGElement, width: number, height: number): 
   return new XMLSerializer().serializeToString(clone);
 }
 
-/** Long names may shrink to this share of the card font before their letters are squeezed. */
-const MIN_NAME_SCALE = 0.72;
-
-/** Fits one name into the card: names that fit keep their size; longer ones shrink, then squeeze as a last resort. */
-function fitName(text: string, lang: 'en' | 'mr', room: number): React.SVGProps<SVGTextElement> {
-  const natural = nameWidth(text, lang);
-  if (natural <= room) return {};
-  const scale = Math.max(MIN_NAME_SCALE, room / natural);
-  const fit: React.SVGProps<SVGTextElement> = { style: { fontSize: FONT[lang].size * scale } };
-  if (natural * scale > room) Object.assign(fit, { textLength: room, lengthAdjust: 'spacingAndGlyphs' });
-  return fit;
-}
-
 let measureContext: CanvasRenderingContext2D | null | undefined;
+let measureSvgText: SVGTextElement | null | undefined;
+const textMeasurements = new Map<string, PosterTextMetrics>();
 
-/** Rendered text width, falling back to an estimate where canvas is unavailable. */
-function textWidth(text: string, font: string, size: number): number {
-  if (measureContext === undefined) measureContext = document.createElement('canvas').getContext('2d');
-  if (!measureContext) return text.length * size * 0.5;
-  measureContext.font = `${size}px ${font}`;
-  return measureContext.measureText(text).width;
+function resetTextMeasurements(): void {
+  textMeasurements.clear();
+  measureContext = undefined;
+  measureSvgText?.ownerSVGElement?.remove();
+  measureSvgText = undefined;
 }
 
-const nameWidth = (text: string, lang: 'en' | 'mr') => textWidth(text, `'${FONT[lang].family}', serif`, FONT[lang].size);
+/** SVG geometry is the fallback when canvas or its ink-bound metrics are unavailable. */
+function svgTextMetrics(text: string, font: string, size: number): Partial<TextMetrics> | null {
+  if (measureSvgText === undefined) {
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    if (typeof label.getBBox !== 'function') measureSvgText = null;
+    else {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('width', '1');
+      svg.setAttribute('height', '1');
+      svg.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;text-rendering:geometricPrecision;-webkit-text-size-adjust:none;text-size-adjust:none';
+      label.setAttribute('text-anchor', 'middle');
+      svg.appendChild(label);
+      document.body.appendChild(svg);
+      measureSvgText = label;
+    }
+  }
+  if (!measureSvgText) return null;
+  measureSvgText.setAttribute('font-family', font);
+  measureSvgText.setAttribute('font-size', String(size));
+  measureSvgText.textContent = text;
+  try {
+    const box = measureSvgText.getBBox();
+    return {
+      width: measureSvgText.getComputedTextLength(),
+      actualBoundingBoxLeft: -box.x, actualBoundingBoxRight: box.x + box.width,
+      actualBoundingBoxAscent: -box.y, actualBoundingBoxDescent: box.y + box.height,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function textMetrics(text: string, font: string, size: number, fontRevision = 0): PosterTextMetrics {
+  const key = `${fontRevision}:${size}:${font}:${text}`;
+  const cached = textMeasurements.get(key);
+  if (cached) return cached;
+  if (measureContext === undefined) {
+    try { measureContext = document.createElement('canvas').getContext('2d'); }
+    catch { measureContext = null; }
+  }
+  let measured: Partial<TextMetrics> | undefined;
+  if (measureContext) {
+    measureContext.font = `${size}px ${font}`;
+    measureContext.textAlign = 'center';
+    measureContext.textBaseline = 'alphabetic';
+    measured = measureContext.measureText(text);
+  }
+  if (!measured || ![measured.actualBoundingBoxLeft, measured.actualBoundingBoxRight, measured.actualBoundingBoxAscent, measured.actualBoundingBoxDescent].every(value => value !== undefined && Number.isFinite(value))) {
+    measured = svgTextMetrics(text, font, size) ?? measured;
+  }
+  const metrics = getPosterTextMetrics(measured ?? { width: Array.from(text).length * size }, size);
+  if (textMeasurements.size >= 5000) textMeasurements.clear();
+  textMeasurements.set(key, metrics);
+  return metrics;
+}
+
+function textWidth(text: string, font: string, size: number, fontRevision = 0): number {
+  return textMetrics(text, font, size, fontRevision).width;
+}
+
+function cardTilt(id: string): number {
+  return Number(((rng(`poster-card:${id}`)() - 0.5) * 5).toFixed(1));
+}
+
+function useCompactPoster(): boolean {
+  const [compact, setCompact] = useState(() => window.matchMedia ? window.matchMedia('(max-width: 720px)').matches : window.innerWidth <= 720);
+  useEffect(() => {
+    const query = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+    const update = () => setCompact(query ? query.matches : window.innerWidth <= 720);
+    update();
+    if (!query) {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+    if (query.addEventListener) {
+      query.addEventListener('change', update);
+      return () => query.removeEventListener('change', update);
+    }
+    query.addListener(update);
+    return () => query.removeListener(update);
+  }, []);
+  return compact;
+}
 
 interface Props { onClose: () => void; returnFocus?: () => HTMLElement | null; }
 
 const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const { state, currentTree } = useFamilyTree();
+  const hasTree = !!currentTree;
   const { t, lang } = useLanguage();
   const { isAdmin } = useAuth();
   const dialogRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  useDialog(dialogRef, onClose, true, returnFocus);
+  const settingsRef = useRef<HTMLElement>(null);
+  const customizeRef = useRef<HTMLButtonElement>(null);
+  const compact = useCompactPoster();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  useDialog(dialogRef, () => { if (compact && settingsOpen) closeSettings(); else onClose(); }, hasTree, returnFocus);
+  useDialog(settingsRef, closeSettings, compact && settingsOpen && hasTree, () => customizeRef.current);
 
   const members = useMemo(() => currentTree?.members ?? [], [currentTree]);
   const parentChild = useMemo(() => currentTree?.relationships.parentChild ?? [], [currentTree]);
@@ -205,25 +293,36 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   });
   const [generations, setGenerations] = useState(4);
   const [theme, setTheme] = useState<PosterTheme>('autumn');
+  const [nameStyle, setNameStyle] = useState<PosterNameStyle>('heritage');
+  const [personQuery, setPersonQuery] = useState('');
   const [showYears, setShowYears] = useState(false);
   // Paper texture is realistic but noisy, which makes the PNG several times larger.
   const [agedPaper, setAgedPaper] = useState(true);
   const [fit, setFit] = useState(true);
   const [zoom, setZoom] = useState(1);
+  const [fitScale, setFitScale] = useState(1);
+  const [viewReset, setViewReset] = useState(0);
   const [far, setFar] = useState(false);
   const zoomAnchor = useRef<{ fx: number; fy: number; cx: number; cy: number } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  // Card widths are measured with the card fonts, so re-render once they have loaded.
-  const [, setFontsLoaded] = useState(0);
+  // Font loading can change both the ink bounds and the card's required spacing.
+  const [fontRevision, setFontsLoaded] = useState(0);
   useEffect(() => {
+    if (!hasTree) return;
     const fonts = document.fonts;
-    if (!fonts) return;
     let live = true;
-    Promise.all([FONT.en, FONT.mr].map(f => fonts.load(`${f.size}px '${f.family}'`, 'Aa अ')))
-      .then(() => { if (live) setFontsLoaded(n => n + 1); })
-      .catch(() => undefined);
-    return () => { live = false; };
-  }, []);
+    const refresh = () => { if (live) { resetTextMeasurements(); setFontsLoaded(n => n + 1); } };
+    if (fonts) {
+      Promise.all([FONT.en, FONT.mr].map(f => fonts.load(`${f.size}px '${f.family}'`, 'Aa अ')))
+        .then(refresh).catch(refresh);
+      if (typeof fonts.addEventListener === 'function') fonts.addEventListener('loadingdone', refresh);
+    }
+    return () => {
+      live = false;
+      if (fonts && typeof fonts.removeEventListener === 'function') fonts.removeEventListener('loadingdone', refresh);
+      resetTextMeasurements();
+    };
+  }, [hasTree]);
 
   const nameOf = useCallback(
     (id: string) => { const m = byId.get(id); return m ? getDisplayFirstName(m, lang) : ''; },
@@ -242,6 +341,16 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       })
       .sort((a, b) => a.label.localeCompare(b.label, lang === 'mr' ? 'mr' : 'en'));
   }, [members, parentChild, byId, nameOf, lang]);
+  const matchingPeople = useMemo(() => {
+    const query = personQuery.trim().toLocaleLowerCase(lang);
+    return personOptions.filter(person => person.label.toLocaleLowerCase(lang).includes(query));
+  }, [personOptions, personQuery, lang]);
+  useEffect(() => {
+    if (personOptions.some(person => person.id === rootId)) return;
+    const selected = state.selectedMemberId;
+    setRootId(selected && byId.get(selected)?.gender === 'male' ? selected
+      : findPosterRoot(members, parentChild) ?? members.find(member => member.gender === 'male')?.id ?? '');
+  }, [personOptions, rootId, state.selectedMemberId, byId, members, parentChild]);
 
   const familyName = useMemo(() => {
     const counts = new Map<string, number>();
@@ -266,13 +375,32 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       })),
     [byId, lang, showYears, t],
   );
+  const nameFont = getPosterNameFont(nameStyle, lang);
+  const cardLayouts = useMemo(() => new Map<string, CardLayout>(layout.nodes.filter(n => n.kind === 'person').map(n => {
+    const people = peopleOf(n);
+    const { rows, h } = cardRows(people, nameFont, fontRevision);
+    const textW = Math.max(0,
+      ...people.map(person => textWidth(person.name, nameFont.family, nameFont.size, fontRevision)),
+      ...people.map(person => person.years ? textWidth(person.years, YEARS_FONT.family, YEARS_FONT.size, fontRevision) + Math.max(0, Array.from(person.years).length - 1) * YEARS_SPACING : 0),
+    );
+    return [n.id, { people, rows, h, w: Math.max(MIN_CARD_W, textW + CARD_PAD) }];
+  })), [layout, peopleOf, nameFont, fontRevision]);
   const cardH = useCallback(
-    (n: PosterNode) => (n.kind === 'fork' ? 0 : cardRows(peopleOf(n)).h),
-    [peopleOf],
+    (n: PosterNode) => (n.kind === 'fork' ? 0 : cardLayouts.get(n.id)?.h ?? 0),
+    [cardLayouts],
   );
-  const tallestCard = useMemo(() => Math.max(COUPLE_H, ...layout.nodes.map(cardH)), [layout, cardH]);
+  const { slotW, tallestCard } = useMemo(() => {
+    let slotW = SLOT_W;
+    let tallestCard = COUPLE_H;
+    cardLayouts.forEach((card, id) => {
+      const footprint = getPosterCardFootprint(card.w, card.h, cardTilt(id));
+      slotW = Math.max(slotW, footprint.width + CARD_GAP);
+      tallestCard = Math.max(tallestCard, footprint.height);
+    });
+    return { slotW, tallestCard };
+  }, [cardLayouts]);
 
-  const contentW = layout.slots * SLOT_W;
+  const contentW = layout.slots * slotW;
   const width = Math.max(contentW + SIDE_PAD * 2, MIN_W);
   const offsetX = (width - contentW) / 2;
   const titleSize = Math.min(96, Math.max(40, width / 28));
@@ -294,7 +422,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
 
   const posOf = useCallback(
     (n: PosterNode): Point => {
-      const x = offsetX + n.x * SLOT_W;
+      const x = offsetX + n.x * slotW;
       return {
         x,
         y: n.depth <= focusDepth
@@ -303,7 +431,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
             + (n.kind === 'person' ? (rng(n.id)() - 0.5) * 2 * CARD_JITTER : 0),
       };
     },
-    [offsetX, rootY, levelH, ancestorGap, focusDepth],
+    [offsetX, slotW, rootY, levelH, ancestorGap, focusDepth],
   );
 
   const art = useMemo(
@@ -328,10 +456,11 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     const sheet = sheetRef.current;
     if (!scroller || !sheet) return;
     const rect = sheet.getBoundingClientRect();
-    const fitScale = Math.min(rect.width / width, rect.height / height);
-    const current = fit ? (fitScale > 0 ? fitScale : 1) : zoom;
-    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current * factor));
-    if (next === current && !fit) return;
+    const measuredFit = Math.min(rect.width / width, rect.height / height);
+    const current = fit ? (measuredFit > 0 ? measuredFit : fitScale) : zoom;
+    const minimum = Math.min(MIN_ZOOM, fit ? current : fitScale);
+    const next = Math.min(MAX_ZOOM, Math.max(minimum, current * factor));
+    if (next === current) return;
     const box = scroller.getBoundingClientRect();
     const cx = clientX ?? box.left + box.width / 2;
     const cy = clientY ?? box.top + box.height / 2;
@@ -342,13 +471,13 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
     zoomAnchor.current = { fx: w > 0 ? clamp01((cx - left) / w) : 0.5, fy: h > 0 ? clamp01((cy - top) / h) : 0.5, cx, cy };
     flushSync(() => { setFit(false); setZoom(next); });
-  }, [fit, zoom, width, height]);
+  }, [fit, zoom, fitScale, width, height]);
   const zoomByRef = useRef(zoomBy);
   zoomByRef.current = zoomBy;
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (!el || fit) return;
+    if (!hasTree || !el || fit) return;
     const anchor = zoomAnchor.current;
     zoomAnchor.current = null;
     if (anchor && sheetRef.current) {
@@ -359,30 +488,32 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     }
     el.scrollLeft = rootPos.x * zoom - el.clientWidth / 2;
     el.scrollTop = el.scrollHeight;
-  }, [fit, zoom, rootPos.x, layout]);
+  }, [fit, zoom, rootPos.x, rootPos.y, layout, viewReset, hasTree]);
 
   // Hide fine detail on screen once the poster is shown very small. The class sits on the wrapper, not the
   // <svg>, so the PNG export (which clones only the <svg>) and print always keep full detail.
   useLayoutEffect(() => {
     const sheet = sheetRef.current;
-    if (!sheet) return;
+    if (!hasTree || !sheet) return;
     const measure = () => {
       if (!fit) return setFar(zoom < FAR_SCALE);
       const rect = sheet.getBoundingClientRect();
-      setFar(rect.width > 0 && rect.height > 0 && Math.min(rect.width / width, rect.height / height) < FAR_SCALE);
+      const measured = Math.min(rect.width / width, rect.height / height);
+      setFitScale(measured > 0 ? measured : 1);
+      setFar(measured > 0 && measured < FAR_SCALE);
     };
     measure();
     if (!fit || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(measure);
     observer.observe(sheet);
     return () => observer.disconnect();
-  }, [fit, zoom, width, height]);
+  }, [fit, zoom, width, height, hasTree]);
 
   // Ctrl/⌘ + wheel (also a trackpad pinch) and a two-finger pinch zoom the poster. These need
   // non-passive native listeners so the browser's own page zoom and scrolling can be cancelled.
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!hasTree || !el) return;
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
@@ -413,7 +544,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       el.removeEventListener('touchend', onTouchEnd);
       el.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, []);
+  }, [hasTree]);
 
   const handleDownload = useCallback(async () => {
     const svg = sheetRef.current?.querySelector('svg');
@@ -421,18 +552,27 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     setIsExporting(true);
     let svgUrl: string | null = null;
     try {
-      const serialized = serializeForExport(svg, exportSize.width, exportSize.height);
+      if (document.fonts) {
+        await document.fonts.ready;
+        resetTextMeasurements();
+        flushSync(() => setFontsLoaded(revision => revision + 1));
+      }
+      const [, , logicalW, logicalH] = (svg.getAttribute('viewBox') ?? '').split(/\s+/).map(Number);
+      const scale = exportScale(logicalW, logicalH);
+      const imageW = Math.round(logicalW * scale);
+      const imageH = Math.round(logicalH * scale);
+      const serialized = serializeForExport(svg, imageW, imageH);
       const withFonts = await inlineFonts(serialized);
       svgUrl = URL.createObjectURL(new Blob([withFonts], { type: 'image/svg+xml' }));
       const img = new Image();
       img.src = svgUrl;
       await img.decode();
       const canvas = document.createElement('canvas');
-      canvas.width = exportSize.width;
-      canvas.height = exportSize.height;
+      canvas.width = imageW;
+      canvas.height = imageH;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas is not available');
-      ctx.drawImage(img, 0, 0, exportSize.width, exportSize.height);
+      ctx.drawImage(img, 0, 0, imageW, imageH);
       const png = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
       if (!png) throw new Error('PNG encoding failed');
       const link = document.createElement('a');
@@ -447,7 +587,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       if (svgUrl) URL.revokeObjectURL(svgUrl);
       setIsExporting(false);
     }
-  }, [exportSize, nameOf, rootId, t]);
+  }, [nameOf, rootId, t]);
 
   const handlePrint = useCallback(() => {
     if (!isAdmin) return;
@@ -487,56 +627,20 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
             <span id="poster-title" className="poster-header__title">{t.posterTitle}</span>
           </div>
 
-          <div className="poster-controls">
-            <label className="poster-field">
-              <span>{t.posterStartFrom}</span>
-              <select value={rootId} onChange={e => setRootId(e.target.value)}>
-                {personOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
-            </label>
-            <label className="poster-field">
-              <span>{t.posterGenerations}</span>
-              <select value={generations} onChange={e => setGenerations(Number(e.target.value))}>
-                {GENERATION_CHOICES.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </label>
-            <label className="poster-field">
-              <span>{t.posterStyle}</span>
-              <select value={theme} onChange={e => setTheme(e.target.value as PosterTheme)}>
-                {POSTER_THEMES.map(th => <option key={th} value={th}>{t.posterThemeNames[th]}</option>)}
-              </select>
-            </label>
-            <label className="poster-field poster-field--check">
-              <input type="checkbox" checked={showYears} onChange={e => setShowYears(e.target.checked)} />
-              <span>{t.posterShowYears}</span>
-            </label>
-            <label className="poster-field poster-field--check">
-              <input type="checkbox" checked={agedPaper} onChange={e => setAgedPaper(e.target.checked)} />
-              <span>{t.posterAgedPaper}</span>
-            </label>
-            <button type="button" className="poster-action" aria-pressed={fit} onClick={() => { setZoom(1); setFit(v => !v); }}>
-              <Maximize2Icon size={14} /><span>{t.posterFit}</span>
-            </button>
-            <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}>
-              <MinusIcon size={14} />
-            </button>
-            <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(ZOOM_STEP)} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}>
-              <PlusIcon size={14} />
-            </button>
-          </div>
-
           <div className="poster-header__actions">
             <button
               type="button"
-              className="poster-action"
+              className="poster-action poster-action--primary"
               onClick={handleDownload}
               disabled={isExporting || layout.nodes.length === 0}
+              aria-label={t.posterDownload}
+              aria-busy={isExporting}
               title={t.posterDownloadHint(exportSize.width, exportSize.height)}
             >
               <DownloadIcon size={15} /><span>{t.posterDownload}</span>
             </button>
             {isAdmin && (
-              <button type="button" className="poster-action" onClick={handlePrint} disabled={layout.nodes.length === 0}>
+              <button type="button" className="poster-action poster-action--print" onClick={handlePrint} disabled={isExporting || layout.nodes.length === 0} aria-label={t.menuPrint} title={t.menuPrint}>
                 <PrinterIcon size={15} /><span>{t.menuPrint}</span>
               </button>
             )}
@@ -546,7 +650,60 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
           </div>
         </div>
 
-        <div ref={scrollRef} className={`poster-scroll${fit ? ' poster-scroll--fit' : ''}`}>
+        <div className="poster-workspace">
+          {compact && settingsOpen && <button type="button" className="poster-settings-scrim" tabIndex={-1} aria-hidden="true" onClick={closeSettings} />}
+          <aside ref={settingsRef} id="poster-settings" className={`poster-sidebar${compact ? ' poster-sidebar--sheet' : ''}`} hidden={compact && !settingsOpen} role={compact ? 'dialog' : 'complementary'} aria-modal={compact ? true : undefined} aria-labelledby="poster-customize-title">
+            <div className="poster-sidebar__header">
+              <h2 id="poster-customize-title">{t.posterCustomize}</h2>
+              {compact && settingsOpen && <button type="button" className="poster-close" onClick={closeSettings} aria-label={t.posterCloseCustomization} data-autofocus><XIcon size={18} /></button>}
+            </div>
+            <fieldset className="poster-sidebar__body" disabled={isExporting || (compact && !settingsOpen)}>
+              <fieldset className="poster-settings-group">
+                <legend>{t.posterFamilyControls}</legend>
+                <label className="poster-field">
+                  <span>{t.posterFindPerson}</span>
+                  <input type="search" value={personQuery} onChange={e => setPersonQuery(e.target.value)} />
+                </label>
+                <label className="poster-field">
+                  <span>{t.posterStartFrom}</span>
+                  <select value={matchingPeople.some(person => person.id === rootId) ? rootId : ''} disabled={matchingPeople.length === 0} onChange={e => { setRootId(e.target.value); setPersonQuery(''); }}>
+                    {!matchingPeople.some(person => person.id === rootId) && <option value="" disabled>{t.posterChooseMatch}</option>}
+                    {matchingPeople.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}
+                  </select>
+                </label>
+                {matchingPeople.length === 0 && <p className="poster-field-hint" role="status">{t.posterNoMatches}</p>}
+                <label className="poster-field">
+                  <span>{t.posterGenerations}</span>
+                  <select value={generations} onChange={e => setGenerations(Number(e.target.value))}>
+                    {GENERATION_CHOICES.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </label>
+                <p className="poster-field-hint">{t.posterLineageHint}</p>
+              </fieldset>
+              <fieldset className="poster-settings-group">
+                <legend>{t.posterAppearance}</legend>
+                <PosterThemePicker theme={theme} onChange={setTheme} label={t.posterStyle} names={t.posterThemeNames} />
+                <label className="poster-field">
+                  <span>{t.posterNameStyle}</span>
+                  <select value={nameStyle} onChange={e => setNameStyle(e.target.value as PosterNameStyle)}>
+                    <option value="heritage">{t.posterHeritageNames}</option>
+                    <option value="readable">{t.posterReadableNames}</option>
+                  </select>
+                </label>
+                <label className="poster-field poster-field--check">
+                  <input type="checkbox" checked={showYears} onChange={e => setShowYears(e.target.checked)} />
+                  <span>{t.posterShowYears}</span>
+                </label>
+                <label className="poster-field poster-field--check">
+                  <input type="checkbox" checked={agedPaper} onChange={e => setAgedPaper(e.target.checked)} />
+                  <span>{t.posterAgedPaper}</span>
+                </label>
+              </fieldset>
+            </fieldset>
+            {compact && settingsOpen && <div className="poster-sidebar__footer"><button type="button" className="poster-action poster-action--primary" onClick={closeSettings}>{t.posterDone}</button></div>}
+          </aside>
+          <div className="poster-viewport">
+            <div ref={scrollRef} className={`poster-scroll${fit ? ' poster-scroll--fit' : ''}`}>
           {layout.nodes.length <= 1 && (
             <p className="poster-hint" role="status">{t.posterNoRelatives}</p>
           )}
@@ -682,14 +839,8 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                 const m = byId.get(n.id);
                 if (!m || n.kind === 'fork') return null;
                 const { x, y } = posOf(n);
-                const people = peopleOf(n);
+                const { people, w, rows, h } = cardLayouts.get(n.id)!;
                 const font = lang === 'mr' ? 'mr' : 'en';
-                const textW = Math.max(
-                  ...people.map(p => nameWidth(p.name, font)),
-                  ...people.map(p => (p.years ? textWidth(p.years, YEARS_FONT.family, YEARS_FONT.size) : 0)),
-                );
-                const w = Math.min(MAX_CARD_W, Math.max(MIN_CARD_W, textW + CARD_PAD));
-                const { rows, h } = cardRows(people);
                 const left = x - w / 2;
                 const top = y - h / 2;
                 const female = m.gender === 'female';
@@ -698,7 +849,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                 const nameClass = `poster-card__name--${font}`;
                 const holes = [left + w * 0.24, left + w * 0.76];
                 const nail = { x, y: top - 12 };
-                const tilt = (rng(`poster-card:${n.id}`)() - 0.5) * 5;
+                const tilt = cardTilt(n.id);
                 return (
                   <g key={`c-${n.id}`} className="poster-card" transform={`rotate(${tilt.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`}>
                     <title>{people.map(p => p.name).join(' ♥ ')}</title>
@@ -716,7 +867,11 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                       if (row.kind === 'years') {
                         return <text key={`y${p.id}`} x={x} y={top + row.baseline} textAnchor="middle" className="poster-card__years" fill={colors.text} opacity={0.75}>{p.years}</text>;
                       }
-                      return <text key={`n${p.id}`} x={x} y={top + row.baseline} textAnchor="middle" className={nameClass} fill={colors.text} {...fitName(p.name, font, w - CARD_PAD)}>{p.name}</text>;
+                      return (
+                        <text key={`n${p.id}`} x={x} y={top + row.baseline} textAnchor="middle" className={nameClass} fill={colors.text} style={{ fontFamily: nameFont.family, fontSize: nameFont.size }}>
+                          {p.name}
+                        </text>
+                      );
                     })}
                   </g>
                 );
@@ -747,6 +902,20 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                 ))}
               </g>
             </svg>
+          </div>
+            </div>
+            <div className="poster-preview-tools">
+              <div className="poster-zoom-dock" role="group" aria-label={t.posterZoomLevel}>
+                <button type="button" className="poster-action" aria-label={t.posterFit} title={t.posterFit} aria-pressed={fit} onClick={() => { zoomAnchor.current = null; setZoom(1); setFit(true); }}>
+                  <Maximize2Icon size={16} /><span>{t.posterFitShort}</span>
+                </button>
+                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={(fit ? fitScale : zoom) <= Math.min(MIN_ZOOM, fitScale)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}><MinusIcon size={16} /></button>
+                <output className="poster-zoom-value" aria-label={t.posterZoomLevel} aria-live="off">{Math.round((fit ? fitScale : zoom) * 100)}%</output>
+                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(ZOOM_STEP)} disabled={(fit ? fitScale : zoom) >= MAX_ZOOM} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}><PlusIcon size={16} /></button>
+                <button type="button" className="poster-action poster-action--icon" title={t.posterResetView} aria-label={t.posterResetView} onClick={() => { zoomAnchor.current = null; setFit(false); setZoom(1); setViewReset(value => value + 1); }}><RotateCcwIcon size={16} /></button>
+              </div>
+              {compact && <button ref={customizeRef} type="button" className="poster-action poster-customize-toggle" aria-controls="poster-settings" aria-expanded={settingsOpen} onClick={() => setSettingsOpen(true)}><SlidersHorizontalIcon size={17} /><span>{t.posterCustomize}</span></button>}
+            </div>
           </div>
         </div>
       </div>
