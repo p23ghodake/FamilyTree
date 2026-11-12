@@ -243,10 +243,11 @@ function cardTilt(id: string): number {
 }
 
 function useCompactPoster(): boolean {
-  const [compact, setCompact] = useState(() => window.matchMedia ? window.matchMedia('(max-width: 720px)').matches : window.innerWidth <= 720);
+  const media = '(max-width: 980px), (max-height: 560px)';
+  const [compact, setCompact] = useState(() => window.matchMedia ? window.matchMedia(media).matches : window.innerWidth <= 980 || window.innerHeight <= 560);
   useEffect(() => {
-    const query = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
-    const update = () => setCompact(query ? query.matches : window.innerWidth <= 720);
+    const query = window.matchMedia ? window.matchMedia(media) : null;
+    const update = () => setCompact(query ? query.matches : window.innerWidth <= 980 || window.innerHeight <= 560);
     update();
     if (!query) {
       window.addEventListener('resize', update);
@@ -274,11 +275,17 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLElement>(null);
   const customizeRef = useRef<HTMLButtonElement>(null);
+  const toolbarFocus = useRef<'settings' | 'toggle' | null>(null);
   const compact = useCompactPoster();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const closeSettings = useCallback(() => { setSettingsOpen(false); customizeRef.current?.focus(); }, []);
   useDialog(dialogRef, () => { if (compact && settingsOpen) closeSettings(); else onClose(); }, hasTree, returnFocus);
-  useDialog(settingsRef, closeSettings, compact && settingsOpen && hasTree, () => customizeRef.current);
+  useLayoutEffect(() => {
+    const settings = settingsRef.current;
+    if (compact && settingsOpen) settings?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+    else if (compact && (toolbarFocus.current === 'settings' || settings?.contains(document.activeElement))) customizeRef.current?.focus();
+    else if (!compact && (toolbarFocus.current === 'toggle' || document.activeElement === customizeRef.current)) settings?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+  }, [compact, settingsOpen]);
 
   const members = useMemo(() => currentTree?.members ?? [], [currentTree]);
   const parentChild = useMemo(() => currentTree?.relationships.parentChild ?? [], [currentTree]);
@@ -621,87 +628,105 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   return createPortal(
     <div className="poster-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={dialogRef} className="poster-modal" role="dialog" aria-modal="true" aria-labelledby="poster-title">
-        <div className="poster-header">
-          <div className="poster-header__left">
-            <ImageIcon size={18} className="poster-header__icon" />
-            <span id="poster-title" className="poster-header__title">{t.posterTitle}</span>
-          </div>
-
-          <div className="poster-header__actions">
-            <button
-              type="button"
-              className="poster-action poster-action--primary"
-              onClick={handleDownload}
-              disabled={isExporting || layout.nodes.length === 0}
-              aria-label={t.posterDownload}
-              aria-busy={isExporting}
-              title={t.posterDownloadHint(exportSize.width, exportSize.height)}
-            >
-              <DownloadIcon size={15} /><span>{t.posterDownload}</span>
-            </button>
-            {isAdmin && (
-              <button type="button" className="poster-action poster-action--print" onClick={handlePrint} disabled={isExporting || layout.nodes.length === 0} aria-label={t.menuPrint} title={t.menuPrint}>
-                <PrinterIcon size={15} /><span>{t.menuPrint}</span>
-              </button>
-            )}
-            <button type="button" className="poster-close" onClick={onClose} title={t.close} aria-label={t.close}>
-              <XIcon size={14} />
-            </button>
-          </div>
-        </div>
-
-        <div className="poster-workspace">
-          {compact && settingsOpen && <button type="button" className="poster-settings-scrim" tabIndex={-1} aria-hidden="true" onClick={closeSettings} />}
-          <aside ref={settingsRef} id="poster-settings" className={`poster-sidebar${compact ? ' poster-sidebar--sheet' : ''}`} hidden={compact && !settingsOpen} role={compact ? 'dialog' : 'complementary'} aria-modal={compact ? true : undefined} aria-labelledby="poster-customize-title">
-            <div className="poster-sidebar__header">
-              <h2 id="poster-customize-title">{t.posterCustomize}</h2>
-              {compact && settingsOpen && <button type="button" className="poster-close" onClick={closeSettings} aria-label={t.posterCloseCustomization} data-autofocus><XIcon size={18} /></button>}
+        <section className="poster-toolbar" aria-label={t.posterToolbar} onFocusCapture={event => { toolbarFocus.current = settingsRef.current?.contains(event.target) ? 'settings' : event.target === customizeRef.current ? 'toggle' : null; }}>
+          <div className="poster-header">
+            <div className="poster-header__left">
+              <ImageIcon size={18} className="poster-header__icon" />
+              <span id="poster-title" className="poster-header__title">{t.posterTitle}</span>
             </div>
-            <fieldset className="poster-sidebar__body" disabled={isExporting || (compact && !settingsOpen)}>
+            <div className="poster-view-controls">
+              <div className="poster-zoom-controls" role="group" aria-label={t.posterZoomLevel}>
+                <button type="button" className="poster-action poster-action--fit" aria-label={t.posterFit} title={t.posterFit} aria-pressed={fit} onClick={() => { zoomAnchor.current = null; setZoom(1); setFit(true); }}>
+                  <Maximize2Icon size={16} /><span>{t.posterFitShort}</span>
+                </button>
+                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={(fit ? fitScale : zoom) <= Math.min(MIN_ZOOM, fitScale)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}><MinusIcon size={16} /></button>
+                <output className="poster-zoom-value" aria-label={t.posterZoomLevel} aria-live="off">{Math.round((fit ? fitScale : zoom) * 100)}%</output>
+                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(ZOOM_STEP)} disabled={(fit ? fitScale : zoom) >= MAX_ZOOM} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}><PlusIcon size={16} /></button>
+                <button type="button" className="poster-action poster-action--icon" title={t.posterResetView} aria-label={t.posterResetView} onClick={() => { zoomAnchor.current = null; setFit(false); setZoom(1); setViewReset(value => value + 1); }}><RotateCcwIcon size={16} /></button>
+              </div>
+              <button ref={customizeRef} type="button" className="poster-action poster-customize-toggle" hidden={!compact} disabled={!compact || isExporting} aria-controls="poster-settings" aria-expanded={compact && settingsOpen} aria-label={t.posterCustomize} title={t.posterCustomize} onClick={() => { if (settingsOpen) closeSettings(); else setSettingsOpen(true); }}>
+                <SlidersHorizontalIcon size={17} /><span>{t.posterCustomize}</span>
+              </button>
+            </div>
+            <div className="poster-header__actions">
+              <button
+                type="button"
+                className="poster-action poster-action--primary poster-action--download"
+                onClick={handleDownload}
+                disabled={isExporting || layout.nodes.length === 0}
+                aria-label={t.posterDownload}
+                aria-busy={isExporting}
+                title={t.posterDownloadHint(exportSize.width, exportSize.height)}
+              >
+                <DownloadIcon size={15} /><span>{t.posterDownload}</span>
+              </button>
+              {isAdmin && (
+                <button type="button" className="poster-action poster-action--print" onClick={handlePrint} disabled={isExporting || layout.nodes.length === 0} aria-label={t.menuPrint} title={t.menuPrint}>
+                  <PrinterIcon size={15} /><span>{t.menuPrint}</span>
+                </button>
+              )}
+              <button type="button" className="poster-close" onClick={onClose} title={t.close} aria-label={t.close}>
+                <XIcon size={14} />
+              </button>
+            </div>
+          </div>
+          <section ref={settingsRef} id="poster-settings" className="poster-settings" hidden={compact && !settingsOpen} aria-label={t.posterCustomize}>
+            <div className="poster-settings__heading" hidden={!compact}>
+              <span>{t.posterCustomize}</span>
+              <button type="button" className="poster-action" disabled={!compact || !settingsOpen} onClick={closeSettings}>{t.posterDone}</button>
+            </div>
+            <fieldset className="poster-settings__body" disabled={isExporting || (compact && !settingsOpen)}>
               <fieldset className="poster-settings-group">
                 <legend>{t.posterFamilyControls}</legend>
-                <label className="poster-field">
-                  <span>{t.posterFindPerson}</span>
-                  <input type="search" value={personQuery} onChange={e => setPersonQuery(e.target.value)} />
-                </label>
-                <label className="poster-field">
-                  <span>{t.posterStartFrom}</span>
-                  <select value={matchingPeople.some(person => person.id === rootId) ? rootId : ''} disabled={matchingPeople.length === 0} onChange={e => { setRootId(e.target.value); setPersonQuery(''); }}>
-                    {!matchingPeople.some(person => person.id === rootId) && <option value="" disabled>{t.posterChooseMatch}</option>}
-                    {matchingPeople.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}
-                  </select>
-                </label>
+                <div className="poster-family-fields">
+                  <label className="poster-field poster-field--search">
+                    <span>{t.posterFindPerson}</span>
+                    <input type="search" value={personQuery} onChange={e => setPersonQuery(e.target.value)} />
+                  </label>
+                  <label className="poster-field">
+                    <span>{t.posterStartFrom}</span>
+                    <select value={matchingPeople.some(person => person.id === rootId) ? rootId : ''} disabled={matchingPeople.length === 0} onChange={e => { setRootId(e.target.value); setPersonQuery(''); }}>
+                      {!matchingPeople.some(person => person.id === rootId) && <option value="" disabled>{t.posterChooseMatch}</option>}
+                      {matchingPeople.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="poster-field">
+                    <span>{t.posterGenerations}</span>
+                    <select value={generations} onChange={e => setGenerations(Number(e.target.value))}>
+                      {GENERATION_CHOICES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </label>
+                </div>
                 {matchingPeople.length === 0 && <p className="poster-field-hint" role="status">{t.posterNoMatches}</p>}
-                <label className="poster-field">
-                  <span>{t.posterGenerations}</span>
-                  <select value={generations} onChange={e => setGenerations(Number(e.target.value))}>
-                    {GENERATION_CHOICES.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </label>
                 <p className="poster-field-hint">{t.posterLineageHint}</p>
               </fieldset>
               <fieldset className="poster-settings-group">
                 <legend>{t.posterAppearance}</legend>
                 <PosterThemePicker theme={theme} onChange={setTheme} label={t.posterStyle} names={t.posterThemeNames} />
-                <label className="poster-field">
-                  <span>{t.posterNameStyle}</span>
-                  <select value={nameStyle} onChange={e => setNameStyle(e.target.value as PosterNameStyle)}>
-                    <option value="heritage">{t.posterHeritageNames}</option>
-                    <option value="readable">{t.posterReadableNames}</option>
-                  </select>
-                </label>
-                <label className="poster-field poster-field--check">
-                  <input type="checkbox" checked={showYears} onChange={e => setShowYears(e.target.checked)} />
-                  <span>{t.posterShowYears}</span>
-                </label>
-                <label className="poster-field poster-field--check">
-                  <input type="checkbox" checked={agedPaper} onChange={e => setAgedPaper(e.target.checked)} />
-                  <span>{t.posterAgedPaper}</span>
-                </label>
+                <div className="poster-appearance-fields">
+                  <label className="poster-field">
+                    <span>{t.posterNameStyle}</span>
+                    <select value={nameStyle} onChange={e => setNameStyle(e.target.value as PosterNameStyle)}>
+                      <option value="heritage">{t.posterHeritageNames}</option>
+                      <option value="readable">{t.posterReadableNames}</option>
+                    </select>
+                  </label>
+                  <div className="poster-checks">
+                    <label className="poster-field poster-field--check">
+                      <input type="checkbox" checked={showYears} onChange={e => setShowYears(e.target.checked)} />
+                      <span>{t.posterShowYears}</span>
+                    </label>
+                    <label className="poster-field poster-field--check">
+                      <input type="checkbox" checked={agedPaper} onChange={e => setAgedPaper(e.target.checked)} />
+                      <span>{t.posterAgedPaper}</span>
+                    </label>
+                  </div>
+                </div>
               </fieldset>
             </fieldset>
-            {compact && settingsOpen && <div className="poster-sidebar__footer"><button type="button" className="poster-action poster-action--primary" onClick={closeSettings}>{t.posterDone}</button></div>}
-          </aside>
+          </section>
+        </section>
+        <div className="poster-workspace">
           <div className="poster-viewport">
             <div ref={scrollRef} className={`poster-scroll${fit ? ' poster-scroll--fit' : ''}`}>
           {layout.nodes.length <= 1 && (
@@ -903,18 +928,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               </g>
             </svg>
           </div>
-            </div>
-            <div className="poster-preview-tools">
-              <div className="poster-zoom-dock" role="group" aria-label={t.posterZoomLevel}>
-                <button type="button" className="poster-action" aria-label={t.posterFit} title={t.posterFit} aria-pressed={fit} onClick={() => { zoomAnchor.current = null; setZoom(1); setFit(true); }}>
-                  <Maximize2Icon size={16} /><span>{t.posterFitShort}</span>
-                </button>
-                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={(fit ? fitScale : zoom) <= Math.min(MIN_ZOOM, fitScale)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}><MinusIcon size={16} /></button>
-                <output className="poster-zoom-value" aria-label={t.posterZoomLevel} aria-live="off">{Math.round((fit ? fitScale : zoom) * 100)}%</output>
-                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(ZOOM_STEP)} disabled={(fit ? fitScale : zoom) >= MAX_ZOOM} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}><PlusIcon size={16} /></button>
-                <button type="button" className="poster-action poster-action--icon" title={t.posterResetView} aria-label={t.posterResetView} onClick={() => { zoomAnchor.current = null; setFit(false); setZoom(1); setViewReset(value => value + 1); }}><RotateCcwIcon size={16} /></button>
-              </div>
-              {compact && <button ref={customizeRef} type="button" className="poster-action poster-customize-toggle" aria-controls="poster-settings" aria-expanded={settingsOpen} onClick={() => setSettingsOpen(true)}><SlidersHorizontalIcon size={17} /><span>{t.posterCustomize}</span></button>}
             </div>
           </div>
         </div>

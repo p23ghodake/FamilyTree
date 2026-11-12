@@ -31,6 +31,7 @@ const data = processAllFamilyData({ familyTrees: [{
 }] });
 const descriptors = {
   width: Object.getOwnPropertyDescriptor(window, 'innerWidth'),
+  height: Object.getOwnPropertyDescriptor(window, 'innerHeight'),
   media: Object.getOwnPropertyDescriptor(window, 'matchMedia'),
   fetch: Object.getOwnPropertyDescriptor(globalThis, 'fetch'),
   fonts: Object.getOwnPropertyDescriptor(document, 'fonts'),
@@ -47,6 +48,7 @@ beforeEach(() => {
   (useFamilyTree as jest.Mock).mockImplementation(() => context);
   (useLanguage as jest.Mock).mockReturnValue({ lang: 'en', t });
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: undefined });
   jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
     font: '', measureText: (value: string) => measureText(value), drawImage: jest.fn(),
@@ -60,6 +62,7 @@ afterEach(() => {
     else Reflect.deleteProperty(object, property);
   };
   restore(window, 'innerWidth', descriptors.width);
+  restore(window, 'innerHeight', descriptors.height);
   restore(window, 'matchMedia', descriptors.media);
   restore(globalThis, 'fetch', descriptors.fetch);
   restore(document, 'fonts', descriptors.fonts);
@@ -70,12 +73,17 @@ afterEach(() => {
 });
 
 describe('poster UX', () => {
-it('groups poster family and appearance settings in the desktop sidebar', () => {
+it('groups family, appearance, zoom and export controls in the top toolbar', () => {
   render(<PosterModal onClose={jest.fn()} />);
-  const sidebar = screen.getByRole('complementary', { name: t.posterCustomize });
-  expect(within(sidebar).getByRole('group', { name: t.posterFamilyControls })).toBeTruthy();
-  expect(within(sidebar).getByRole('group', { name: t.posterAppearance })).toBeTruthy();
-  expect(within(sidebar).getAllByRole('radio')).toHaveLength(4);
+  const toolbar = screen.getByRole('region', { name: t.posterToolbar });
+  const settings = within(toolbar).getByRole('region', { name: t.posterCustomize });
+  expect(within(settings).getByRole('group', { name: t.posterFamilyControls })).toBeTruthy();
+  expect(within(settings).getByRole('group', { name: t.posterAppearance })).toBeTruthy();
+  expect(within(settings).getAllByRole('radio')).toHaveLength(4);
+  expect(within(toolbar).getByRole('button', { name: t.posterFit })).toBeTruthy();
+  expect(within(toolbar).getByRole('button', { name: t.posterDownload })).toBeTruthy();
+  expect(within(toolbar).getByRole('button', { name: t.menuPrint })).toBeTruthy();
+  expect(screen.queryByRole('complementary')).toBeNull();
   expect((screen.getByRole('radio', { name: t.posterThemeNames.autumn }) as HTMLInputElement).checked).toBe(true);
   expect(screen.getByRole('status', { name: t.posterZoomLevel }).textContent).toBe('100%');
   expect(screen.queryByRole('button', { name: t.posterCustomize })).toBeNull();
@@ -254,40 +262,91 @@ it('does not zoom in when zoom-out is requested below the nominal minimum', () =
   expect(screen.getByRole('status', { name: t.posterZoomLevel }).textContent).toBe('5%');
 });
 
-it('opens a mobile sheet, traps focus, and dismisses it before closing the poster', () => {
+it('expands mobile settings in the top toolbar and dismisses them before closing the poster', () => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
   const close = jest.fn();
   render(<PosterModal onClose={close} />);
   expect(screen.queryByRole('combobox', { name: t.posterNameStyle })).toBeNull();
-  const customize = screen.getByRole('button', { name: t.posterCustomize });
+  const toolbar = screen.getByRole('region', { name: t.posterToolbar });
+  const customize = within(toolbar).getByRole('button', { name: t.posterCustomize });
+  expect(customize.getAttribute('aria-expanded')).toBe('false');
   customize.focus();
   fireEvent.click(customize);
-  const sheet = screen.getByRole('dialog', { name: t.posterCustomize });
-  const closeSheet = within(sheet).getByRole('button', { name: t.posterCloseCustomization });
-  const done = within(sheet).getByRole('button', { name: t.posterDone });
-  expect(closeSheet.matches(':focus')).toBe(true);
-  fireEvent.keyDown(closeSheet, { key: 'Tab', shiftKey: true });
-  expect(done.matches(':focus')).toBe(true);
-  fireEvent.keyDown(done, { key: 'Tab' });
-  expect(closeSheet.matches(':focus')).toBe(true);
-  fireEvent.keyDown(closeSheet, { key: 'Escape' });
+  const settings = within(toolbar).getByRole('region', { name: t.posterCustomize });
+  const search = within(settings).getByRole('searchbox', { name: t.posterFindPerson });
+  expect(customize.getAttribute('aria-expanded')).toBe('true');
+  expect(search.matches(':focus')).toBe(true);
+  expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  const fit = within(toolbar).getByRole('button', { name: t.posterFit });
+  const paper = within(settings).getByRole('checkbox', { name: t.posterAgedPaper });
+  fit.focus();
+  fireEvent.keyDown(fit, { key: 'Tab', shiftKey: true });
+  expect(paper.matches(':focus')).toBe(true);
+  fireEvent.keyDown(paper, { key: 'Tab' });
+  expect(fit.matches(':focus')).toBe(true);
+  fireEvent.keyDown(fit, { key: 'Escape' });
   expect(close).not.toHaveBeenCalled();
-  expect(screen.queryByRole('dialog', { name: t.posterCustomize })).toBeNull();
+  expect(screen.queryByRole('region', { name: t.posterCustomize })).toBeNull();
   expect(customize.matches(':focus')).toBe(true);
   fireEvent.keyDown(customize, { key: 'Escape' });
   expect(close).toHaveBeenCalledTimes(1);
 });
 
-it('keeps mobile customization changes after Done and adapts to desktop resizing', () => {
+it('keeps mobile settings after Done and adapts to desktop resizing', () => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
   render(<PosterModal onClose={jest.fn()} />);
   fireEvent.click(screen.getByRole('button', { name: t.posterCustomize }));
   fireEvent.click(screen.getByRole('radio', { name: t.posterThemeNames.spring }));
+  fireEvent.change(screen.getByRole('combobox', { name: t.posterNameStyle }), { target: { value: 'readable' } });
   fireEvent.click(screen.getByRole('button', { name: t.posterDone }));
+  const customize = screen.getByRole('button', { name: t.posterCustomize });
+  expect(customize.matches(':focus')).toBe(true);
+  expect(screen.queryByRole('region', { name: t.posterCustomize })).toBeNull();
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
   fireEvent(window, new Event('resize'));
-  expect(screen.getByRole('complementary', { name: t.posterCustomize })).toBeTruthy();
+  expect(screen.getByRole('region', { name: t.posterCustomize })).toBeTruthy();
   expect((screen.getByRole('radio', { name: t.posterThemeNames.spring }) as HTMLInputElement).checked).toBe(true);
+  expect((screen.getByRole('combobox', { name: t.posterNameStyle }) as HTMLSelectElement).value).toBe('readable');
+});
+
+it.each([
+  { width: 768, height: 1024, screen: 'tablet' },
+  { width: 1024, height: 480, screen: 'short landscape' },
+])('keeps zoom and export available above collapsed settings on a $screen screen', ({ width, height }) => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
+  render(<PosterModal onClose={jest.fn()} />);
+  const toolbar = screen.getByRole('region', { name: t.posterToolbar });
+  expect(within(toolbar).getByRole('button', { name: t.posterFit })).toBeTruthy();
+  expect(within(toolbar).getByRole('button', { name: t.posterDownload })).toBeTruthy();
+  expect(screen.queryByRole('combobox', { name: t.posterGenerations })).toBeNull();
+  fireEvent.click(within(toolbar).getByRole('button', { name: t.posterCustomize }));
+  expect(within(toolbar).getByRole('combobox', { name: t.posterGenerations })).toBeTruthy();
+});
+
+it('restores focus when the browser blurs hidden settings during resizing', () => {
+  render(<PosterModal onClose={jest.fn()} />);
+  const search = screen.getByRole('searchbox', { name: t.posterFindPerson });
+  search.focus();
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+  search.blur();
+  fireEvent(window, new Event('resize'));
+  expect(screen.getByRole('button', { name: t.posterCustomize }).matches(':focus')).toBe(true);
+  expect(screen.queryByRole('searchbox')).toBeNull();
+  const close = screen.getByRole('button', { name: t.close });
+  close.focus();
+  fireEvent.keyDown(close, { key: 'Tab' });
+  expect(screen.getByRole('button', { name: t.posterFit }).matches(':focus')).toBe(true);
+});
+
+it('does not steal focus from export when the layout becomes compact', () => {
+  render(<PosterModal onClose={jest.fn()} />);
+  const download = screen.getByRole('button', { name: t.posterDownload });
+  download.focus();
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 480 });
+  fireEvent(window, new Event('resize'));
+  expect(download.matches(':focus')).toBe(true);
+  expect(screen.queryByRole('region', { name: t.posterCustomize })).toBeNull();
 });
 
 it('selects a valid poster root when family data arrives after opening', () => {
@@ -352,8 +411,9 @@ it('exports the readable, single-line SVG as PNG without editor controls', async
   expect(serialized).toContain('text-rendering: geometricPrecision');
   expect(serialized).not.toContain('<tspan');
   expect(serialized).toContain('Ramchandra Vithoba');
-  expect(serialized).not.toContain('poster-sidebar');
-  expect(serialized).not.toContain('poster-zoom-dock');
+  expect(serialized).not.toContain('poster-toolbar');
+  expect(serialized).not.toContain('poster-settings');
+  expect(serialized).not.toContain('poster-zoom-controls');
   expect(toast.error).not.toHaveBeenCalled();
 });
 

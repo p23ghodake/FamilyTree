@@ -354,6 +354,7 @@ type Translations = {
   viewStats: string;
   viewPoster: string;
   posterTitle: string;
+  posterToolbar: string;
   posterNoRelatives: string;
   posterStartFrom: string;
   posterGenerations: string;
@@ -801,6 +802,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     viewStats: 'Statistics',
     viewPoster: 'Poster',
     posterTitle: 'Family poster',
+    posterToolbar: 'Poster controls',
     posterNoRelatives: 'No parents or children are recorded for this person yet.',
     posterStartFrom: 'Start from',
     posterGenerations: 'Generations',
@@ -1247,6 +1249,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     viewStats: 'आकडेवारी',
     viewPoster: 'पोस्टर',
     posterTitle: 'कुटुंब पोस्टर',
+    posterToolbar: 'पोस्टरचे पर्याय',
     posterNoRelatives: 'या व्यक्तीच्या पालकांची किंवा मुलांची अजून नोंद नाही.',
     posterStartFrom: 'यांच्यापासून',
     posterGenerations: 'पिढ्या',

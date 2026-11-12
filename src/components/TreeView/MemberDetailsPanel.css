@@ -28,8 +28,8 @@
 }
 
 .member-details__avatar {
-  width: 42px;
-  height: 42px;
+  width: 75px;
+  height: 75px;
   border-radius: 50%;
   border: 2px solid var(--border);
   overflow: hidden;
