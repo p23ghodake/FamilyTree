@@ -8,7 +8,7 @@ export class ImageCompressionError extends Error {
   }
 }
 
-/** Downscales a photo to fit within 400×400 and re-encodes it as JPEG so saves and share links stay small. */
+/** Downscales a photo to fit within 400×400 and re-encodes it as JPEG to keep saved data small. */
 export async function compressImage(file: File): Promise<string> {
   if (!file.type.startsWith('image/')) throw new ImageCompressionError('not-image');
   const objectUrl = URL.createObjectURL(file);

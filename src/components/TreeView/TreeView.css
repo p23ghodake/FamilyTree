@@ -693,50 +693,6 @@
   animation: banner-in 0.3s ease;
 }
 
-/* ─── Lineage focus banner ─── */
-
-.tree-view__lineage-banner {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, var(--lineage-banner-start), var(--lineage-banner-end));
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 7px 14px 7px 16px;
-  border-radius: 20px;
-  z-index: var(--z-dropdown);
-  box-shadow: 0 4px 16px var(--lineage-banner-shadow);
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  animation: banner-in 0.3s ease;
-}
-
-.tree-view__lineage-banner-close {
-  margin-left: 10px;
-  background: var(--lineage-btn-overlay);
-  border: none;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.15s;
-  padding: 0;
-}
-
-.tree-view__lineage-banner-close:hover {
-  background: var(--lineage-btn-overlay-hover);
-}
-
 @keyframes banner-in {
   from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -942,8 +898,7 @@
     opacity: 1;
     transform: none;
   }
-  .tree-view__rel-banner,
-  .tree-view__lineage-banner {
+  .tree-view__rel-banner {
     animation: none !important;
     opacity: 1;
     transform: translateX(-50%);
@@ -952,8 +907,7 @@
 
 /* ─── Narrow screens: keep banners inside the viewport ─── */
 @media (max-width: 600px) {
-  .tree-view__rel-banner,
-  .tree-view__lineage-banner {
+  .tree-view__rel-banner {
     max-width: calc(100% - 24px);
     box-sizing: border-box;
     white-space: normal;

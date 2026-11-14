@@ -1,4 +1,4 @@
-import { buildTreeFromMembers, computeLineage } from './treeBuilder';
+import { buildTreeFromMembers } from './treeBuilder';
 import { StyledFamilyMember, StyledRelationships, SpouseRelationship } from '../types/FamilyTypes';
 
 // ─── Minimal fixture helpers ───
@@ -135,50 +135,5 @@ describe('buildTreeFromMembers', () => {
       expect(tree.children.map(n => n.member.id)).toEqual(['elder', 'younger']);
       expect(tree.children[1].currentSpouses.map(s => s.member.id)).toEqual(['wife']);
     });
-  });
-});
-
-// ─── computeLineage ───
-
-describe('computeLineage', () => {
-  it('always includes the starting member', () => {
-    const result = computeLineage('a', [m('a')], emptyRels());
-    expect(result.has('a')).toBe(true);
-  });
-
-  it('isolated member with no relationships returns a set containing only itself', () => {
-    const result = computeLineage('lone', [m('lone'), m('other')], emptyRels());
-    expect(result.size).toBe(1);
-    expect(result.has('lone')).toBe(true);
-  });
-
-  it('known ancestor chain: includes all ancestors and descendants', () => {
-    // grandparent → parent → me → child
-    const members = [m('gp'), m('parent', ['gp']), m('me', ['parent']), m('child', ['me'])];
-    const rels = pc([['gp', 'parent'], ['parent', 'me'], ['me', 'child']]);
-    const result = computeLineage('me', members, rels);
-
-    expect(result.has('me')).toBe(true);
-    expect(result.has('parent')).toBe(true);
-    expect(result.has('gp')).toBe(true);
-    expect(result.has('child')).toBe(true);
-  });
-
-  it('includes own spouses', () => {
-    const members = [m('a'), m('b')];
-    const rels: StyledRelationships = {
-      spouses: [{ spouse1Id: 'a', spouse2Id: 'b', status: 'current' } as SpouseRelationship],
-      parentChild: [],
-    };
-    const result = computeLineage('a', members, rels);
-    expect(result.has('b')).toBe(true);
-  });
-
-  it('member not in any relationship produces a single-element set', () => {
-    const members = [m('a'), m('b'), m('c')];
-    const rels = pc([['a', 'b']]);
-    const result = computeLineage('c', members, rels);
-    expect(result.size).toBe(1);
-    expect(result.has('c')).toBe(true);
   });
 });

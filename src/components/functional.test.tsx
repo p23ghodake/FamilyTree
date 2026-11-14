@@ -1,6 +1,5 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import LZString from 'lz-string';
 import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
 import { useFamilyTree, NO_FILTERS } from '../context/FamilyTreeContext';
@@ -10,8 +9,6 @@ import { DEFAULT_DISPLAY_SETTINGS } from '../processing/displaySettings';
 import { processAllFamilyData } from '../processing/dataProcessor';
 import { buildTreeFromMembers } from '../processing/treeBuilder';
 import TopBar from './Layout/TopBar';
-import ShareModal from './Layout/ShareModal';
-import TreeLoader from './Layout/TreeLoader';
 import MemberFormModal from './TreeView/MemberFormModal';
 import { TreeBranch } from './TreeView/TreeBranch';
 import TimelineModal from './Timeline/TimelineModal';
@@ -44,7 +41,7 @@ beforeEach(() => {
     state: {
       data, past: [], future: [], selectedTreeId: 'test', selectedMemberId: null,
       searchQuery: '', error: null, memberFormMode: null, memberFormTargetId: null,
-      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null, lineageMode: false,
+      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null,
       theme: 'light', avatarStyle: 'initials',
     },
     currentTree: data.familyTreesStyled[0],
@@ -53,7 +50,7 @@ beforeEach(() => {
     filteredMembers: data.familyTreesStyled[0].members,
     matchedMemberIds: new Set(), advancedMatchedIds: new Set(), relResult: null,
     debouncedSearchQuery: '', dispatch: jest.fn(), exportData: jest.fn(), importData: jest.fn(),
-    loadSharedData: jest.fn().mockReturnValue(true), resetData: jest.fn(), undo: jest.fn(), redo: jest.fn(),
+    resetData: jest.fn(), undo: jest.fn(), redo: jest.fn(),
     styleNewMember: jest.fn(),
     displaySettings: { ...DEFAULT_DISPLAY_SETTINGS },
   };
@@ -120,10 +117,9 @@ it('shows the tree line style controls only to admins and saves each change', ()
   view.rerender(<TopBar />);
   fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorSpeed }), { target: { value: 'fast' } });
   fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorTiming }), { target: { value: 'together' } });
-  fireEvent.change(screen.getByRole('combobox', { name: t.settingsConnectorScope }), { target: { value: 'lineage' } });
   expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorSpeed: 'fast' } });
   expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorTiming: 'together' } });
-  expect(context.dispatch).toHaveBeenCalledWith({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorScope: 'lineage' } });
+  expect(screen.queryByRole('combobox', { name: /animate/i })).toBeNull();
 
   // Timing only applies to the pulse; controls lock while a save is running.
   context.displaySettings = { ...context.displaySettings, connectorStyle: 'particles' };
@@ -133,30 +129,10 @@ it('shows the tree line style controls only to admins and saves each change', ()
   expect((screen.getByRole('combobox', { name: t.settingsConnectorStyle }) as HTMLSelectElement).disabled).toBe(true);
 });
 
-it('toggles lineage focus from the desktop and phone top bar', () => {
-  const view = render(<TopBar />);
-  const lineageButtons = () => [
-    screen.getByRole('button', { name: t.viewLineage }),
-    screen.getByRole('button', { name: t.tooltipLineageFocus }),
-  ];
-  const buttons = lineageButtons();
-  buttons.forEach(button => expect(button.getAttribute('aria-pressed')).toBe('false'));
-  fireEvent.click(buttons[0]);
-  fireEvent.click(buttons[1]);
-  expect(context.dispatch).toHaveBeenCalledTimes(2);
-  expect(context.dispatch).toHaveBeenNthCalledWith(1, { type: 'TOGGLE_LINEAGE_MODE' });
-  expect(context.dispatch).toHaveBeenNthCalledWith(2, { type: 'TOGGLE_LINEAGE_MODE' });
-  context.state = { ...context.state, lineageMode: true };
-  view.rerender(<TopBar />);
-  lineageButtons().forEach(button => expect(button.getAttribute('aria-pressed')).toBe('true'));
-});
-
-it('hides Share from visitors in the limited view', () => {
-  const view = render(<TopBar />);
-  expect(screen.getByRole('button', { name: t.headerShareTree })).toBeTruthy();
-  context.limitedView = true;
-  view.rerender(<TopBar />);
-  expect(screen.queryByRole('button', { name: t.headerShareTree })).toBeNull();
+it('does not render lineage or share tree actions', () => {
+  render(<TopBar />);
+  expect(screen.queryByText(/Lineage|वंश फोकस/)).toBeNull();
+  expect(screen.queryByRole('button', { name: /Share/ })).toBeNull();
 });
 
 it('shows the poster view only to admins', () => {
@@ -200,6 +176,7 @@ it('lets the poster switch style, show life years and drop the paper texture', (
   const banyan = screen.getByRole('radio', { name: t.posterThemeNames.banyan }) as HTMLInputElement;
   fireEvent.click(banyan);
   expect(banyan.checked).toBe(true);
+  expect(screen.queryByRole('button', { name: t.menuPrint })).toBeNull();
 
   expect(screen.queryByText(t.posterLifeYears(1920, 1990))).toBeNull();
   fireEvent.click(screen.getByLabelText(t.posterShowYears));
@@ -537,23 +514,4 @@ it('places crowded timeline events separately and exposes details on focus and t
   fireEvent.blur(events[0]);
   fireEvent.click(events[1]);
   expect(screen.getByRole('tooltip').textContent).toContain('Person2');
-});
-
-it('generates share links in raw family data format', () => {
-  render(<ShareModal onClose={jest.fn()} />);
-  const url = new URL((screen.getByRole('textbox') as HTMLInputElement).value);
-  const snapshot = JSON.parse(LZString.decompressFromEncodedURIComponent(url.searchParams.get('tree')!)!);
-  expect(snapshot.familyTrees).toHaveLength(1);
-  expect(snapshot.familyTreesStyled).toBeUndefined();
-  expect(snapshot.familyTrees[0].members[0].imageConfig).toBeUndefined();
-});
-
-it('loads shared links without cloud import and retains the reloadable URL', () => {
-  const snapshot = JSON.stringify({ familyTrees: [] });
-  const query = `/?tree=${LZString.compressToEncodedURIComponent(snapshot)}`;
-  window.history.replaceState({}, '', query);
-  render(<TreeLoader />);
-  expect(context.loadSharedData).toHaveBeenCalledWith(snapshot);
-  expect(context.importData).not.toHaveBeenCalled();
-  expect(window.location.search).toBe(query.slice(1));
 });

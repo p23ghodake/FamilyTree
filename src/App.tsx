@@ -5,7 +5,6 @@ import { FamilyTreeProvider } from './context/FamilyTreeContext';
 import { AuthProvider } from './lib/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout/Layout';
-import TreeLoader from './components/Layout/TreeLoader';
 
 function App() {
   return (
@@ -13,7 +12,6 @@ function App() {
       <LanguageProvider>
         <AuthProvider>
           <FamilyTreeProvider>
-            <TreeLoader />
             <Layout />
             <Toaster
               position="bottom-right"

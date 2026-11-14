@@ -61,15 +61,6 @@ it('starts with Hide females off and lets Clear switch every filter off', async 
   expect(NO_FILTERS.hideFemale).toBe(false);
 });
 
-it('toggles lineage focus and turns it off when switching trees', async () => {
-  await mountEditor();
-  expect(context.state.lineageMode).toBe(false);
-  act(() => context.dispatch({ type: 'TOGGLE_LINEAGE_MODE' }));
-  expect(context.state.lineageMode).toBe(true);
-  act(() => context.dispatch({ type: 'SELECT_TREE', payload: context.state.selectedTreeId! }));
-  expect(context.state.lineageMode).toBe(false);
-});
-
 it('lets only administrators delete members, including through undo', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser, access_token: githubToken }, loading: false });
   await mountEditor();
@@ -153,43 +144,6 @@ it('retains the form and original data when a save fails', async () => {
   await waitFor(() => expect(context.isSaving).toBe(false));
   expect(context.state.memberFormMode).toBe('add');
   expect(context.currentTree?.members).toHaveLength(2);
-});
-
-it('opens raw and legacy processed shared snapshots without saving', async () => {
-  await mountEditor();
-  const legacy = context.state.data!;
-  act(() => expect(context.loadSharedData(JSON.stringify(buildRawExport(legacy)))).toBe(true));
-  expect(context.canEdit).toBe(false);
-  expect(context.cloudReady).toBe(false);
-  act(() => expect(context.loadSharedData(JSON.stringify(legacy))).toBe(true));
-  act(() => context.dispatch({ type: 'DELETE_MEMBER', payload: { treeId: 'test-tree', memberId: 'parent' } }));
-  expect(saveFamilyData).not.toHaveBeenCalled();
-  expect(context.currentTree?.members).toHaveLength(2);
-});
-
-it('shows share links in the limited view to visitors who are not signed in', async () => {
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false });
-  (getFamilyData as jest.Mock).mockReturnValue(new Promise(() => {}));
-  render(<FamilyTreeProvider><Probe /></FamilyTreeProvider>);
-  act(() => expect(context.loadSharedData(JSON.stringify(rawData))).toBe(true));
-  expect(context.limitedView).toBe(true);
-});
-
-it('does not replace a shared snapshot with a late cloud response', async () => {
-  let finishLoad!: (response: unknown) => void;
-  (getFamilyData as jest.Mock).mockReturnValue(new Promise(resolve => { finishLoad = resolve; }));
-  render(<FamilyTreeProvider><Probe /></FamilyTreeProvider>);
-  act(() => context.loadSharedData(JSON.stringify(rawData)));
-  await act(async () => finishLoad({ data: rawData, sha: 'remote', canEdit: true }));
-  expect(context.canEdit).toBe(false);
-  expect(context.cloudReady).toBe(false);
-});
-
-it('rejects malformed shared data without changing the current tree', async () => {
-  await mountEditor();
-  act(() => expect(context.loadSharedData('{}')).toBe(false));
-  expect(context.canEdit).toBe(true);
-  expect(saveFamilyData).not.toHaveBeenCalled();
 });
 
 it('rejects an import that contains a future date', async () => {
@@ -287,7 +241,7 @@ describe('tree line style (admin display settings)', () => {
   it('defaults to the static lines when the data has no settings', async () => {
     await mountEditor();
     expect(context.displaySettings).toEqual({
-      connectorStyle: 'static', connectorShape: 'elbow', connectorSpeed: 'normal', connectorTiming: 'cascade', connectorScope: 'all',
+      connectorStyle: 'static', connectorShape: 'elbow', connectorSpeed: 'normal', connectorTiming: 'cascade',
     });
   });
 
@@ -300,7 +254,7 @@ describe('tree line style (admin display settings)', () => {
     act(() => context.dispatch({ type: 'SET_DISPLAY_SETTINGS', payload: { connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'fast' } }));
     await waitFor(() => expect(context.displaySettings.connectorStyle).toBe('pulse'));
     expect((saveFamilyData as jest.Mock).mock.calls[0][0].settings).toEqual({
-      connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'fast', connectorTiming: 'cascade', connectorScope: 'all',
+      connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'fast', connectorTiming: 'cascade',
     });
   });
 
@@ -320,7 +274,7 @@ describe('tree line style (admin display settings)', () => {
     act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
     await waitFor(() => expect(context.currentTree?.members).toHaveLength(3));
     expect((saveFamilyData as jest.Mock).mock.calls[0][0].settings).toEqual({
-      connectorStyle: 'particles', connectorShape: 'curve', connectorSpeed: 'slow', connectorTiming: 'together', connectorScope: 'lineage',
+      connectorStyle: 'particles', connectorShape: 'curve', connectorSpeed: 'slow', connectorTiming: 'together',
     });
   });
 
@@ -337,7 +291,7 @@ describe('tree line style (admin display settings)', () => {
   });
 
   it('round-trips settings through export', () => {
-    const settings = { connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'slow', connectorTiming: 'together', connectorScope: 'all' } as const;
+    const settings = { connectorStyle: 'pulse', connectorShape: 'curve', connectorSpeed: 'slow', connectorTiming: 'together' } as const;
     expect(buildRawExport({ familyTreesStyled: [], settings }).settings).toEqual(settings);
     expect(buildRawExport({ familyTreesStyled: [] })).not.toHaveProperty('settings');
   });

@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { DisplaySettings, StyledFamilyMember, StyledRelationships } from '../../types/FamilyTypes';
-import { TreeNode, computeLineage } from '../../processing/treeBuilder';
+import { TreeNode } from '../../processing/treeBuilder';
 import { isMemberDeceased } from '../../processing/ageCalculation';
 import './ConnectorFlow.css';
 
@@ -28,7 +28,6 @@ interface ConnectorFlowProps {
   members: StyledFamilyMember[];
   relationships: StyledRelationships;
   settings: DisplaySettings;
-  selectedId: string | null;
   /** Anything that can move nodes without resizing the chart (e.g. avatar style, language). */
   layoutKey: string;
 }
@@ -74,7 +73,7 @@ const childElements = (el: Element, tag: string) =>
  * Animation runs only on lines that lead down from living members.
  */
 const ConnectorFlow: React.FC<ConnectorFlowProps> = ({
-  chartRef, treeNodes, members, relationships, settings, selectedId, layoutKey,
+  chartRef, treeNodes, members, relationships, settings, layoutKey,
 }) => {
   const animated = settings.connectorStyle !== 'static';
   const curved = settings.connectorShape === 'curve';
@@ -190,29 +189,11 @@ const ConnectorFlow: React.FC<ConnectorFlowProps> = ({
     };
   }, [enabled, curved, chartRef, treeNodes, livingParentOf, layoutKey]);
 
-  // Selected lineage: only that member's ancestors and descendants animate. A spouse follows their partner's line.
-  const lineageIds = useMemo(() => {
-    if (!animated || settings.connectorScope !== 'lineage' || !selectedId) return null;
-    const ids = computeLineage(selectedId, members, relationships);
-    const findPartner = (nodes: TreeNode[]): string | null => {
-      for (const node of nodes) {
-        if ([...node.currentSpouses, ...node.formerSpouses].some(s => s.member.id === selectedId)) return node.member.id;
-        const inner = findPartner(node.children);
-        if (inner) return inner;
-      }
-      return null;
-    };
-    const partner = findPartner(treeNodes);
-    if (partner) computeLineage(partner, members, relationships).forEach(id => ids.add(id));
-    return ids;
-  }, [animated, settings.connectorScope, selectedId, members, relationships, treeNodes]);
-
-  useEffect(() => setCycle(c => c + 1), [settings.connectorStyle, settings.connectorShape, settings.connectorTiming, settings.connectorSpeed, lineageIds]);
+  useEffect(() => setCycle(c => c + 1), [settings.connectorStyle, settings.connectorShape, settings.connectorTiming, settings.connectorSpeed]);
 
   if (!enabled || connectors.length === 0) return null;
 
-  const isAnimated = (c: Connector) => animated && c.depth !== null
-    && (!lineageIds || (lineageIds.has(c.parentId) && lineageIds.has(c.childId)));
+  const isAnimated = (c: Connector) => animated && c.depth !== null;
   const pulse = settings.connectorStyle === 'pulse';
 
   return (

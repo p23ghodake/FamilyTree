@@ -1,8 +1,8 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { isFiltersActive, useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { FocusIcon, Maximize2Icon } from '../Icons';
-import { buildTreeFromMembers, computeLineage } from '../../processing/treeBuilder';
+import { Maximize2Icon } from '../Icons';
+import { buildTreeFromMembers } from '../../processing/treeBuilder';
 import { TreeBranch } from './TreeBranch';
 import ConnectorFlow from './ConnectorFlow';
 import { CONFIG } from '../../constants/config';
@@ -25,15 +25,6 @@ const TreeView: React.FC = () => {
   zoomRef.current = zoom;
   const panRef = useRef(pan); // sync ref so touch handlers always read latest pan
   panRef.current = pan;
-
-  // Lineage focus mode (toggled from the top bar)
-  const lineageModeActive = state.lineageMode;
-  const [lineageIds, setLineageIds] = useState<Set<string>>(new Set());
-  useEffect(() => {
-    if (!lineageModeActive) setLineageIds(new Set());
-  }, [lineageModeActive]);
-
-  const toggleLineageMode = useCallback(() => dispatch({ type: 'TOGGLE_LINEAGE_MODE' }), [dispatch]);
 
   // Relationship mode: set of IDs in the found path (excluding source/target)
   const relPathSet = useMemo(() => {
@@ -63,12 +54,9 @@ const TreeView: React.FC = () => {
         dispatch({ type: 'SET_REL_NODE', payload: id });
       } else {
         dispatch({ type: 'SELECT_MEMBER', payload: id });
-        if (lineageModeActive && currentTree) {
-          setLineageIds(computeLineage(id, currentTree.members, currentTree.relationships));
-        }
       }
     },
-    [dispatch, state.relMode, lineageModeActive, currentTree]
+    [dispatch, state.relMode]
   );
 
   const treeNodes = useMemo(() => {
@@ -92,13 +80,6 @@ const TreeView: React.FC = () => {
     };
     return buildTreeFromMembers(members, relationships);
   }, [currentTree, state.advancedFilters]);
-
-  // When lineage mode is active and a member has been clicked, use lineage set;
-  // otherwise fall back to the advanced-filter matched IDs from context.
-  const effectiveFilterIds = useMemo(() => {
-    if (lineageModeActive && lineageIds.size > 0) return lineageIds;
-    return advancedMatchedIds;
-  }, [lineageModeActive, lineageIds, advancedMatchedIds]);
 
   // Use the debounced query (same source as filteredMembers) so firstMatchId
   // only updates after the filter has actually been applied — prevents the
@@ -493,8 +474,8 @@ const TreeView: React.FC = () => {
                 searchMatchedIds={matchedMemberIds}
                 onSelect={handleSelect}
                 onMenuAction={canEdit ? handleMenuAction : undefined}
-                filterMatchedIds={effectiveFilterIds}
-                filterActive={(lineageModeActive && lineageIds.size > 0) || isFiltersActive(state.advancedFilters)}
+                filterMatchedIds={advancedMatchedIds}
+                filterActive={isFiltersActive(state.advancedFilters)}
                 marriageMatchedIds={advancedMatchedIds}
                 relSource={state.relSource}
                 relTarget={state.relTarget}
@@ -512,7 +493,6 @@ const TreeView: React.FC = () => {
             members={currentTree.members}
             relationships={currentTree.relationships}
             settings={displaySettings}
-            selectedId={state.selectedMemberId}
             layoutKey={`${state.avatarStyle}|${lang}`}
           />
         </div>
@@ -522,17 +502,6 @@ const TreeView: React.FC = () => {
       {state.relMode && (
         <div className="tree-view__rel-banner">
           {t.tracerActiveBanner}
-        </div>
-      )}
-
-      {/* Lineage focus banner */}
-      {lineageModeActive && (
-        <div className="tree-view__lineage-banner">
-          <FocusIcon size={13} style={{ verticalAlign: 'middle', marginRight: 6, flexShrink: 0 }} />
-          {lineageIds.size > 0
-            ? t.lineageBannerActive
-            : t.lineageBannerInactive}
-          <button className="tree-view__lineage-banner-close" onClick={toggleLineageMode} title={t.lineageExit}>✕</button>
         </div>
       )}
 

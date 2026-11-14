@@ -28,12 +28,6 @@
   --rel-marriage-color: #db2777;
   --rel-marriage-text: #9d174d;
 
-  /* ─── Lineage banner ─── */
-  --lineage-banner-start: #059669;
-  --lineage-banner-end: #10b981;
-  --lineage-banner-shadow: rgba(16,185,129,0.35);
-  --lineage-btn-overlay: rgba(255,255,255,0.2);
-  --lineage-btn-overlay-hover: rgba(255,255,255,0.35);
 
   /* ─── UI success/fit button ─── */
   --success-active: #10b981;

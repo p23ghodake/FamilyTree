@@ -3,11 +3,10 @@ import { createPortal, flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../lib/AuthContext';
 import { useDialog } from '../useDialog';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { buildPosterLayout, findPosterRoot, PosterNode } from '../../processing/posterLayout';
-import { DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, PrinterIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
+import { DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
 import {
   BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, PosterTheme,
   rng, SHADOW_OFFSET, SOIL, THEMES,
@@ -269,7 +268,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const { state, currentTree } = useFamilyTree();
   const hasTree = !!currentTree;
   const { t, lang } = useLanguage();
-  const { isAdmin } = useAuth();
   const dialogRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -596,17 +594,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     }
   }, [nameOf, rootId, t]);
 
-  const handlePrint = useCallback(() => {
-    if (!isAdmin) return;
-    const cleanup = () => {
-      document.body.classList.remove('poster-printing');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    document.body.classList.add('poster-printing');
-    window.addEventListener('afterprint', cleanup);
-    window.print();
-  }, [isAdmin]);
-
   if (!currentTree) return null;
 
   const title = t.posterFamilyName(familyName);
@@ -660,11 +647,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               >
                 <DownloadIcon size={15} /><span>{t.posterDownload}</span>
               </button>
-              {isAdmin && (
-                <button type="button" className="poster-action poster-action--print" onClick={handlePrint} disabled={isExporting || layout.nodes.length === 0} aria-label={t.menuPrint} title={t.menuPrint}>
-                  <PrinterIcon size={15} /><span>{t.menuPrint}</span>
-                </button>
-              )}
               <button type="button" className="poster-close" onClick={onClose} title={t.close} aria-label={t.close}>
                 <XIcon size={14} />
               </button>

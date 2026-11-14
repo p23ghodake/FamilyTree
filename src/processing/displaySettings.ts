@@ -6,7 +6,6 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   connectorShape: 'elbow',
   connectorSpeed: 'normal',
   connectorTiming: 'cascade',
-  connectorScope: 'all',
 };
 
 const ALLOWED: { [K in keyof DisplaySettings]: readonly DisplaySettings[K][] } = {
@@ -14,7 +13,6 @@ const ALLOWED: { [K in keyof DisplaySettings]: readonly DisplaySettings[K][] } =
   connectorShape: ['elbow', 'curve'],
   connectorSpeed: ['slow', 'normal', 'fast'],
   connectorTiming: ['cascade', 'together'],
-  connectorScope: ['all', 'lineage'],
 };
 
 function pick<K extends keyof DisplaySettings>(source: Record<string, unknown>, key: K): DisplaySettings[K] {
@@ -34,7 +32,6 @@ export function normalizeDisplaySettings(input: unknown): DisplaySettings {
     connectorShape: pick(source, 'connectorShape'),
     connectorSpeed: pick(source, 'connectorSpeed'),
     connectorTiming: pick(source, 'connectorTiming'),
-    connectorScope: pick(source, 'connectorScope'),
   };
 }
 

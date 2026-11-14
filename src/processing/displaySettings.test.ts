@@ -8,6 +8,7 @@ it('fills in defaults and drops unknown values', () => {
   expect(normalizeDisplaySettings({ connectorStyle: 'pulse', connectorSpeed: 'warp', extra: 1 })).toEqual({
     ...DEFAULT_DISPLAY_SETTINGS, connectorStyle: 'pulse',
   });
+  expect(normalizeDisplaySettings({ connectorScope: 'lineage' })).toEqual(DEFAULT_DISPLAY_SETTINGS);
 });
 
 it('treats missing settings as the defaults when comparing', () => {

@@ -165,7 +165,6 @@ interface State {
   relMode: boolean;
   relSource: string | null;
   relTarget: string | null;
-  lineageMode: boolean;
   theme: ThemeName;
   avatarStyle: AvatarStyle;
 }
@@ -184,7 +183,6 @@ const initialState: State = {
   relMode: false,
   relSource: null,
   relTarget: null,
-  lineageMode: false,
   theme: loadSavedTheme(),
   avatarStyle: loadSavedAvatarStyle(),
 };
@@ -193,7 +191,7 @@ const initialState: State = {
 
 type Action =
   | { type: 'SET_DATA'; payload: ProcessedFamilyData }
-  | { type: 'RESET_ACCESS'; sharedPreview?: boolean }
+  | { type: 'RESET_ACCESS' }
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'SELECT_TREE'; payload: string }
   | { type: 'SELECT_MEMBER'; payload: string | null }
@@ -202,7 +200,6 @@ type Action =
   | { type: 'SET_ADVANCED_FILTER'; payload: Partial<AdvancedFilters> }
   | { type: 'CLEAR_ADVANCED_FILTERS' }
   | { type: 'TOGGLE_REL_MODE' }
-  | { type: 'TOGGLE_LINEAGE_MODE' }
   | { type: 'SET_REL_NODE'; payload: string }
   | { type: 'CLEAR_REL_PATH' }
   | { type: 'SET_THEME'; payload: ThemeName }
@@ -249,7 +246,7 @@ function reduceState(state: State, action: Action): State {
     case 'RESET_ACCESS':
       return {
         ...state,
-        data: action.sharedPreview ? state.data : restrictData(state.data),
+        data: restrictData(state.data),
         past: [],
         future: [],
         memberFormMode: null,
@@ -268,7 +265,7 @@ function reduceState(state: State, action: Action): State {
     case 'SET_ERROR':
       return { ...state, error: action.payload };
     case 'SELECT_TREE':
-      return { ...state, selectedTreeId: action.payload, selectedMemberId: null, relMode: false, relSource: null, relTarget: null, lineageMode: false };
+      return { ...state, selectedTreeId: action.payload, selectedMemberId: null, relMode: false, relSource: null, relTarget: null };
     case 'SELECT_MEMBER':
       return { ...state, selectedMemberId: action.payload };
     case 'SET_SEARCH':
@@ -280,7 +277,7 @@ function reduceState(state: State, action: Action): State {
         data: action.payload,
         selectedTreeId: action.payload.familyTreesStyled[0]?.familyTreeId ?? null,
         selectedMemberId: null,
-        relMode: false, relSource: null, relTarget: null, lineageMode: false,
+        relMode: false, relSource: null, relTarget: null,
         error: null,
       };
 
@@ -436,8 +433,6 @@ function reduceState(state: State, action: Action): State {
 
     case 'TOGGLE_REL_MODE':
       return { ...state, relMode: !state.relMode, relSource: null, relTarget: null };
-    case 'TOGGLE_LINEAGE_MODE':
-      return { ...state, lineageMode: !state.lineageMode };
     case 'SET_REL_NODE': {
       const id = action.payload;
       if (!state.relSource || (state.relSource && state.relTarget)) {
@@ -510,7 +505,6 @@ interface FamilyTreeContextValue {
   debouncedSearchQuery: string;
   exportData: () => void;
   importData: (jsonStr: string) => void;
-  loadSharedData: (jsonStr: string) => boolean;
   resetData: () => void;
   undo: () => void;
   redo: () => void;
@@ -546,7 +540,6 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
   const conflictGenerationRef = useRef(0);
   const savingRef = useRef(false);
-  const sharedPreviewRef = useRef(false);
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
   stateRef.current = state;
@@ -584,7 +577,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       toast.error(tRef.current.saveSignInRequired, { id: 'family-save' });
       return;
     }
-    if (!canEditRef.current || sharedPreviewRef.current) {
+    if (!canEditRef.current) {
       toast.error(tRef.current.saveNoPermission, { id: 'family-save' });
       return;
     }
@@ -637,11 +630,11 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
           setCloudReadyState(false);
           try {
             const latest = await getFamilyData();
-            if (refreshGeneration !== conflictGenerationRef.current || sharedPreviewRef.current) return;
+            if (refreshGeneration !== conflictGenerationRef.current) return;
             applyRemoteData(latest);
             toast.error(tRef.current.saveConflict, { id: 'family-save-conflict', duration: 8000 });
           } catch (refreshError) {
-            if (refreshGeneration !== conflictGenerationRef.current || sharedPreviewRef.current) return;
+            if (refreshGeneration !== conflictGenerationRef.current) return;
             const message = refreshError instanceof Error ? refreshError.message : 'Unknown error';
             setCloudError(message);
             toast.error(tRef.current.saveConflictReloadFailed(message), { id: 'family-save-conflict', duration: 8000 });
@@ -668,9 +661,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     canEditRef.current = false;
     setCanEdit(false);
     setCloudReadyState(false);
-    setLimitedView(!sharedPreviewRef.current || userId === null);
+    setLimitedView(userId === null);
     setCloudError(null);
-    const action: Action = { type: 'RESET_ACCESS', sharedPreview: sharedPreviewRef.current };
+    const action: Action = { type: 'RESET_ACCESS' };
     stateRef.current = reducer(stateRef.current, action);
     reducerDispatch(action);
   }, [authLoading, userId, setCloudReadyState]);
@@ -683,7 +676,6 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   // Everyone loads through the family-data function; visitors receive a limited, read-only view.
   useEffect(() => {
     if (authLoading) return;
-    if (sharedPreviewRef.current) return;
     const generation = ++conflictGenerationRef.current;
     let active = true;
 
@@ -694,10 +686,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     setCloudError(null);
 
     getFamilyData().then(remote => {
-      if (!active || generation !== conflictGenerationRef.current || sharedPreviewRef.current) return;
+      if (!active || generation !== conflictGenerationRef.current) return;
       applyRemoteData(remote);
     }).catch(error => {
-      if (!active || generation !== conflictGenerationRef.current || sharedPreviewRef.current) return;
+      if (!active || generation !== conflictGenerationRef.current) return;
       console.error('Failed to load family data:', error);
       const message = error instanceof Error ? error.message : 'Failed to load family data';
       setCloudError(message);
@@ -799,38 +791,12 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   }, [state.data, session]);
 
   const resetData = useCallback(() => {
-    if (!isAdminUser(session?.user) || !canEditRef.current || sharedPreviewRef.current) {
+    if (!isAdminUser(session?.user) || !canEditRef.current) {
       toast.error(tRef.current.resetAdminOnly, { id: 'family-save' });
       return;
     }
     setReloadKey(key => key + 1);
   }, [session]);
-
-  const loadSharedData = useCallback((jsonStr: string): boolean => {
-    try {
-      let parsed: unknown = JSON.parse(jsonStr);
-      if (typeof parsed === 'object' && parsed !== null && 'familyTreesStyled' in parsed) {
-        parsed = buildRawExport(parsed as ProcessedFamilyData);
-      }
-      const result = validateRawFamilyData(parsed);
-      if (!result.ok || !result.data) throw new Error(result.error ?? 'Invalid shared family data.');
-      const processed = processAllFamilyData(result.data);
-      sharedPreviewRef.current = true;
-      conflictGenerationRef.current += 1;
-      canEditRef.current = false;
-      setCanEdit(false);
-      setLimitedView(!session);
-      shaRef.current = null;
-      setCloudReadyState(false);
-      setCloudError(null);
-      stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload: processed });
-      reducerDispatch({ type: 'SET_DATA', payload: processed });
-      return true;
-    } catch (error) {
-      toast.error(tRef.current.shareOpenFailed(error instanceof Error ? error.message : 'Invalid data.'), { id: 'share-load' });
-      return false;
-    }
-  }, [session, setCloudReadyState]);
 
   const importData = useCallback((jsonStr: string) => {
     let parsed: unknown;
@@ -935,9 +901,9 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const canRedo = state.future.length > 0;
 
   const contextValue = useMemo<FamilyTreeContextValue>(
-    () => ({ state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings }),
+    () => ({ state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, loadSharedData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings],
+    [state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings],
   );
 
   return (

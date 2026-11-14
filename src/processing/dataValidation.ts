@@ -1,10 +1,10 @@
 // ─── Data validation & sanitization for untrusted input ───
 //
-// All external data (JSON import, localStorage, and the shareable `?tree=` URL
-// param) flows through here before reaching the processing pipeline. Structural
-// problems are rejected with a human-readable message; recoverable issues
-// (dangling relationship edges, unsafe image URLs) are repaired and reported as
-// warnings so a partially-corrupt file still loads instead of crashing the app.
+// External data flows through here before reaching the processing pipeline.
+// Structural problems are rejected with a human-readable message; recoverable
+// issues (dangling relationship edges, unsafe image URLs) are repaired and
+// reported as warnings so a partially-corrupt file still loads instead of
+// crashing the app.
 
 import {
   RawFamilyData,

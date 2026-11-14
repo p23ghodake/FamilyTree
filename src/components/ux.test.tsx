@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useFamilyTree, NO_FILTERS } from '../context/FamilyTreeContext';
 import { LanguageProvider } from '../context/LanguageContext';
@@ -8,7 +8,6 @@ import { DEFAULT_DISPLAY_SETTINGS } from '../processing/displaySettings';
 import { processAllFamilyData } from '../processing/dataProcessor';
 import MemberDetailsPanel from './TreeView/MemberDetailsPanel';
 import FloatingSearch from './SearchBar/FloatingSearch';
-import ShareModal from './Layout/ShareModal';
 import TopBar from './Layout/TopBar';
 import MemberFormModal from './TreeView/MemberFormModal';
 import { PhotoUploadSection } from './TreeView/PhotoUploadSection';
@@ -49,7 +48,7 @@ beforeEach(() => {
     state: {
       data, past: [], future: [], selectedTreeId: 'test', selectedMemberId: null,
       searchQuery: '', error: null, memberFormMode: null, memberFormTargetId: null,
-      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null, lineageMode: false,
+      advancedFilters: NO_FILTERS, relMode: false, relSource: null, relTarget: null,
       theme: 'light', avatarStyle: 'initials',
     },
     currentTree: data.familyTreesStyled[0],
@@ -58,7 +57,7 @@ beforeEach(() => {
     filteredMembers: data.familyTreesStyled[0].members,
     matchedMemberIds: new Set(), advancedMatchedIds: new Set(), relResult: null,
     debouncedSearchQuery: '', dispatch: jest.fn(), exportData: jest.fn(), importData: jest.fn(),
-    loadSharedData: jest.fn(), resetData: jest.fn(), undo: jest.fn(), redo: jest.fn(),
+    resetData: jest.fn(), undo: jest.fn(), redo: jest.fn(),
     styleNewMember: jest.fn(),
     displaySettings: { ...DEFAULT_DISPLAY_SETTINGS },
   };
@@ -265,29 +264,6 @@ describe('search panel', () => {
 });
 
 describe('dialog keyboard behaviour', () => {
-  function ShareHarness() {
-    const [open, setOpen] = useState(false);
-    return <><button onClick={() => setOpen(true)}>Open share</button>{open && <ShareModal onClose={() => setOpen(false)} />}</>;
-  }
-
-  it('moves focus in, traps Tab, closes on Escape, and restores focus', () => {
-    render(<ShareHarness />);
-    const opener = screen.getByRole('button', { name: 'Open share' });
-    opener.focus();
-    fireEvent.click(opener);
-    const dialog = screen.getByRole('dialog', { name: en.shareTitle });
-    expect(dialog.contains(document.activeElement)).toBe(true);
-    const buttons = within(dialog).getAllByRole('button');
-    buttons[buttons.length - 1].focus();
-    fireEvent.keyDown(document.activeElement!, { key: 'Tab' });
-    expect(document.activeElement).toBe(buttons[0]);
-    fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true });
-    expect(document.activeElement).toBe(buttons[buttons.length - 1]);
-    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(document.activeElement).toBe(opener);
-  });
-
   it('returns focus to the Timeline button when the timeline closes', () => {
     render(<TopBar />);
     const timelineButton = screen.getByRole('button', { name: en.menuTimeline });

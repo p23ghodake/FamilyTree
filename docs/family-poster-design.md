@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The family poster turns the recorded family line into a decorative, printable keepsake. It is a read-only view: changing poster options changes the composition, not the underlying family data.
+The family poster turns the recorded family line into a decorative PNG download. It is a read-only view: changing poster options changes the composition, not the underlying family data.
 
 This document describes the existing feature and the design rules to preserve when extending it. The implementation is in [PosterModal](../src/components/Poster/PosterModal.tsx), its stylesheet is [PosterModal.css](../src/components/Poster/PosterModal.css), the family layout is in [posterLayout.ts](../src/processing/posterLayout.ts), and the illustration palettes and drawing model are in [posterArt.ts](../src/components/Poster/posterArt.ts).
 
@@ -13,8 +13,8 @@ This document describes the existing feature and the design rules to preserve wh
 - A man's card includes wives in marriage order when the relationship is current or ended by death. Relationships ended by divorce, annulment, or separation are omitted. Women's cards do not list spouses.
 - The UI offers a start person, two to eight generations (four by default), four illustration styles, optional life years, optional aged-paper effects, and a fit-to-view control. The default style is Autumn; years are off, aged paper is on, and fit is on.
 - The family name in the heading is selected from the most common surname, using the active language where available. Names use the active language's display name.
-- The view is opened from the admin interface. PNG download is available from the poster view; printing is shown to admins and is formatted as a single A3 landscape sheet.
-- The renderer uses SVG for the screen, PNG export, and print. The drawing is generated deterministically for a given layout and style, which keeps the composition stable across renders.
+- The view is opened from the admin interface. PNG download is available from the poster view.
+- The renderer uses SVG for the screen and PNG export. The drawing is generated deterministically for a given layout and style, which keeps the composition stable across renders.
 
 ## Composition and information hierarchy
 
@@ -32,7 +32,7 @@ The layout should adapt to family width, generation count, card height, and long
 
 Use a warm, illustrated botanical keepsake aesthetic. The art is vector-based, with tapered, shaded branches, layered foliage, subtle shadows, visible paper, and a restrained ornamental border. Keep decorative detail cohesive with the tree rather than introducing unrelated UI iconography into the poster artwork.
 
-The poster itself intentionally has a light paper palette regardless of the app's selected interface theme. The modal chrome follows the app's theme tokens; the printable sheet remains visually consistent.
+The poster itself intentionally has a light paper palette regardless of the app's selected interface theme. The modal chrome follows the app's theme tokens; the downloaded sheet remains visually consistent.
 
 ### Color and materials
 
@@ -70,22 +70,21 @@ Keep each style's defining details distinct. Avoid introducing random variation 
 - **Branches, foliage and bark.** Retain the original tapered, shaded branch drawing, foliage, bark detail and fixed seeded variation. Additional forks, twigs, textures or age tints should only be introduced if they improve the full poster, not just an isolated detail.
 - **Layout.** Parents are centered over their children, with horizontal space for branches and vertical space for generations. Keep the existing root flare, seasonal styles, consistent upper-left lighting and subtle aged-paper treatment.
 - **Marriage tags.** The selected visual direction keeps the original combined card: the man and wives are listed on his tag with heart markers. Individual rose tags for wives were tried, then removed because the overall illustration did not improve.
-- **Zoom.** Fit (the default) shows the whole sheet. The `−` and `+` buttons, Ctrl/⌘ + wheel (including a trackpad pinch) and a two-finger pinch zoom around the pointer; Fit returns to the whole sheet. Export size and print do not depend on zoom.
-- **Level of detail.** At far zoom, the screen hides fine bark, leaf, ground and fallen-leaf details. This screen-only behavior does not affect the SVG copied for PNG export or printing, so both retain full detail.
+- **Zoom.** Fit (the default) shows the whole sheet. The `−` and `+` buttons, Ctrl/⌘ + wheel (including a trackpad pinch) and a two-finger pinch zoom around the pointer; Fit returns to the whole sheet. Export size does not depend on zoom.
+- **Level of detail.** At far zoom, the screen hides fine bark, leaf, ground and fallen-leaf details. This screen-only behavior does not affect the SVG copied for PNG export, so the download retains full detail.
 - **Determinism.** Preserve the fixed starting value for drawing variation so a given poster remains stable across renders.
 
 ## Poster controls and responsive behavior
 
 - Keep the control labels explicit and localized. Controls should update the preview immediately.
 - The current person picker is a native select sorted by display name, with the father's name added to disambiguate duplicate first names. Retain the native control while it remains usable; if replaced, preserve keyboard selection and the same disambiguation.
-- Keep download and print actions visually grouped apart from composition controls. Disable actions when there is no useful layout or while an export is in progress.
+- Keep the download action visually grouped apart from composition controls. Disable it when there is no useful layout or while an export is in progress.
 - The dialog is bounded by the viewport and uses an independently scrollable canvas. Keep the title and export actions together in the top toolbar row, with composition controls on a separate row that wraps cleanly at every width. On narrow screens, use a near-full-height bottom sheet and compact field layouts; action labels may collapse to icons, but accessible names must remain.
 - Fit mode shows the complete sheet. Zooming (buttons, Ctrl/⌘ + wheel or pinch) leaves Fit and lets the poster be panned and scrolled without clipping the rendered SVG; Fit returns to the whole sheet.
 
 ## Output, accessibility, and localization
 
 - PNG export should preserve the SVG composition, colors, and bundled fonts. Keep canvas dimensions within browser limits and surface export failures rather than producing a misleading success state.
-- Print should hide the app controls, remove screen-only shadows and overflow constraints, preserve print colors, and fit the poster on A3 landscape paper.
 - Keep the modal labelled as a dialog, provide an accessible name for the SVG, use native labelled controls, retain visible keyboard focus, and preserve the shared dialog behavior for focus trapping, Escape, and focus restoration.
 - Localize all poster controls and status text in English and Marathi. Use the active language's member names and family title, and ensure Devanagari text remains supported by the selected fonts.
 - Keep the no-relatives message available to assistive technology when the selected start person has no recorded relatives.
@@ -95,15 +94,15 @@ Keep each style's defining details distinct. Avoid introducing random variation 
 When changing the feature:
 
 - Do not imply that this poster displays every relationship; its lineage rules intentionally omit some branches and former relationships.
-- Do not alter source family records as a side effect of preview, export, or print controls.
+- Do not alter source family records as a side effect of preview or export controls.
 - Preserve long names, non-Latin text, unknown dates, and families with missing or sparse relationships.
 - Keep visual gender distinctions redundant (shape and color), and preserve readable contrast for tag text.
 - Avoid adding detail that makes names, years, or branch connections harder to follow.
-- Keep screen styling, SVG rendering, PNG export, and print output visually aligned.
+- Keep screen styling and PNG export visually aligned.
 
 ## Improvement plan
 
-Reviewed against the code. Visual experiments were compared against the original poster; the original illustration style is retained. The implemented view changes are zoom and screen-only detail reduction. Family data, lineage rules, and PNG and print output remain unchanged.
+Reviewed against the code. Visual experiments were compared against the original poster; the original illustration style is retained. The implemented view changes are zoom and screen-only detail reduction. Family data, lineage rules, and PNG output remain unchanged.
 
 ### Review of the proposed improvements
 
@@ -116,7 +115,7 @@ Reviewed against the code. Visual experiments were compared against the original
 | Bark texture and age | Existing shading, cracks and knots retained; age tint was reverted. | Keep original |
 | Balanced crown: Reingold–Tilford or Walker packing | Parents are already centered; proposed crown and trunk changes were reverted. | Keep original |
 | Wives as paired tags | Individual wife tags were tried and reverted; wives remain on the man's tag with hearts. | Keep original |
-| Less detail when zoomed out | Screen-only fine-detail reduction added; exports and print retain all detail. | Keep |
+| Less detail when zoomed out | Screen-only fine-detail reduction added; PNG exports retain all detail. | Keep |
 | Root flare that scales | Existing roots retained without alteration. | Keep original |
 | Knots per ancestor generation | Existing bark details retained without alteration. | Keep original |
 | Daughters on short twigs | Experimental layout/art changes were reverted. | Keep original |
@@ -125,7 +124,7 @@ Reviewed against the code. Visual experiments were compared against the original
 ### Constraints
 
 - Keep view behavior out of family data and lineage rules.
-- Screen-only detail reduction must not reach PNG or print.
+- Screen-only detail reduction must not reach PNG exports.
 - Preserve the original artwork's composition and deterministic rendering; evaluate proposed changes against the full poster, not just an isolated branch.
 - Do not add libraries for SVG drawing or zoom.
 

@@ -37,11 +37,6 @@ export const CONFIG = {
     READABLE_MIN_ZOOM: 0.45,
   },
 
-  share: {
-    /** Max compressed URL length before QR code is suppressed */
-    QR_MAX_LENGTH: 2500,
-  },
-
   colors: {
     /** Tint blend amount for node background colors */
     TINT_AMOUNT: 0.1,

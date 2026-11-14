@@ -97,22 +97,11 @@ type Translations = {
   tooltipTracer: string;
   tooltipStats: string;
   tooltipAvatarStyle: string;
-  tooltipShare: string;
-  shareTitle: string;
-  shareNoData: string;
-  shareQrHint: string;
-  shareQrTooLargeTitle: string;
-  shareQrTooLargeSub: (sizeKb: string) => string;
-  shareCopy: string;
-  shareCopied: string;
-  shareNoteQr: string;
-  shareNoteLink: string;
   tooltipTimeline: string;
   tooltipPrint: string;
   tooltipMore: string;
   menuExportJson: string;
   menuExportImage: string;
-  menuShare: string;
   menuTimeline: string;
   menuPrint: string;
   tooltipExportJson: string;
@@ -214,14 +203,10 @@ type Translations = {
   tooltipZoomIn: string;
   tooltipZoomOut: string;
   tooltipZoomReset: string;
-  tooltipLineageFocus: string;
   tooltipFitToScreen: string;
-  // ── TreeView empty / lineage banner ──
+  // ── TreeView empty state ──
   selectTreePrompt: string;
   ariaFamilyTree: string;
-  lineageBannerActive: string;
-  lineageBannerInactive: string;
-  lineageExit: string;
   // ── TopBar ──
   toastResetSuccess: string;
   toastUndo: string;
@@ -313,8 +298,6 @@ type Translations = {
   loadFailed: (error: string) => string;
   resetAdminOnly: string;
   deleteAdminOnly: string;
-  shareOpenFailed: (error: string) => string;
-  shareInvalidLink: string;
   importInvalidJson: string;
   importFailed: (error: string) => string;
   importRepaired: (count: number) => string;
@@ -350,7 +333,6 @@ type Translations = {
   // ── Header ──
   viewTree: string;
   viewTrace: string;
-  viewLineage: string;
   viewStats: string;
   viewPoster: string;
   posterTitle: string;
@@ -384,7 +366,6 @@ type Translations = {
   posterDone: string;
   headerViews: string;
   headerAddMember: string;
-  headerShareTree: string;
   headerMenu: string;
   headerUndo: string;
   headerRedo: string;
@@ -409,9 +390,6 @@ type Translations = {
   settingsConnectorTiming: string;
   connectorTimingCascade: string;
   connectorTimingTogether: string;
-  settingsConnectorScope: string;
-  connectorScopeAll: string;
-  connectorScopeLineage: string;
   connectorSettingsHint: string;
   connectorAdminOnly: string;
   accountMenu: (name: string) => string;
@@ -537,22 +515,11 @@ export const translations: Record<'en' | 'mr', Translations> = {
     tooltipExportJson: 'Export as familyData.json — downloads a copy of all data',
     tooltipExportImage: 'Export tree as PNG image (high-res 2×)',
     tooltipAvatarStyle: 'Avatar style — choose how members are displayed',
-    tooltipShare: 'Share — generate QR code link',
-    shareTitle: 'Share Family Tree',
-    shareNoData: 'No tree data loaded.',
-    shareQrHint: 'Scan to open this family tree on any device',
-    shareQrTooLargeTitle: 'Tree too large for QR code',
-    shareQrTooLargeSub: (kb) => `Your tree data is ${kb} KB compressed — above the ~2.5 KB QR limit. Use the link below to share instead.`,
-    shareCopy: 'Copy',
-    shareCopied: '✓ Copied',
-    shareNoteQr: '✓ Paste this link in any browser to open the tree',
-    shareNoteLink: '💡 Tip: paste this link in any browser to open the tree',
     tooltipTimeline: 'Family Timeline',
     tooltipPrint: 'Print family tree',
     tooltipMore: 'More actions',
     menuExportJson: 'Export JSON',
     menuExportImage: 'Export PNG',
-    menuShare: 'Share',
     menuTimeline: 'Timeline',
     menuPrint: 'Print',
     tooltipReset: 'Reload the latest shared family data from GitHub',
@@ -644,14 +611,10 @@ export const translations: Record<'en' | 'mr', Translations> = {
     tooltipZoomIn: 'Zoom in',
     tooltipZoomOut: 'Zoom out',
     tooltipZoomReset: 'Reset zoom to 100%',
-    tooltipLineageFocus: 'Lineage Focus — click a member to highlight their direct line',
     tooltipFitToScreen: 'Fit entire tree to screen',
-    // TreeView empty / lineage banner
+    // TreeView empty state
     selectTreePrompt: 'Select a family tree to view',
     ariaFamilyTree: 'Family tree',
-    lineageBannerActive: 'Lineage Focus — showing direct ancestors, descendants & spouses',
-    lineageBannerInactive: 'Lineage Focus — click any member to highlight their direct line',
-    lineageExit: 'Exit lineage focus',
     // TopBar
     toastResetSuccess: 'Family tree reset to original data.',
     toastUndo: 'Change undone',
@@ -761,8 +724,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     loadFailed: (error) => `Could not load the latest family data: ${error}`,
     resetAdminOnly: 'Only an administrator can reset shared family data.',
     deleteAdminOnly: 'Only the family admin signed in with GitHub can delete members.',
-    shareOpenFailed: (error) => `Could not open shared tree: ${error}`,
-    shareInvalidLink: 'Could not open shared tree: the link is invalid.',
     importInvalidJson: 'Import failed — the file is not valid JSON.',
     importFailed: (error) => `Import failed — ${error}`,
     importRepaired: (count) => `Imported data includes ${count} repaired item(s); the save is in progress.`,
@@ -798,7 +759,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // Header
     viewTree: 'Tree',
     viewTrace: 'Trace',
-    viewLineage: 'Lineage',
     viewStats: 'Statistics',
     viewPoster: 'Poster',
     posterTitle: 'Family poster',
@@ -832,7 +792,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterDone: 'Done',
     headerViews: 'Views',
     headerAddMember: 'Add member',
-    headerShareTree: 'Share tree',
     headerMenu: 'Menu',
     headerUndo: 'Undo',
     headerRedo: 'Redo',
@@ -857,9 +816,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     settingsConnectorTiming: 'Pulse timing',
     connectorTimingCascade: 'Cascade',
     connectorTimingTogether: 'Together',
-    settingsConnectorScope: 'Animate',
-    connectorScopeAll: 'All lines',
-    connectorScopeLineage: 'Selected lineage',
     connectorSettingsHint: 'Saved for everyone who views the tree.',
     connectorAdminOnly: 'Only the family admin can change the tree line style.',
     accountMenu: (name) => `Account and settings for ${name}`,
@@ -984,22 +940,11 @@ export const translations: Record<'en' | 'mr', Translations> = {
     tooltipExportJson: 'familyData.json म्हणून निर्यात करा',
     tooltipExportImage: 'वृक्ष PNG प्रतिमा म्हणून निर्यात करा',
     tooltipAvatarStyle: 'अवतार शैली — सदस्य कसे दाखवायचे ते निवडा',
-    tooltipShare: 'शेअर करा — QR कोड लिंक तयार करा',
-    shareTitle: 'कुटुंब वृक्ष शेअर करा',
-    shareNoData: 'कोणताही वृक्ष डेटा लोड केलेला नाही.',
-    shareQrHint: 'कोणत्याही डिव्हाइसवर हा कुटुंब वृक्ष उघडण्यासाठी स्कॅन करा',
-    shareQrTooLargeTitle: 'वृक्ष QR कोडसाठी खूप मोठा आहे',
-    shareQrTooLargeSub: (kb) => `तुमचा वृक्ष डेटा ${kb} KB संकुचित आहे — ~2.5 KB QR मर्यादेपेक्षा जास्त. त्याऐवजी खालील लिंक वापरून शेअर करा.`,
-    shareCopy: 'कॉपी करा',
-    shareCopied: '✓ कॉपी केले',
-    shareNoteQr: '✓ ही लिंक कोणत्याही ब्राउझरमध्ये पेस्ट करा',
-    shareNoteLink: '💡 टीप: ही लिंक कोणत्याही ब्राउझरमध्ये पेस्ट करा',
     tooltipTimeline: 'कौटुंबिक टाइमलाइन',
     tooltipPrint: 'कुटुंब वृक्ष प्रिंट करा',
     tooltipMore: 'अधिक क्रिया',
     menuExportJson: 'JSON निर्यात',
     menuExportImage: 'PNG निर्यात',
-    menuShare: 'शेअर करा',
     menuTimeline: 'टाइमलाइन',
     menuPrint: 'प्रिंट',
     tooltipReset: 'GitHub वरून नवीनतम सामायिक कुटुंब माहिती पुन्हा लोड करा',
@@ -1091,14 +1036,10 @@ export const translations: Record<'en' | 'mr', Translations> = {
     tooltipZoomIn: 'झूम इन',
     tooltipZoomOut: 'झूम आउट',
     tooltipZoomReset: 'झूम १००% वर रीसेट करा',
-    tooltipLineageFocus: 'वंश फोकस — थेट रेषा दाखवण्यासाठी सदस्यावर क्लिक करा',
     tooltipFitToScreen: 'संपूर्ण वृक्ष स्क्रीनवर बसवा',
-    // TreeView empty / lineage banner
+    // TreeView empty state
     selectTreePrompt: 'पाहण्यासाठी कुटुंब वृक्ष निवडा',
     ariaFamilyTree: 'कुटुंब वृक्ष',
-    lineageBannerActive: 'वंश फोकस — थेट पूर्वज, वंशज आणि जोडीदार दाखवत आहे',
-    lineageBannerInactive: 'वंश फोकस — थेट रेषा दाखवण्यासाठी कोणत्याही सदस्यावर क्लिक करा',
-    lineageExit: 'वंश फोकस बाहेर पडा',
     // TopBar
     toastResetSuccess: 'कुटुंब वृक्ष मूळ डेटावर रीसेट केला.',
     toastUndo: 'बदल पूर्ववत केला',
@@ -1208,8 +1149,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     loadFailed: (error) => `नवीनतम कौटुंबिक माहिती लोड झाली नाही: ${error}`,
     resetAdminOnly: 'सामायिक माहिती फक्त प्रशासक रीसेट करू शकतो.',
     deleteAdminOnly: 'GitHub ने साइन इन केलेला कुटुंब प्रशासकच सदस्य हटवू शकतो.',
-    shareOpenFailed: (error) => `शेअर केलेला वृक्ष उघडता आला नाही: ${error}`,
-    shareInvalidLink: 'शेअर केलेला वृक्ष उघडता आला नाही: लिंक अवैध आहे.',
     importInvalidJson: 'आयात अयशस्वी — फाइल वैध JSON नाही.',
     importFailed: (error) => `आयात अयशस्वी — ${error}`,
     importRepaired: (count) => `आयात केलेल्या माहितीत ${count} दुरुस्त्या केल्या; जतन सुरू आहे.`,
@@ -1245,7 +1184,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // Header
     viewTree: 'वृक्ष',
     viewTrace: 'नाते शोधा',
-    viewLineage: 'वंश फोकस',
     viewStats: 'आकडेवारी',
     viewPoster: 'पोस्टर',
     posterTitle: 'कुटुंब पोस्टर',
@@ -1279,7 +1217,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterDone: 'पूर्ण',
     headerViews: 'दृश्ये',
     headerAddMember: 'सदस्य जोडा',
-    headerShareTree: 'वृक्ष शेअर करा',
     headerMenu: 'मेनू',
     headerUndo: 'पूर्ववत',
     headerRedo: 'पुन्हा करा',
@@ -1304,9 +1241,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     settingsConnectorTiming: 'स्पंदाची वेळ',
     connectorTimingCascade: 'पिढीनुसार',
     connectorTimingTogether: 'एकत्र',
-    settingsConnectorScope: 'अॅनिमेशन',
-    connectorScopeAll: 'सर्व रेषा',
-    connectorScopeLineage: 'निवडलेला वंश',
     connectorSettingsHint: 'वृक्ष पाहणाऱ्या सर्वांसाठी जतन होते.',
     connectorAdminOnly: 'वृक्ष रेषांची शैली फक्त कुटुंब प्रशासक बदलू शकतो.',
     accountMenu: (name) => `${name} यांचे खाते आणि सेटिंग्ज`,

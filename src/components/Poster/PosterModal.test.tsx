@@ -69,7 +69,6 @@ afterEach(() => {
   restore(URL, 'createObjectURL', descriptors.objectUrl);
   restore(URL, 'revokeObjectURL', descriptors.revokeUrl);
   restore(Image.prototype, 'decode', descriptors.decode);
-  document.body.classList.remove('poster-printing');
 });
 
 describe('poster UX', () => {
@@ -82,7 +81,7 @@ it('groups family, appearance, zoom and export controls in the top toolbar', () 
   expect(within(settings).getAllByRole('radio')).toHaveLength(4);
   expect(within(toolbar).getByRole('button', { name: t.posterFit })).toBeTruthy();
   expect(within(toolbar).getByRole('button', { name: t.posterDownload })).toBeTruthy();
-  expect(within(toolbar).getByRole('button', { name: t.menuPrint })).toBeTruthy();
+  expect(within(toolbar).queryByRole('button', { name: t.menuPrint })).toBeNull();
   expect(screen.queryByRole('complementary')).toBeNull();
   expect((screen.getByRole('radio', { name: t.posterThemeNames.autumn }) as HTMLInputElement).checked).toBe(true);
   expect(screen.getByRole('status', { name: t.posterZoomLevel }).textContent).toBe('100%');
@@ -417,13 +416,4 @@ it('exports the readable, single-line SVG as PNG without editor controls', async
   expect(toast.error).not.toHaveBeenCalled();
 });
 
-it('prints the poster and removes the print-only state afterwards', () => {
-  const print = jest.spyOn(window, 'print').mockImplementation(() => {});
-  render(<PosterModal onClose={jest.fn()} />);
-  fireEvent.click(screen.getByRole('button', { name: t.menuPrint }));
-  expect(print).toHaveBeenCalledTimes(1);
-  expect(document.body.classList.contains('poster-printing')).toBe(true);
-  fireEvent(window, new Event('afterprint'));
-  expect(document.body.classList.contains('poster-printing')).toBe(false);
-});
 });

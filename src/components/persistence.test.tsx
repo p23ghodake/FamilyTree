@@ -242,23 +242,6 @@ it('discards a late privileged conflict reload after sign-out', async () => {
   expect(context.limitedView).toBe(true);
 });
 
-it('does not overwrite a shared snapshot with a late conflict reload', async () => {
-  await mountEditor();
-  let finishConflict!: (response: unknown) => void;
-  client.functions.invoke.mockResolvedValueOnce(failedResponse(409));
-  client.functions.invoke.mockImplementationOnce(() => new Promise(resolve => { finishConflict = resolve; }));
-  const member = context.styleNewMember({ id: 'new', firstName: 'New', lastName: 'Family', gender: 'unknown' });
-  act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
-  await waitFor(() => expect(calls('GET')).toHaveLength(2));
-  const shared = JSON.parse(JSON.stringify(rawData)) as RawFamilyData;
-  shared.familyTrees[0].familyTreeDisplayName = 'Shared snapshot';
-  act(() => expect(context.loadSharedData(JSON.stringify(shared))).toBe(true));
-  await act(async () => finishConflict({ data: { data: rawData, sha: 'privileged', canEdit: true }, error: null }));
-  expect(context.currentTree?.familyTreeDisplayName).toBe('Shared snapshot');
-  expect(context.canEdit).toBe(false);
-  expect(context.cloudReady).toBe(false);
-});
-
 it('updates permission flags when conflict recovery returns limited data', async () => {
   await mountEditor();
   client.functions.invoke.mockResolvedValueOnce(failedResponse(409));
@@ -272,7 +255,7 @@ it('updates permission flags when conflict recovery returns limited data', async
   expect(context.currentTree?.members[0].birthDate).toBeUndefined();
 });
 
-it('persists deceased status without a death year through save, reload and sharing', async () => {
+it('persists deceased status without a death year through save and reload', async () => {
   await mountEditor();
   openParentDetailsStep();
   fireEvent.click(screen.getByRole('switch', { name: t.labelLiving }));
@@ -293,10 +276,6 @@ it('persists deceased status without a death year through save, reload and shari
   expect(context.advancedMatchedIds.has('parent')).toBe(false);
   act(() => context.dispatch({ type: 'SET_ADVANCED_FILTER', payload: { livingOnly: false, marriageEligible: true } }));
   expect(context.advancedMatchedIds.has('parent')).toBe(false);
-  const exported = buildRawExport(context.state.data!);
-  act(() => expect(context.loadSharedData(JSON.stringify(exported))).toBe(true));
-  expect(context.currentTree?.members[0].isDeceased).toBe(true);
-  expect(context.currentTree?.members[0].age).toBeNull();
 });
 
 it('clears death information when a deceased member is changed back to living', async () => {

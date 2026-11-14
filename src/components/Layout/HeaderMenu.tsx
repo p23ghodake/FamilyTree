@@ -30,7 +30,7 @@ const ConnectorSettings: React.FC = () => {
   const { t } = useLanguage();
   const disabled = !canEdit || !cloudReady || isSaving;
   const set = (payload: Partial<DisplaySettings>) => dispatch({ type: 'SET_DISPLAY_SETTINGS', payload });
-  const { connectorStyle, connectorShape, connectorSpeed, connectorTiming, connectorScope } = displaySettings;
+  const { connectorStyle, connectorShape, connectorSpeed, connectorTiming } = displaySettings;
 
   return (
     <div className="hdr-menu__group" aria-busy={isSaving}>
@@ -89,18 +89,6 @@ const ConnectorSettings: React.FC = () => {
               </select>
             </label>
           )}
-          <label className="hdr-menu__row hdr-menu__row--sub">
-            <span>{t.settingsConnectorScope}</span>
-            <select
-              className="hdr-menu__select"
-              value={connectorScope}
-              disabled={disabled}
-              onChange={e => set({ connectorScope: e.target.value as DisplaySettings['connectorScope'] })}
-            >
-              <option value="all">{t.connectorScopeAll}</option>
-              <option value="lineage">{t.connectorScopeLineage}</option>
-            </select>
-          </label>
         </>
       )}
       <p className="hdr-menu__hint">{t.connectorSettingsHint}</p>

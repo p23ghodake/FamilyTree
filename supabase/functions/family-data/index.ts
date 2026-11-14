@@ -157,7 +157,6 @@ const SETTINGS_OPTIONS: Record<string, readonly string[]> = {
   connectorShape: ['elbow', 'curve'],
   connectorSpeed: ['normal', 'slow', 'fast'],
   connectorTiming: ['cascade', 'together'],
-  connectorScope: ['all', 'lineage'],
 };
 
 function normalizeSettings(data: unknown): string {
