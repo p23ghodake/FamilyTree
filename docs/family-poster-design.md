@@ -11,7 +11,7 @@ This document describes the existing feature and the design rules to preserve wh
 - The poster presents a lineage through sons, growing upward from a selected male starting person. Ancestors are stacked along the trunk; descendants branch above them.
 - Sibling order is eldest first when birth years are known; siblings without dates retain their recorded order. Daughters are grouped separately from sons and appear on their own, without a husband or descendants. A wife's children recorded under her or her husband can appear in the man's line. These are product rules, not a complete visualization of every relationship in the family data.
 - A man's card includes wives in marriage order when the relationship is current or ended by death. Relationships ended by divorce, annulment, or separation are omitted. Women's cards do not list spouses.
-- The UI offers a start person, two to eight generations (four by default), four illustration styles, optional life years, optional aged-paper effects, and a fit-to-view control. The default style is Autumn; years are off, aged paper is on, and fit is on.
+- The UI offers a start person, two to eight generations (four by default), four illustration styles, two name styles, and a fit-to-view control. The default style is Autumn and fit is on. Tags show names without life years, and the paper has no aging texture or vignette.
 - The family name in the heading is selected from the most common surname, using the active language where available. Names use the active language's display name.
 - The view is opened from the admin interface. PNG download is available from the poster view.
 - The renderer uses SVG for the screen and PNG export. The drawing is generated deterministically for a given layout and style, which keeps the composition stable across renders.
@@ -19,7 +19,7 @@ This document describes the existing feature and the design rules to preserve wh
 ## Composition and information hierarchy
 
 1. **Tree silhouette:** The trunk anchors the composition, with ancestors below the selected person and descendants branching toward the canopy. Use the horizontal space to distinguish family branches and vertical space to distinguish generations.
-2. **Person tags:** Each person is represented by a hanging tag. Keep the primary name as the most prominent text. Optional birth/death years are secondary and should not compete with names.
+2. **Person tags:** Each person is represented by a hanging tag. Keep the primary name as the most prominent text; birth/death years are not displayed.
 3. **Relationships:** List wives on the man's tag in marriage order, separated by small heart markers. Keep every listed name legible.
 4. **Family title:** Center the family title below the tree, inside the decorative frame. It should remain fully inside the sheet at narrow and wide layouts.
 5. **Decoration:** Foliage, roots, ground, and frame add a keepsake quality, but must remain behind or around the family information rather than obscure it.
@@ -32,7 +32,7 @@ The layout should adapt to family width, generation count, card height, and long
 
 Use a warm, illustrated botanical keepsake aesthetic. The art is vector-based, with tapered, shaded branches, layered foliage, subtle shadows, visible paper, and a restrained ornamental border. Keep decorative detail cohesive with the tree rather than introducing unrelated UI iconography into the poster artwork.
 
-The poster itself intentionally has a light paper palette regardless of the app's selected interface theme. The modal chrome follows the app's theme tokens, with a compact 56px header, shared interface typography, theme-colored primary action and selected states. The downloaded sheet remains visually consistent.
+The poster itself intentionally has a light paper palette regardless of the app's selected interface theme. The modal chrome follows the app's theme tokens, with a compact header, shared interface typography, theme-colored primary action and selected states. The downloaded sheet remains visually consistent.
 
 ### Color and materials
 
@@ -43,12 +43,11 @@ The poster itself intentionally has a light paper palette regardless of the app'
 | Male tag | Green edge with dark green-brown text | Retain a visible outline and readable text. |
 | Female tag | Rose edge with dark wine text and mirrored corner shape | Retain both color and shape distinction; do not make gender legible by color alone. |
 | Seasonal foliage | Theme-specific greens, golds, russets, and blossoms | Vary foliage, fallen leaves, and accents while leaving the paper and names readable. |
-| Aged-paper option | Fine texture and edge vignette | Keep it subtle. It is optional because it increases PNG size. |
 
 ### Typography
 
 - Use the bundled Great Vibes script for English names and Yatra One for Marathi names.
-- Use a quiet serif for years and a complementary script treatment for the family title.
+- Use a complementary script treatment for the family title.
 - Keep the title and name lettering decorative but readable at screen scale and in the exported image.
 - Fit long names by shrinking them only as needed, then adjusting text spacing as a last resort. Do not truncate or silently replace a person's name.
 - Bundle/in-line the fonts for export so the image does not depend on the viewer's installed fonts.
@@ -68,7 +67,7 @@ Keep each style's defining details distinct. Avoid introducing random variation 
 
 - **Branch thickness follows family size.** The original renderer already models limb weight from the number of people carried and caps maximum width. Keep this behavior so the trunk does not crowd ancestor tags.
 - **Branches, foliage and bark.** Retain the original tapered, shaded branch drawing, foliage, bark detail and fixed seeded variation. Additional forks, twigs, textures or age tints should only be introduced if they improve the full poster, not just an isolated detail.
-- **Layout.** Parents are centered over their children, with horizontal space for branches and vertical space for generations. Keep the existing root flare, seasonal styles, consistent upper-left lighting and subtle aged-paper treatment.
+- **Layout.** Parents are centered over their children, with horizontal space for branches and vertical space for generations. Keep the existing root flare, seasonal styles, consistent upper-left lighting and clean paper background.
 - **Marriage tags.** The selected visual direction keeps the original combined card: the man and wives are listed on his tag with heart markers. Individual rose tags for wives were tried, then removed because the overall illustration did not improve.
 - **Zoom.** Fit (the default) shows the whole sheet. The `−` and `+` buttons, Ctrl/⌘ + wheel (including a trackpad pinch) and a two-finger pinch zoom around the pointer; Fit returns to the whole sheet. Export size does not depend on zoom.
 - **Level of detail.** At far zoom, the screen hides fine bark, leaf, ground and fallen-leaf details. This screen-only behavior does not affect the SVG copied for PNG export, so the download retains full detail.
@@ -77,9 +76,11 @@ Keep each style's defining details distinct. Avoid introducing random variation 
 ## Poster controls and responsive behavior
 
 - Keep the control labels explicit and localized. Controls should update the preview immediately.
-- The current person picker is a native select sorted by display name, with the father's name added to disambiguate duplicate first names. Retain the native control while it remains usable; if replaced, preserve keyboard selection and the same disambiguation.
+- The starting person is selected from one searchable combobox sorted by display name, with the father's name added to disambiguate duplicate first names. Preserve keyboard selection, localized names, and the same disambiguation.
+- The style control is a dropdown that shows the localized style names only; do not add illustrated previews.
 - Keep the download action visually grouped apart from composition controls. Disable it when there is no useful layout or while an export is in progress.
-- The dialog is bounded by the viewport and uses an independently scrollable canvas. Keep the title and export actions together in the top toolbar row, with composition controls below on larger screens. On tablets, phones and short landscape screens, use the full viewport and let Customize expand the settings below the header; action labels may collapse to icons, but accessible names must remain.
+- The dialog is bounded by the viewport and uses an independently scrollable canvas. On larger screens, place the Family and Appearance controls between the poster title and the download/close actions in the top toolbar. On tablets, phones and short landscape screens, use the full viewport and let Customize expand the same settings below the title and actions.
+- Poster action buttons are icon-only on every screen size, with localized tooltips and accessible names. Keep person names, dropdown choices, field labels and the zoom percentage visible.
 - Keep Fit, zoom percentage, zoom buttons and Reset in a floating bar at the bottom-right of the preview, outside the scrolling sheet and exported SVG. Reserve canvas space below the fitted sheet so the controls do not cover the artwork. Use larger controls and safe-area spacing on compact screens.
 - Fit mode shows the complete sheet. Zooming (buttons, Ctrl/⌘ + wheel or pinch) leaves Fit and lets the poster be panned and scrolled without clipping the rendered SVG; Fit returns to the whole sheet.
 
@@ -98,12 +99,12 @@ When changing the feature:
 - Do not alter source family records as a side effect of preview or export controls.
 - Preserve long names, non-Latin text, unknown dates, and families with missing or sparse relationships.
 - Keep visual gender distinctions redundant (shape and color), and preserve readable contrast for tag text.
-- Avoid adding detail that makes names, years, or branch connections harder to follow.
+- Avoid adding detail that makes names or branch connections harder to follow.
 - Keep screen styling and PNG export visually aligned.
 
 ## Improvement plan
 
-Reviewed against the code. Visual experiments were compared against the original poster; the original illustration style is retained. The implemented view changes are zoom and screen-only detail reduction. Family data, lineage rules, and PNG output remain unchanged.
+Reviewed against the code. Visual experiments were compared against the original poster; the original tree illustration style is retained. The implemented view changes include zoom and screen-only detail reduction. Life-year labels and aged-paper effects have been removed from both the preview and PNG output. Family data and lineage rules remain unchanged.
 
 ### Review of the proposed improvements
 
@@ -131,4 +132,4 @@ Reviewed against the code. Visual experiments were compared against the original
 
 ## Existing verification
 
-The current tests cover poster-root selection, theme and year controls, paper texture toggling, long-name retention, deterministic illustration output, theme-specific art, and export error recovery. Relevant suites are [functional.test.tsx](../src/components/functional.test.tsx), [posterLayout.test.ts](../src/processing/posterLayout.test.ts), and [posterArt.test.ts](../src/components/Poster/posterArt.test.ts).
+The current tests cover poster-root selection, style controls, name-only tags and clean paper in the preview and PNG, long-name retention, deterministic illustration output, theme-specific art, and export error recovery. Relevant suites are [functional.test.tsx](../src/components/functional.test.tsx), [PosterModal.test.tsx](../src/components/Poster/PosterModal.test.tsx), [posterLayout.test.ts](../src/processing/posterLayout.test.ts), and [posterArt.test.ts](../src/components/Poster/posterArt.test.ts).

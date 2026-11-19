@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
 import { useFamilyTree, NO_FILTERS } from '../context/FamilyTreeContext';
@@ -155,12 +155,16 @@ it('offers only men as the poster starting person', () => {
   context.currentTree = people.familyTreesStyled[0];
   context.state = { ...context.state, data: people, selectedMemberId: 'sita' };
   render(<PosterModal onClose={jest.fn()} />);
-  const picker = screen.getByLabelText(t.posterStartFrom) as HTMLSelectElement;
-  expect(Array.from(picker.options).map(o => o.value).sort()).toEqual(['kush', 'lav', 'ram']);
+  const picker = screen.getByRole('combobox', { name: t.posterFindPerson }) as HTMLInputElement;
   expect(picker.value).toBe('ram');
+  fireEvent.focus(picker);
+  const peopleList = screen.getByRole('listbox', { name: t.posterStartFrom });
+  expect(within(peopleList).getAllByRole('option').map(option => option.textContent)).toEqual(['kush (ram)', 'lav (ram)', 'ram']);
+  fireEvent.click(within(peopleList).getByRole('option', { name: 'lav (ram)' }));
+  expect(picker.value).toBe('lav (ram)');
 });
 
-it('lets the poster switch style, show life years and drop the paper texture', () => {
+it('lets the poster switch style while keeping name-only tags and clean paper', () => {
   const people = processAllFamilyData({ familyTrees: [{
     familyTreeId: 'test', familyTreeDisplayName: 'Test Family',
     members: [
@@ -172,22 +176,18 @@ it('lets the poster switch style, show life years and drop the paper texture', (
   context.currentTree = people.familyTreesStyled[0];
   context.state = { ...context.state, data: people, selectedMemberId: 'ram' };
   const view = render(<PosterModal onClose={jest.fn()} />);
-  expect(screen.getByRole('group', { name: t.posterStyle })).toBeTruthy();
-  expect(screen.getAllByRole('radio').map(radio => (radio as HTMLInputElement).value)).toEqual(['autumn', 'spring', 'summer', 'banyan']);
-  const banyan = screen.getByRole('radio', { name: t.posterThemeNames.banyan }) as HTMLInputElement;
-  fireEvent.click(banyan);
-  expect(banyan.checked).toBe(true);
+  const style = screen.getByRole('combobox', { name: t.posterStyle }) as HTMLSelectElement;
+  expect(Array.from(style.options).map(option => option.value)).toEqual(['autumn', 'spring', 'summer', 'banyan']);
+  fireEvent.change(style, { target: { value: 'banyan' } });
+  expect(style.value).toBe('banyan');
   expect(screen.queryByRole('button', { name: t.menuPrint })).toBeNull();
 
-  expect(screen.queryByText(t.posterLifeYears(1920, 1990))).toBeNull();
-  fireEvent.click(screen.getByLabelText(t.posterShowYears));
-  expect(screen.getByText(t.posterLifeYears(1920, 1990))).toBeTruthy();
-  expect(screen.getByText(t.posterLifeYears(1950, null))).toBeTruthy();
+  expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
 
   const svg = view.baseElement.querySelector('.poster-sheet svg')!;
-  expect(svg.querySelector('#poster-paper-texture')).toBeTruthy();
-  fireEvent.click(screen.getByLabelText(t.posterAgedPaper));
-  expect(svg.querySelector('[fill="url(#poster-paper-texture)"]')).toBeNull();
+  expect(Array.from(svg.querySelectorAll('.poster-card text')).map(text => text.textContent)).toEqual(['ram', 'lav']);
+  expect(svg.querySelector('#poster-paper-texture, #poster-vignette')).toBeNull();
+  expect(svg.querySelector('[fill="url(#poster-paper-texture)"], [fill="url(#poster-vignette)"]')).toBeNull();
 });
 
 const posterFamily = () => {

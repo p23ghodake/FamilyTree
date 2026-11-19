@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
@@ -6,7 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useDialog } from '../useDialog';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { buildPosterLayout, findPosterRoot, PosterNode } from '../../processing/posterLayout';
-import { DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
+import { CheckIcon, DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
 import {
   BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, PosterTheme,
   rng, SHADOW_OFFSET, SOIL, THEMES,
@@ -26,7 +26,6 @@ const POSTER_RATIO = 0.62;
 const ANCESTOR_RATIO = 0.45;
 const COUPLE_H = 80;
 const CARD_PAD_Y = 11;
-const YEARS_ROW = 13;
 const HEART_ROW = 18;
 const WIFE_GAP = 2;
 /** Cards are nudged up or down a little so generations don't sit on ruler-straight lines. */
@@ -35,7 +34,6 @@ const MIN_CARD_W = 84;
 const CARD_PAD = 30;
 const CARD_GAP = 16;
 const TEXT_GAP = 4;
-const YEARS_SPACING = 0.3;
 const SIDE_PAD = 110;
 const TOP_PAD = 150;
 const TRUNK_H = 90;
@@ -60,7 +58,6 @@ const CARD_COLORS = {
 const HEART = '#a7c957';
 const TWINE = '#8b6b47';
 const SHADOW_INK = '#2e2018';
-const YEARS_FONT = { family: 'Georgia, serif', size: 11 };
 const FONT = {
   en: { family: 'Poster Great Vibes', size: 23 },
   mr: { family: 'Poster Yatra One', size: 17 },
@@ -92,7 +89,6 @@ const SVG_STYLE = `
   .poster-card__name--en { font-family: '${FONT.en.family}', 'Brush Script MT', cursive; font-size: ${FONT.en.size}px; }
   .poster-card__name--mr { font-family: '${FONT.mr.family}', 'Nirmala UI', 'Mangal', sans-serif; font-size: ${FONT.mr.size}px; }
   .poster-card__heart { font-family: Georgia, serif; font-size: 12px; fill: ${HEART}; }
-  .poster-card__years { font-family: ${YEARS_FONT.family}; font-size: ${YEARS_FONT.size}px; letter-spacing: ${YEARS_SPACING}px; }
   .poster-title-text { font-family: 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive; fill: ${BARK_DARK}; }
 `;
 
@@ -114,17 +110,17 @@ async function inlineFonts(svgText: string): Promise<string> {
   return out;
 }
 
-interface CardPerson { id: string; name: string; years: string }
-type CardRow = { kind: 'name' | 'years' | 'heart'; person: number; baseline: number };
+interface CardPerson { id: string; name: string }
+type CardRow = { kind: 'name' | 'heart'; person: number; baseline: number };
 interface CardLayout { people: CardPerson[]; rows: CardRow[]; h: number; w: number }
 
-/** Stacks the names (and optional years) on a card: the man first, then a heart, then each wife. */
+/** Stacks the names on a card: the man first, then a heart, then each wife. */
 function cardRows(people: CardPerson[], font: PosterNameFont, fontRevision: number): { rows: CardRow[]; h: number } {
   const rows: CardRow[] = [];
   let y = CARD_PAD_Y;
   people.forEach((p, i) => {
     if (i === 1) {
-      const heart = textMetrics('♥', YEARS_FONT.family, 12, fontRevision);
+      const heart = textMetrics('♥', 'Georgia, serif', 12, fontRevision);
       rows.push({ kind: 'heart', person: i, baseline: y + heart.ascent });
       y += Math.max(HEART_ROW, heart.ascent + heart.descent + TEXT_GAP);
     } else if (i > 1) {
@@ -133,11 +129,6 @@ function cardRows(people: CardPerson[], font: PosterNameFont, fontRevision: numb
     const name = textMetrics(p.name, font.family, font.size, fontRevision);
     rows.push({ kind: 'name', person: i, baseline: y + name.ascent });
     y += Math.max(font.lineHeight, name.ascent + name.descent + TEXT_GAP);
-    if (p.years) {
-      const years = textMetrics(p.years, YEARS_FONT.family, YEARS_FONT.size, fontRevision);
-      rows.push({ kind: 'years', person: i, baseline: y + years.ascent });
-      y += Math.max(YEARS_ROW, years.ascent + years.descent + TEXT_GAP);
-    }
   });
   return { rows, h: y + CARD_PAD_Y };
 }
@@ -300,9 +291,8 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const [theme, setTheme] = useState<PosterTheme>('autumn');
   const [nameStyle, setNameStyle] = useState<PosterNameStyle>('heritage');
   const [personQuery, setPersonQuery] = useState('');
-  const [showYears, setShowYears] = useState(false);
-  // Paper texture is realistic but noisy, which makes the PNG several times larger.
-  const [agedPaper, setAgedPaper] = useState(true);
+  const [personPickerOpen, setPersonPickerOpen] = useState(false);
+  const [activePersonIndex, setActivePersonIndex] = useState(0);
   const [fit, setFit] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [fitScale, setFitScale] = useState(1);
@@ -346,10 +336,38 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       })
       .sort((a, b) => a.label.localeCompare(b.label, lang === 'mr' ? 'mr' : 'en'));
   }, [members, parentChild, byId, nameOf, lang]);
+  const selectedPerson = personOptions.find(person => person.id === rootId);
   const matchingPeople = useMemo(() => {
     const query = personQuery.trim().toLocaleLowerCase(lang);
     return personOptions.filter(person => person.label.toLocaleLowerCase(lang).includes(query));
   }, [personOptions, personQuery, lang]);
+  const personListId = useId();
+  const selectPerson = useCallback((id: string) => {
+    setRootId(id);
+    setPersonQuery('');
+    setPersonPickerOpen(false);
+    setActivePersonIndex(0);
+    settingsRef.current?.querySelector<HTMLInputElement>('.poster-person-picker input')?.focus();
+  }, []);
+  const handlePersonPickerKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown' && matchingPeople.length > 0) {
+      event.preventDefault();
+      setPersonPickerOpen(true);
+      setActivePersonIndex(index => Math.min(index + 1, matchingPeople.length - 1));
+    } else if (event.key === 'ArrowUp' && matchingPeople.length > 0) {
+      event.preventDefault();
+      setPersonPickerOpen(true);
+      setActivePersonIndex(index => Math.max(index - 1, 0));
+    } else if (event.key === 'Enter' && personPickerOpen && matchingPeople.length > 0) {
+      event.preventDefault();
+      selectPerson(matchingPeople[Math.min(activePersonIndex, matchingPeople.length - 1)].id);
+    } else if (event.key === 'Escape' && personPickerOpen) {
+      event.preventDefault();
+      setPersonPickerOpen(false);
+      setPersonQuery('');
+      setActivePersonIndex(0);
+    }
+  }, [activePersonIndex, matchingPeople, personPickerOpen, selectPerson]);
   useEffect(() => {
     if (personOptions.some(person => person.id === rootId)) return;
     const selected = state.selectedMemberId;
@@ -376,9 +394,8 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       .map((p: RawFamilyMember) => ({
         id: p.id,
         name: getDisplayFirstName(p, lang),
-        years: showYears ? t.posterLifeYears(p.birthYear, p.deathYear) : '',
       })),
-    [byId, lang, showYears, t],
+    [byId, lang],
   );
   const nameFont = getPosterNameFont(nameStyle, lang);
   const cardLayouts = useMemo(() => new Map<string, CardLayout>(layout.nodes.filter(n => n.kind === 'person').map(n => {
@@ -386,7 +403,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     const { rows, h } = cardRows(people, nameFont, fontRevision);
     const textW = Math.max(0,
       ...people.map(person => textWidth(person.name, nameFont.family, nameFont.size, fontRevision)),
-      ...people.map(person => person.years ? textWidth(person.years, YEARS_FONT.family, YEARS_FONT.size, fontRevision) + Math.max(0, Array.from(person.years).length - 1) * YEARS_SPACING : 0),
     );
     return [n.id, { people, rows, h, w: Math.max(MIN_CARD_W, textW + CARD_PAD) }];
   })), [layout, peopleOf, nameFont, fontRevision]);
@@ -622,19 +638,19 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               <span id="poster-title" className="poster-header__title">{t.posterTitle}</span>
             </div>
             <div className="poster-header__actions">
-              <button ref={customizeRef} type="button" className="poster-action poster-customize-toggle" hidden={!compact} disabled={!compact || isExporting} aria-controls="poster-settings" aria-expanded={compact && settingsOpen} aria-label={t.posterCustomize} title={t.posterCustomize} onClick={() => { if (settingsOpen) closeSettings(); else setSettingsOpen(true); }}>
-                <SlidersHorizontalIcon size={17} /><span>{t.posterCustomize}</span>
+              <button ref={customizeRef} type="button" className="poster-action poster-action--icon poster-customize-toggle" hidden={!compact} disabled={!compact || isExporting} aria-controls="poster-settings" aria-expanded={compact && settingsOpen} aria-label={t.posterCustomize} title={t.posterCustomize} onClick={() => { if (settingsOpen) closeSettings(); else setSettingsOpen(true); }}>
+                <SlidersHorizontalIcon size={17} />
               </button>
               <button
                 type="button"
-                className="poster-action ui-button ui-button--primary poster-action--download"
+                className="poster-action poster-action--icon ui-button ui-button--primary poster-action--download"
                 onClick={handleDownload}
                 disabled={isExporting || layout.nodes.length === 0}
                 aria-label={t.posterDownload}
                 aria-busy={isExporting}
-                title={t.posterDownloadHint(exportSize.width, exportSize.height)}
+                title={`${t.posterDownload}: ${t.posterDownloadHint(exportSize.width, exportSize.height)}`}
               >
-                <DownloadIcon size={15} /><span>{t.posterDownload}</span>
+                <DownloadIcon size={15} />
               </button>
               <button type="button" className="poster-close" onClick={onClose} title={t.close} aria-label={t.close}>
                 <XIcon size={14} />
@@ -644,64 +660,93 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
           <section ref={settingsRef} id="poster-settings" className="poster-settings" hidden={compact && !settingsOpen} aria-label={t.posterCustomize}>
             <div className="poster-settings__heading" hidden={!compact}>
               <span>{t.posterCustomize}</span>
-              <button type="button" className="poster-action" disabled={!compact || !settingsOpen} onClick={closeSettings}>{t.posterDone}</button>
+              <button type="button" className="poster-action poster-action--icon" disabled={!compact || !settingsOpen} onClick={closeSettings} aria-label={t.posterDone} title={t.posterDone}><CheckIcon size={17} /></button>
             </div>
-            <fieldset className="poster-settings__body" disabled={isExporting || (compact && !settingsOpen)}>
-              <fieldset className="poster-settings-group">
-                <legend>{t.posterFamilyControls}</legend>
-                <div className="poster-family-fields">
-                  <label className="poster-field poster-field--search">
-                    <span>{t.posterFindPerson}</span>
-                    <input type="search" value={personQuery} onChange={e => setPersonQuery(e.target.value)} />
-                  </label>
-                  <label className="poster-field">
-                    <span>{t.posterStartFrom}</span>
-                    <select value={matchingPeople.some(person => person.id === rootId) ? rootId : ''} disabled={matchingPeople.length === 0} onChange={e => { setRootId(e.target.value); setPersonQuery(''); }}>
-                      {!matchingPeople.some(person => person.id === rootId) && <option value="" disabled>{t.posterChooseMatch}</option>}
-                      {matchingPeople.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}
-                    </select>
-                  </label>
-                  <label className="poster-field">
-                    <span>{t.posterGenerations}</span>
-                    <select value={generations} onChange={e => setGenerations(Number(e.target.value))}>
-                      {GENERATION_CHOICES.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </label>
-                </div>
-                {matchingPeople.length === 0 && <p className="poster-field-hint" role="status">{t.posterNoMatches}</p>}
-                <p className="poster-field-hint">{t.posterLineageHint}</p>
-              </fieldset>
-              <fieldset className="poster-settings-group">
-                <legend>{t.posterAppearance}</legend>
-                <PosterThemePicker theme={theme} onChange={setTheme} label={t.posterStyle} names={t.posterThemeNames} />
-                <div className="poster-appearance-fields">
-                  <label className="poster-field">
-                    <span>{t.posterNameStyle}</span>
-                    <select value={nameStyle} onChange={e => setNameStyle(e.target.value as PosterNameStyle)}>
-                      <option value="heritage">{t.posterHeritageNames}</option>
-                      <option value="readable">{t.posterReadableNames}</option>
-                    </select>
-                  </label>
-                  <div className="poster-checks">
-                    <label className="poster-field poster-field--check">
-                      <input type="checkbox" checked={showYears} onChange={e => setShowYears(e.target.checked)} />
-                      <span>{t.posterShowYears}</span>
-                    </label>
-                    <label className="poster-field poster-field--check">
-                      <input type="checkbox" checked={agedPaper} onChange={e => setAgedPaper(e.target.checked)} />
-                      <span>{t.posterAgedPaper}</span>
+            <div className="poster-settings__body">
+              <fieldset className="poster-settings__fields" disabled={isExporting || (compact && !settingsOpen)}>
+                <fieldset className="poster-settings-group">
+                  <legend>{t.posterFamilyControls}</legend>
+                  <div className="poster-family-fields">
+                    <div className="poster-field poster-field--search poster-person-picker">
+                      <span>{t.posterFindPerson}</span>
+                      <input
+                        type="search"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-controls={personListId}
+                        aria-expanded={personPickerOpen}
+                        aria-activedescendant={personPickerOpen && matchingPeople.length > 0 ? `${personListId}-option-${activePersonIndex}` : undefined}
+                        aria-label={t.posterFindPerson}
+                        placeholder={t.posterFindPerson}
+                        value={personQuery || selectedPerson?.label || ''}
+                        disabled={personOptions.length === 0}
+                        onFocus={event => {
+                          event.currentTarget.select();
+                          setPersonQuery('');
+                          setPersonPickerOpen(true);
+                          setActivePersonIndex(Math.max(personOptions.findIndex(person => person.id === rootId), 0));
+                        }}
+                        onBlur={() => setPersonPickerOpen(false)}
+                        onChange={event => {
+                          setPersonQuery(event.target.value);
+                          setPersonPickerOpen(true);
+                          setActivePersonIndex(0);
+                        }}
+                        onKeyDown={handlePersonPickerKeyDown}
+                      />
+                      {personPickerOpen && matchingPeople.length > 0 && (
+                        <div id={personListId} className="poster-person-picker__list" role="listbox" aria-label={t.posterStartFrom}>
+                          {matchingPeople.map((person, index) => (
+                            <button
+                              key={person.id}
+                              id={`${personListId}-option-${index}`}
+                              type="button"
+                              className="poster-person-picker__option"
+                              role="option"
+                              aria-selected={person.id === rootId}
+                              data-active={index === activePersonIndex}
+                              onMouseDown={event => event.preventDefault()}
+                              onMouseEnter={() => setActivePersonIndex(index)}
+                              onClick={() => selectPerson(person.id)}
+                            >
+                              {person.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {personPickerOpen && matchingPeople.length === 0 && <p className="poster-person-picker__empty" role="status">{t.posterNoMatches}</p>}
+                    </div>
+                    <label className="poster-field">
+                      <span>{t.posterGenerations}</span>
+                      <select value={generations} onChange={e => setGenerations(Number(e.target.value))}>
+                        {GENERATION_CHOICES.map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
                     </label>
                   </div>
-                </div>
+                  <p className="poster-field-hint">{t.posterLineageHint}</p>
+                </fieldset>
+                <fieldset className="poster-settings-group">
+                  <legend>{t.posterAppearance}</legend>
+                  <div className="poster-appearance-fields">
+                    <PosterThemePicker theme={theme} onChange={setTheme} label={t.posterStyle} names={t.posterThemeNames} />
+                    <label className="poster-field">
+                      <span>{t.posterNameStyle}</span>
+                      <select value={nameStyle} onChange={e => setNameStyle(e.target.value as PosterNameStyle)}>
+                        <option value="heritage">{t.posterHeritageNames}</option>
+                        <option value="readable">{t.posterReadableNames}</option>
+                      </select>
+                    </label>
+                  </div>
+                </fieldset>
               </fieldset>
-            </fieldset>
+            </div>
           </section>
         </section>
         <div className="poster-workspace">
           <div className="poster-viewport">
             <div className="poster-zoom-controls" role="group" aria-label={t.posterZoomLevel}>
-              <button type="button" className="poster-action poster-action--fit" aria-label={t.posterFit} title={t.posterFit} aria-pressed={fit} onClick={() => { zoomAnchor.current = null; setZoom(1); setFit(true); }}>
-                <Maximize2Icon size={16} /><span>{t.posterFitShort}</span>
+              <button type="button" className="poster-action poster-action--icon poster-action--fit" aria-label={t.posterFit} title={t.posterFit} aria-pressed={fit} onClick={() => { zoomAnchor.current = null; setZoom(1); setFit(true); }}>
+                <Maximize2Icon size={16} />
               </button>
               <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={(fit ? fitScale : zoom) <= Math.min(MIN_ZOOM, fitScale)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}><MinusIcon size={16} /></button>
               <output className="poster-zoom-value" aria-label={t.posterZoomLevel} aria-live="off">{Math.round((fit ? fitScale : zoom) * 100)}%</output>
@@ -759,23 +804,11 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                   <stop offset="0" stopColor={BARK_DARK} stopOpacity={0.22} />
                   <stop offset="1" stopColor={BARK_DARK} stopOpacity={0} />
                 </radialGradient>
-                <radialGradient id="poster-vignette" cx="0.5" cy="0.48" r="0.75">
-                  <stop offset="0.55" stopColor="#a07a4f" stopOpacity={0} />
-                  <stop offset="1" stopColor="#a07a4f" stopOpacity={0.3} />
-                </radialGradient>
                 <linearGradient id="poster-background" x1="0" x2="0" y1="0" y2="1">
                   <stop offset="0" stopColor="#f5f0e5" />
                   <stop offset="0.7" stopColor={PAPER} />
                   <stop offset="1" stopColor="#e9dcc5" />
                 </linearGradient>
-                <pattern id="poster-paper-texture" width="128" height="128" patternUnits="userSpaceOnUse">
-                  <path d="M8 17l17-3M62 31l24 2M94 8l15-2M17 72l21-3M74 88l19 2M101 117l18-4M45 119l10 1"
-                    stroke="#9c805d" strokeWidth="1" opacity="0.16" />
-                  <circle cx="39" cy="44" r="1.7" fill="#8c6944" opacity="0.12" />
-                  <circle cx="111" cy="58" r="1.2" fill="#8c6944" opacity="0.14" />
-                  <circle cx="57" cy="99" r="1.5" fill="#8c6944" opacity="0.1" />
-                  <path d="M21 28c9 4 12 7 15 13M83 101c6 3 8 6 10 11" fill="none" stroke="#8c6944" strokeWidth="1.2" opacity="0.1" />
-                </pattern>
                 <filter id="poster-cast" x="-5%" y="-5%" width="110%" height="110%">
                   <feColorMatrix type="matrix" values="0 0 0 0 0.18  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.2 0" />
                   <feGaussianBlur stdDeviation="3.5" />
@@ -785,12 +818,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                 </filter>
               </defs>
               <rect width={width} height={height} fill="url(#poster-background)" />
-              {agedPaper && (
-                <>
-                  <rect width={width} height={height} fill="url(#poster-paper-texture)" />
-                  <rect width={width} height={height} fill="url(#poster-vignette)" />
-                </>
-              )}
 
               {art.canopy.map((c, i) => <circle key={`c${i}`} cx={c.cx.toFixed(1)} cy={c.cy.toFixed(1)} r={c.r.toFixed(1)} fill="url(#poster-canopy)" />)}
               {art.dappled.map((spot, i) => (
@@ -869,9 +896,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                     {rows.map(row => {
                       const p = people[row.person];
                       if (row.kind === 'heart') return <text key={`h${row.person}`} x={x} y={top + row.baseline} textAnchor="middle" className="poster-card__heart">♥</text>;
-                      if (row.kind === 'years') {
-                        return <text key={`y${p.id}`} x={x} y={top + row.baseline} textAnchor="middle" className="poster-card__years" fill={colors.text} opacity={0.75}>{p.years}</text>;
-                      }
                       return (
                         <text key={`n${p.id}`} x={x} y={top + row.baseline} textAnchor="middle" className={nameClass} fill={colors.text} style={{ fontFamily: nameFont.family, fontSize: nameFont.size }}>
                           {p.name}

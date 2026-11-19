@@ -354,9 +354,6 @@ type Translations = {
   posterFamilyName: (surname: string) => string;
   posterStyle: string;
   posterThemeNames: { autumn: string; spring: string; summer: string; banyan: string };
-  posterShowYears: string;
-  posterAgedPaper: string;
-  posterLifeYears: (birth: number | null, death: number | null) => string;
   posterCustomize: string;
   posterCloseCustomization: string;
   posterFamilyControls: string;
@@ -368,7 +365,6 @@ type Translations = {
   posterNameStyle: string;
   posterHeritageNames: string;
   posterReadableNames: string;
-  posterFitShort: string;
   posterZoomLevel: string;
   posterResetView: string;
   posterDone: string;
@@ -788,9 +784,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterFamilyName: surname => (surname ? `The ${surname} Family` : 'Our Family'),
     posterStyle: 'Style',
     posterThemeNames: { autumn: 'Autumn', spring: 'Spring blossom', summer: 'Summer', banyan: 'Banyan' },
-    posterShowYears: 'Show years',
-    posterAgedPaper: 'Aged paper',
-    posterLifeYears: (birth, death) => (birth && death ? `${birth} – ${death}` : birth ? `b. ${birth}` : death ? `d. ${death}` : ''),
     posterCustomize: 'Customize',
     posterCloseCustomization: 'Close customization',
     posterFamilyControls: 'Family',
@@ -802,7 +795,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterNameStyle: 'Name style',
     posterHeritageNames: 'Heritage script',
     posterReadableNames: 'Readable',
-    posterFitShort: 'Fit',
     posterZoomLevel: 'Zoom level',
     posterResetView: 'Reset to 100% view',
     posterDone: 'Done',
@@ -1221,9 +1213,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterFamilyName: surname => (surname ? `${surname} परिवार` : 'आमचा परिवार'),
     posterStyle: 'शैली',
     posterThemeNames: { autumn: 'शरद ऋतू', spring: 'वसंत बहर', summer: 'उन्हाळा', banyan: 'वटवृक्ष' },
-    posterShowYears: 'वर्षे दाखवा',
-    posterAgedPaper: 'जुना कागद',
-    posterLifeYears: (birth, death) => (birth && death ? `${birth} – ${death}` : birth ? `जन्म ${birth}` : death ? `निधन ${death}` : ''),
     posterCustomize: 'सानुकूल करा',
     posterCloseCustomization: 'सानुकूल पर्याय बंद करा',
     posterFamilyControls: 'कुटुंब',
@@ -1235,7 +1224,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterNameStyle: 'नावांची शैली',
     posterHeritageNames: 'पारंपरिक शैली',
     posterReadableNames: 'सुवाच्य',
-    posterFitShort: 'बसवा',
     posterZoomLevel: 'झूम पातळी',
     posterResetView: 'दृश्य १००% वर आणा',
     posterDone: 'पूर्ण',
