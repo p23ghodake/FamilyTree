@@ -6,7 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useDialog } from '../useDialog';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { buildPosterLayout, findPosterRoot, PosterNode } from '../../processing/posterLayout';
-import { CheckIcon, DownloadIcon, ImageIcon, Maximize2Icon, MinusIcon, PlusIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
+import { CheckIcon, DownloadIcon, Maximize2Icon, MinusIcon, PlusIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
 import {
   BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, PosterTheme,
   rng, SHADOW_OFFSET, SOIL, THEMES,
@@ -630,13 +630,9 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
 
   return createPortal(
     <div className="poster-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={dialogRef} className="poster-modal" role="dialog" aria-modal="true" aria-labelledby="poster-title" onFocusCapture={event => { toolbarFocus.current = settingsRef.current?.contains(event.target) ? 'settings' : customizeRef.current?.contains(event.target) ? 'toggle' : null; }}>
+      <div ref={dialogRef} className="poster-modal" role="dialog" aria-modal="true" aria-label={t.posterTitle} onFocusCapture={event => { toolbarFocus.current = settingsRef.current?.contains(event.target) ? 'settings' : customizeRef.current?.contains(event.target) ? 'toggle' : null; }}>
         <section className="poster-toolbar" aria-label={t.posterToolbar}>
           <div className="poster-header">
-            <div className="poster-header__left">
-              <ImageIcon size={18} className="poster-header__icon" />
-              <span id="poster-title" className="poster-header__title">{t.posterTitle}</span>
-            </div>
             <div className="poster-header__actions">
               <button ref={customizeRef} type="button" className="poster-action poster-action--icon poster-customize-toggle" hidden={!compact} disabled={!compact || isExporting} aria-controls="poster-settings" aria-expanded={compact && settingsOpen} aria-label={t.posterCustomize} title={t.posterCustomize} onClick={() => { if (settingsOpen) closeSettings(); else setSettingsOpen(true); }}>
                 <SlidersHorizontalIcon size={17} />
@@ -664,11 +660,9 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
             </div>
             <div className="poster-settings__body">
               <fieldset className="poster-settings__fields" disabled={isExporting || (compact && !settingsOpen)}>
-                <fieldset className="poster-settings-group">
-                  <legend>{t.posterFamilyControls}</legend>
+                <fieldset className="poster-settings-group" aria-label={t.posterFamilyControls}>
                   <div className="poster-family-fields">
                     <div className="poster-field poster-field--search poster-person-picker">
-                      <span>{t.posterFindPerson}</span>
                       <input
                         type="search"
                         role="combobox"
@@ -677,6 +671,7 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                         aria-expanded={personPickerOpen}
                         aria-activedescendant={personPickerOpen && matchingPeople.length > 0 ? `${personListId}-option-${activePersonIndex}` : undefined}
                         aria-label={t.posterFindPerson}
+                        title={t.posterFindPerson}
                         placeholder={t.posterFindPerson}
                         value={personQuery || selectedPerson?.label || ''}
                         disabled={personOptions.length === 0}
@@ -716,26 +711,22 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
                       )}
                       {personPickerOpen && matchingPeople.length === 0 && <p className="poster-person-picker__empty" role="status">{t.posterNoMatches}</p>}
                     </div>
-                    <label className="poster-field">
-                      <span>{t.posterGenerations}</span>
-                      <select value={generations} onChange={e => setGenerations(Number(e.target.value))}>
+                    <div className="poster-field">
+                      <select aria-label={t.posterGenerations} title={t.posterGenerations} value={generations} onChange={e => setGenerations(Number(e.target.value))}>
                         {GENERATION_CHOICES.map(g => <option key={g} value={g}>{g}</option>)}
                       </select>
-                    </label>
+                    </div>
                   </div>
-                  <p className="poster-field-hint">{t.posterLineageHint}</p>
                 </fieldset>
-                <fieldset className="poster-settings-group">
-                  <legend>{t.posterAppearance}</legend>
+                <fieldset className="poster-settings-group" aria-label={t.posterAppearance}>
                   <div className="poster-appearance-fields">
                     <PosterThemePicker theme={theme} onChange={setTheme} label={t.posterStyle} names={t.posterThemeNames} />
-                    <label className="poster-field">
-                      <span>{t.posterNameStyle}</span>
-                      <select value={nameStyle} onChange={e => setNameStyle(e.target.value as PosterNameStyle)}>
+                    <div className="poster-field">
+                      <select aria-label={t.posterNameStyle} title={t.posterNameStyle} value={nameStyle} onChange={e => setNameStyle(e.target.value as PosterNameStyle)}>
                         <option value="heritage">{t.posterHeritageNames}</option>
                         <option value="readable">{t.posterReadableNames}</option>
                       </select>
-                    </label>
+                    </div>
                   </div>
                 </fieldset>
               </fieldset>

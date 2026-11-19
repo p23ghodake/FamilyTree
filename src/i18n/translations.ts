@@ -358,7 +358,6 @@ type Translations = {
   posterCloseCustomization: string;
   posterFamilyControls: string;
   posterAppearance: string;
-  posterLineageHint: string;
   posterFindPerson: string;
   posterNoMatches: string;
   posterChooseMatch: string;
@@ -788,7 +787,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterCloseCustomization: 'Close customization',
     posterFamilyControls: 'Family',
     posterAppearance: 'Appearance',
-    posterLineageHint: 'This poster follows the sons’ line. Daughters are shown without expanding their families.',
     posterFindPerson: 'Find a starting person',
     posterNoMatches: 'No matching starting people.',
     posterChooseMatch: 'Choose a matching person',
@@ -1217,7 +1215,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterCloseCustomization: 'सानुकूल पर्याय बंद करा',
     posterFamilyControls: 'कुटुंब',
     posterAppearance: 'स्वरूप',
-    posterLineageHint: 'हे पोस्टर मुलांच्या वंशरेषेनुसार आहे. मुली दाखवल्या जातात, पण त्यांच्या कुटुंबांचा विस्तार केला जात नाही.',
     posterFindPerson: 'सुरुवातीची व्यक्ती शोधा',
     posterNoMatches: 'जुळणारी सुरुवातीची व्यक्ती सापडली नाही.',
     posterChooseMatch: 'जुळणारी व्यक्ती निवडा',

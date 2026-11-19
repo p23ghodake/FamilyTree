@@ -76,6 +76,8 @@ it('keeps settings and export in the toolbar with zoom inside the preview outsid
   render(<PosterModal onClose={jest.fn()} />);
   const toolbar = screen.getByRole('region', { name: t.posterToolbar });
   const settings = within(toolbar).getByRole('region', { name: t.posterCustomize });
+  expect(screen.getByRole('dialog', { name: t.posterTitle })).toBeTruthy();
+  expect(within(toolbar).queryByText(t.posterTitle)).toBeNull();
   expect(within(settings).getByRole('group', { name: t.posterFamilyControls })).toBeTruthy();
   expect(within(settings).getByRole('group', { name: t.posterAppearance })).toBeTruthy();
   const style = within(settings).getByRole('combobox', { name: t.posterStyle }) as HTMLSelectElement;
@@ -90,6 +92,10 @@ it('keeps settings and export in the toolbar with zoom inside the preview outsid
   expect(within(toolbar).queryByRole('button', { name: t.menuPrint })).toBeNull();
   expect(screen.queryByRole('complementary')).toBeNull();
   expect(style.value).toBe('autumn');
+  expect(settings.querySelectorAll('legend, label, p, .poster-field > span')).toHaveLength(0);
+  for (const name of [t.posterFindPerson, t.posterGenerations, t.posterStyle, t.posterNameStyle]) {
+    expect(within(settings).getByRole('combobox', { name }).getAttribute('title')).toBe(name);
+  }
   expect(settings.querySelectorAll('.poster-theme-preview')).toHaveLength(0);
   expect(screen.getByRole('status', { name: t.posterZoomLevel }).textContent).toBe('100%');
   expect(screen.queryByRole('button', { name: t.posterCustomize })).toBeNull();

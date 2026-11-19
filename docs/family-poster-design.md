@@ -75,19 +75,19 @@ Keep each style's defining details distinct. Avoid introducing random variation 
 
 ## Poster controls and responsive behavior
 
-- Keep the control labels explicit and localized. Controls should update the preview immediately.
+- Poster settings show no visible field labels, group headings or explanatory text; each control keeps a localized accessible name and tooltip instead. Controls should update the preview immediately.
 - The starting person is selected from one searchable combobox sorted by display name, with the father's name added to disambiguate duplicate first names. Preserve keyboard selection, localized names, and the same disambiguation.
 - The style control is a dropdown that shows the localized style names only; do not add illustrated previews.
 - Keep the download action visually grouped apart from composition controls. Disable it when there is no useful layout or while an export is in progress.
-- The dialog is bounded by the viewport and uses an independently scrollable canvas. On larger screens, place the Family and Appearance controls between the poster title and the download/close actions in the top toolbar. On tablets, phones and short landscape screens, use the full viewport and let Customize expand the same settings below the title and actions.
-- Poster action buttons are icon-only on every screen size, with localized tooltips and accessible names. Keep person names, dropdown choices, field labels and the zoom percentage visible.
+- The dialog is bounded by the viewport and uses an independently scrollable canvas. On larger screens, place the Family and Appearance controls at the left of the top toolbar, with the download/close actions at the right; the toolbar shows no title or icon (the dialog keeps its accessible name). On tablets, phones and short landscape screens, use the full viewport and let Customize expand the same settings below the actions.
+- Poster action buttons are icon-only on every screen size, with localized tooltips and accessible names. Keep person names, dropdown choices and the zoom percentage visible.
 - Keep Fit, zoom percentage, zoom buttons and Reset in a floating bar at the bottom-right of the preview, outside the scrolling sheet and exported SVG. Reserve canvas space below the fitted sheet so the controls do not cover the artwork. Use larger controls and safe-area spacing on compact screens.
 - Fit mode shows the complete sheet. Zooming (buttons, Ctrl/⌘ + wheel or pinch) leaves Fit and lets the poster be panned and scrolled without clipping the rendered SVG; Fit returns to the whole sheet.
 
 ## Output, accessibility, and localization
 
 - PNG export should preserve the SVG composition, colors, and bundled fonts. Keep canvas dimensions within browser limits and surface export failures rather than producing a misleading success state.
-- Keep the modal labelled as a dialog, provide an accessible name for the SVG, use native labelled controls, retain visible keyboard focus, and preserve the shared dialog behavior for focus trapping, Escape, and focus restoration.
+- Keep the modal labelled as a dialog, provide an accessible name for the SVG, use native controls with accessible names and tooltips, retain visible keyboard focus, and preserve the shared dialog behavior for focus trapping, Escape, and focus restoration.
 - Localize all poster controls and status text in English and Marathi. Use the active language's member names and family title, and ensure Devanagari text remains supported by the selected fonts.
 - Keep the no-relatives message available to assistive technology when the selected start person has no recorded relatives.
 
