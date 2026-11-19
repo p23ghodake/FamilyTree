@@ -614,31 +614,20 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
 
   return createPortal(
     <div className="poster-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={dialogRef} className="poster-modal" role="dialog" aria-modal="true" aria-labelledby="poster-title">
-        <section className="poster-toolbar" aria-label={t.posterToolbar} onFocusCapture={event => { toolbarFocus.current = settingsRef.current?.contains(event.target) ? 'settings' : event.target === customizeRef.current ? 'toggle' : null; }}>
+      <div ref={dialogRef} className="poster-modal" role="dialog" aria-modal="true" aria-labelledby="poster-title" onFocusCapture={event => { toolbarFocus.current = settingsRef.current?.contains(event.target) ? 'settings' : customizeRef.current?.contains(event.target) ? 'toggle' : null; }}>
+        <section className="poster-toolbar" aria-label={t.posterToolbar}>
           <div className="poster-header">
             <div className="poster-header__left">
               <ImageIcon size={18} className="poster-header__icon" />
               <span id="poster-title" className="poster-header__title">{t.posterTitle}</span>
             </div>
-            <div className="poster-view-controls">
-              <div className="poster-zoom-controls" role="group" aria-label={t.posterZoomLevel}>
-                <button type="button" className="poster-action poster-action--fit" aria-label={t.posterFit} title={t.posterFit} aria-pressed={fit} onClick={() => { zoomAnchor.current = null; setZoom(1); setFit(true); }}>
-                  <Maximize2Icon size={16} /><span>{t.posterFitShort}</span>
-                </button>
-                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={(fit ? fitScale : zoom) <= Math.min(MIN_ZOOM, fitScale)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}><MinusIcon size={16} /></button>
-                <output className="poster-zoom-value" aria-label={t.posterZoomLevel} aria-live="off">{Math.round((fit ? fitScale : zoom) * 100)}%</output>
-                <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(ZOOM_STEP)} disabled={(fit ? fitScale : zoom) >= MAX_ZOOM} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}><PlusIcon size={16} /></button>
-                <button type="button" className="poster-action poster-action--icon" title={t.posterResetView} aria-label={t.posterResetView} onClick={() => { zoomAnchor.current = null; setFit(false); setZoom(1); setViewReset(value => value + 1); }}><RotateCcwIcon size={16} /></button>
-              </div>
+            <div className="poster-header__actions">
               <button ref={customizeRef} type="button" className="poster-action poster-customize-toggle" hidden={!compact} disabled={!compact || isExporting} aria-controls="poster-settings" aria-expanded={compact && settingsOpen} aria-label={t.posterCustomize} title={t.posterCustomize} onClick={() => { if (settingsOpen) closeSettings(); else setSettingsOpen(true); }}>
                 <SlidersHorizontalIcon size={17} /><span>{t.posterCustomize}</span>
               </button>
-            </div>
-            <div className="poster-header__actions">
               <button
                 type="button"
-                className="poster-action poster-action--primary poster-action--download"
+                className="poster-action ui-button ui-button--primary poster-action--download"
                 onClick={handleDownload}
                 disabled={isExporting || layout.nodes.length === 0}
                 aria-label={t.posterDownload}
@@ -710,6 +699,15 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
         </section>
         <div className="poster-workspace">
           <div className="poster-viewport">
+            <div className="poster-zoom-controls" role="group" aria-label={t.posterZoomLevel}>
+              <button type="button" className="poster-action poster-action--fit" aria-label={t.posterFit} title={t.posterFit} aria-pressed={fit} onClick={() => { zoomAnchor.current = null; setZoom(1); setFit(true); }}>
+                <Maximize2Icon size={16} /><span>{t.posterFitShort}</span>
+              </button>
+              <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={(fit ? fitScale : zoom) <= Math.min(MIN_ZOOM, fitScale)} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}><MinusIcon size={16} /></button>
+              <output className="poster-zoom-value" aria-label={t.posterZoomLevel} aria-live="off">{Math.round((fit ? fitScale : zoom) * 100)}%</output>
+              <button type="button" className="poster-action poster-action--icon" onClick={() => zoomBy(ZOOM_STEP)} disabled={(fit ? fitScale : zoom) >= MAX_ZOOM} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}><PlusIcon size={16} /></button>
+              <button type="button" className="poster-action poster-action--icon" title={t.posterResetView} aria-label={t.posterResetView} onClick={() => { zoomAnchor.current = null; setFit(false); setZoom(1); setViewReset(value => value + 1); }}><RotateCcwIcon size={16} /></button>
+            </div>
             <div ref={scrollRef} className={`poster-scroll${fit ? ' poster-scroll--fit' : ''}`}>
           {layout.nodes.length <= 1 && (
             <p className="poster-hint" role="status">{t.posterNoRelatives}</p>

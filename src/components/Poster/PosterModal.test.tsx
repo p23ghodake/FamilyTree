@@ -72,14 +72,19 @@ afterEach(() => {
 });
 
 describe('poster UX', () => {
-it('groups family, appearance, zoom and export controls in the top toolbar', () => {
+it('keeps settings and export in the toolbar with zoom inside the preview outside the artwork', () => {
   render(<PosterModal onClose={jest.fn()} />);
   const toolbar = screen.getByRole('region', { name: t.posterToolbar });
   const settings = within(toolbar).getByRole('region', { name: t.posterCustomize });
   expect(within(settings).getByRole('group', { name: t.posterFamilyControls })).toBeTruthy();
   expect(within(settings).getByRole('group', { name: t.posterAppearance })).toBeTruthy();
   expect(within(settings).getAllByRole('radio')).toHaveLength(4);
-  expect(within(toolbar).getByRole('button', { name: t.posterFit })).toBeTruthy();
+  const zoom = screen.getByRole('group', { name: t.posterZoomLevel });
+  const image = screen.getByRole('img', { name: t.posterFamilyName('Family') });
+  expect(within(toolbar).queryByRole('button', { name: t.posterFit })).toBeNull();
+  expect(zoom.parentElement).toBe(image.closest('.poster-viewport'));
+  expect(image.closest('.poster-scroll')?.contains(zoom)).toBe(false);
+  expect(within(zoom).getByRole('button', { name: t.posterFit })).toBeTruthy();
   expect(within(toolbar).getByRole('button', { name: t.posterDownload })).toBeTruthy();
   expect(within(toolbar).queryByRole('button', { name: t.menuPrint })).toBeNull();
   expect(screen.queryByRole('complementary')).toBeNull();
@@ -276,13 +281,14 @@ it('expands mobile settings in the top toolbar and dismisses them before closing
   expect(customize.getAttribute('aria-expanded')).toBe('true');
   expect(search.matches(':focus')).toBe(true);
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
-  const fit = within(toolbar).getByRole('button', { name: t.posterFit });
-  const paper = within(settings).getByRole('checkbox', { name: t.posterAgedPaper });
+  const fit = screen.getByRole('button', { name: t.posterFit });
+  const reset = screen.getByRole('button', { name: t.posterResetView });
+  customize.focus();
+  fireEvent.keyDown(customize, { key: 'Tab', shiftKey: true });
+  expect(reset.matches(':focus')).toBe(true);
+  fireEvent.keyDown(reset, { key: 'Tab' });
+  expect(customize.matches(':focus')).toBe(true);
   fit.focus();
-  fireEvent.keyDown(fit, { key: 'Tab', shiftKey: true });
-  expect(paper.matches(':focus')).toBe(true);
-  fireEvent.keyDown(paper, { key: 'Tab' });
-  expect(fit.matches(':focus')).toBe(true);
   fireEvent.keyDown(fit, { key: 'Escape' });
   expect(close).not.toHaveBeenCalled();
   expect(screen.queryByRole('region', { name: t.posterCustomize })).toBeNull();
@@ -311,12 +317,14 @@ it('keeps mobile settings after Done and adapts to desktop resizing', () => {
 it.each([
   { width: 768, height: 1024, screen: 'tablet' },
   { width: 1024, height: 480, screen: 'short landscape' },
-])('keeps zoom and export available above collapsed settings on a $screen screen', ({ width, height }) => {
+])('keeps preview zoom and toolbar export available with collapsed settings on a $screen screen', ({ width, height }) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
   render(<PosterModal onClose={jest.fn()} />);
   const toolbar = screen.getByRole('region', { name: t.posterToolbar });
-  expect(within(toolbar).getByRole('button', { name: t.posterFit })).toBeTruthy();
+  const zoom = screen.getByRole('group', { name: t.posterZoomLevel });
+  expect(within(zoom).getByRole('button', { name: t.posterFit })).toBeTruthy();
+  expect(toolbar.contains(zoom)).toBe(false);
   expect(within(toolbar).getByRole('button', { name: t.posterDownload })).toBeTruthy();
   expect(screen.queryByRole('combobox', { name: t.posterGenerations })).toBeNull();
   fireEvent.click(within(toolbar).getByRole('button', { name: t.posterCustomize }));
@@ -332,10 +340,21 @@ it('restores focus when the browser blurs hidden settings during resizing', () =
   fireEvent(window, new Event('resize'));
   expect(screen.getByRole('button', { name: t.posterCustomize }).matches(':focus')).toBe(true);
   expect(screen.queryByRole('searchbox')).toBeNull();
-  const close = screen.getByRole('button', { name: t.close });
-  close.focus();
-  fireEvent.keyDown(close, { key: 'Tab' });
-  expect(screen.getByRole('button', { name: t.posterFit }).matches(':focus')).toBe(true);
+  const reset = screen.getByRole('button', { name: t.posterResetView });
+  reset.focus();
+  fireEvent.keyDown(reset, { key: 'Tab' });
+  expect(screen.getByRole('button', { name: t.posterCustomize }).matches(':focus')).toBe(true);
+});
+
+it('does not steal focus from preview zoom when settings collapse during resizing', () => {
+  render(<PosterModal onClose={jest.fn()} />);
+  screen.getByRole('searchbox', { name: t.posterFindPerson }).focus();
+  const fit = screen.getByRole('button', { name: t.posterFit });
+  fit.focus();
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+  fireEvent(window, new Event('resize'));
+  expect(fit.matches(':focus')).toBe(true);
+  expect(screen.queryByRole('region', { name: t.posterCustomize })).toBeNull();
 });
 
 it('does not steal focus from export when the layout becomes compact', () => {

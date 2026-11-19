@@ -32,7 +32,7 @@ The layout should adapt to family width, generation count, card height, and long
 
 Use a warm, illustrated botanical keepsake aesthetic. The art is vector-based, with tapered, shaded branches, layered foliage, subtle shadows, visible paper, and a restrained ornamental border. Keep decorative detail cohesive with the tree rather than introducing unrelated UI iconography into the poster artwork.
 
-The poster itself intentionally has a light paper palette regardless of the app's selected interface theme. The modal chrome follows the app's theme tokens; the downloaded sheet remains visually consistent.
+The poster itself intentionally has a light paper palette regardless of the app's selected interface theme. The modal chrome follows the app's theme tokens, with a compact 56px header, shared interface typography, theme-colored primary action and selected states. The downloaded sheet remains visually consistent.
 
 ### Color and materials
 
@@ -79,7 +79,8 @@ Keep each style's defining details distinct. Avoid introducing random variation 
 - Keep the control labels explicit and localized. Controls should update the preview immediately.
 - The current person picker is a native select sorted by display name, with the father's name added to disambiguate duplicate first names. Retain the native control while it remains usable; if replaced, preserve keyboard selection and the same disambiguation.
 - Keep the download action visually grouped apart from composition controls. Disable it when there is no useful layout or while an export is in progress.
-- The dialog is bounded by the viewport and uses an independently scrollable canvas. Keep the title and export actions together in the top toolbar row, with composition controls on a separate row that wraps cleanly at every width. On narrow screens, use a near-full-height bottom sheet and compact field layouts; action labels may collapse to icons, but accessible names must remain.
+- The dialog is bounded by the viewport and uses an independently scrollable canvas. Keep the title and export actions together in the top toolbar row, with composition controls below on larger screens. On tablets, phones and short landscape screens, use the full viewport and let Customize expand the settings below the header; action labels may collapse to icons, but accessible names must remain.
+- Keep Fit, zoom percentage, zoom buttons and Reset in a floating bar at the bottom-right of the preview, outside the scrolling sheet and exported SVG. Reserve canvas space below the fitted sheet so the controls do not cover the artwork. Use larger controls and safe-area spacing on compact screens.
 - Fit mode shows the complete sheet. Zooming (buttons, Ctrl/⌘ + wheel or pinch) leaves Fit and lets the poster be panned and scrolled without clipping the rendered SVG; Fit returns to the whole sheet.
 
 ## Output, accessibility, and localization
