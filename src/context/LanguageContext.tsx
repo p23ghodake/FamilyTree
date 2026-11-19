@@ -19,14 +19,21 @@ const LANG_STORAGE_KEY = 'app-lang';
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [lang, setLang] = useState<Lang>(() => {
-    const saved = localStorage.getItem(LANG_STORAGE_KEY);
-    return (saved === 'en' ? 'en' : 'mr') as Lang;
+    try {
+      return localStorage.getItem(LANG_STORAGE_KEY) === 'en' ? 'en' : 'mr';
+    } catch (error) {
+      console.warn('Unable to read the saved language:', error);
+      return 'mr';
+    }
   });
 
   const toggleLang = () => {
     const next: Lang = lang === 'en' ? 'mr' : 'en';
-    // Write to storage first so it's always consistent even if component unmounts
-    localStorage.setItem(LANG_STORAGE_KEY, next);
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, next);
+    } catch (error) {
+      console.warn('Unable to persist the selected language:', error);
+    }
     setLang(next);
   };
 

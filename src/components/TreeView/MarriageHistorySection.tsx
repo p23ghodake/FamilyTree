@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { StyledFamilyTree } from '../../types/FamilyTypes';
@@ -15,7 +15,7 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
   editMemberId,
   currentTree,
 }) => {
-  const { dispatch } = useFamilyTree();
+  const { dispatch, isSaving } = useFamilyTree();
   const { t, lang } = useLanguage();
 
   const [endMarriageForm, setEndMarriageForm] = useState<{
@@ -29,6 +29,29 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
   const marriages = currentTree.relationships.spouses.filter(
     r => r.spouse1Id === editMemberId || r.spouse2Id === editMemberId
   );
+
+  useEffect(() => {
+    if (isSaving) return;
+    setDateDrafts(drafts => {
+      let changed = false;
+      const next = { ...drafts };
+      marriages.forEach(marriage => {
+        const spouseId = marriage.spouse1Id === editMemberId ? marriage.spouse2Id : marriage.spouse1Id;
+        if (next[spouseId] !== undefined && next[spouseId] === (marriage.marriageDate ?? '')) {
+          delete next[spouseId];
+          changed = true;
+        }
+      });
+      return changed ? next : drafts;
+    });
+    if (endMarriageForm && marriages.some(marriage =>
+      marriage.spouse1Id === endMarriageForm.spouse1Id &&
+      marriage.spouse2Id === endMarriageForm.spouse2Id &&
+      marriage.status !== 'current'
+    )) {
+      setEndMarriageForm(null);
+    }
+  }, [isSaving, marriages, editMemberId, endMarriageForm]);
 
   const formatMarriageEndReason = (reason: 'divorce' | 'death' | 'annulment' | 'separation' | null | undefined) => {
     switch (reason) {
@@ -89,14 +112,16 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                       value={/^\d{4}-\d{2}-\d{2}$/.test(draft) ? draft : ''}
                       max={!isCurrent && r.endYear ? `${r.endYear}-12-31` : today}
                       aria-invalid={draftInFuture || undefined}
+                      disabled={isSaving}
                       onChange={e => setDateDrafts(d => ({ ...d, [spouseId]: e.target.value }))}
                     />
                   </label>
                   <button
                     type="button"
                     className="member-form__btn member-form__btn--primary"
-                    disabled={draft === saved || afterEnd || draftInFuture}
+                    disabled={isSaving || draft === saved || afterEnd || draftInFuture}
                     onClick={() => {
+                      if (isSaving) return;
                       dispatch({
                         type: 'UPDATE_MARRIAGE_DATE',
                         payload: {
@@ -106,7 +131,6 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                           marriageDate: draft || null,
                         },
                       });
-                      setDateDrafts(d => { const { [spouseId]: _omit, ...rest } = d; return rest; });
                     }}
                   >
                     {t.btnConfirm}
@@ -119,6 +143,7 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
               <button
                 type="button"
                 className="member-form__marriage-end-btn"
+                disabled={isSaving}
                 onClick={() => setEndMarriageForm({
                   spouse1Id: r.spouse1Id,
                   spouse2Id: r.spouse2Id,
@@ -139,11 +164,13 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                   className="member-form__input member-form__marriage-end-year"
                   placeholder={t.placeholderEndYear}
                   value={endMarriageForm.endYear}
+                  disabled={isSaving}
                   onChange={e => setEndMarriageForm(f => f ? { ...f, endYear: e.target.value.replace(/\D/g,'').slice(0,4) } : f)}
                 />
                 <select
                   className="member-form__input member-form__select"
                   value={endMarriageForm.endReason}
+                  disabled={isSaving}
                   onChange={e => setEndMarriageForm(f => f ? { ...f, endReason: e.target.value as 'divorce' | 'death' | 'annulment' | 'separation' } : f)}
                 >
                   <option value="divorce">{t.optionDivorce}</option>
@@ -155,13 +182,14 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                   type="button"
                   className="member-form__btn member-form__btn--primary member-form__marriage-end-confirm"
                   disabled={
+                    isSaving ||
                     endMarriageForm.endYear.length !== 4 ||
                     isFutureYear(parseInt(endMarriageForm.endYear)) ||
                     (endMarriageForm.startYear !== null &&
                       parseInt(endMarriageForm.endYear) < endMarriageForm.startYear)
                   }
                   onClick={() => {
-                    if (!endMarriageForm.endYear) return;
+                    if (isSaving || !endMarriageForm.endYear) return;
                     dispatch({
                       type: 'END_MARRIAGE',
                       payload: {
@@ -172,7 +200,6 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                         endReason: endMarriageForm.endReason,
                       },
                     });
-                    setEndMarriageForm(null);
                   }}
                 >
                   {t.btnConfirm}
@@ -180,6 +207,7 @@ export const MarriageHistorySection: React.FC<MarriageHistorySectionProps> = ({
                 <button
                   type="button"
                   className="member-form__btn member-form__btn--ghost"
+                  disabled={isSaving}
                   onClick={() => setEndMarriageForm(null)}
                 >
                   {t.btnCancel}

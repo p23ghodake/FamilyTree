@@ -1,6 +1,11 @@
 import React from 'react';
 
-interface Props { children: React.ReactNode; }
+interface Props {
+  children: React.ReactNode;
+  title: string;
+  description: string;
+  reload: string;
+}
 interface State { hasError: boolean; error: Error | null; }
 
 export class ErrorBoundary extends React.Component<Props, State> {
@@ -29,9 +34,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
         background: 'var(--bg-primary, #f8fafc)', color: 'var(--text-primary, #0f172a)',
       }}>
         <span style={{ fontSize: 48 }}>⚠️</span>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Something went wrong</h2>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{this.props.title}</h2>
         <p style={{ margin: 0, color: 'var(--text-secondary, #64748b)', maxWidth: 480, lineHeight: 1.6 }}>
-          An unexpected error occurred. Your data is safe in local storage.
+          {this.props.description}
         </p>
         {this.state.error && (
           <pre style={{
@@ -49,7 +54,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             background: 'var(--accent, #3b82f6)', color: '#fff', fontWeight: 600, fontSize: 14,
           }}
         >
-          Reload App
+          {this.props.reload}
         </button>
       </div>
     );

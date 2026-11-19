@@ -124,7 +124,7 @@ beforeEach(() => {
       remoteData = JSON.parse(JSON.stringify(options.body.data));
       return { data: { sha: 'saved' }, error: null };
     }
-    return { data: { data: remoteData, sha: 'original', canEdit: true, limited: false }, error: null };
+    return { data: { data: remoteData, sha: 'original', canEdit: true, isAdmin: true, canDelete: true, limited: false }, error: null };
   });
 });
 
@@ -134,7 +134,7 @@ it('keeps a successful save visible after the service refreshes a 401 token', as
   let submittedData!: RawFamilyData;
   let attempts = 0;
   client.functions.invoke.mockImplementation(async (_name, options) => {
-    if (options.method === 'GET') return { data: { data: remoteData, sha: 'original', canEdit: true }, error: null };
+    if (options.method === 'GET') return { data: { data: remoteData, sha: 'original', canEdit: true, isAdmin: true, canDelete: true }, error: null };
     if (++attempts === 1) return failedResponse(401);
     submittedData = options.body.data;
     return new Promise(resolve => { finishPut = resolve; });
@@ -220,7 +220,7 @@ it('redacts the old view during an account switch before the new load completes'
   expect(context.canEdit).toBe(false);
   const nextData = JSON.parse(JSON.stringify(rawData)) as RawFamilyData;
   nextData.familyTrees[0].members[0].birthDate = '1970-05-06';
-  await act(async () => finishLoad({ data: { data: nextData, sha: 'new-user', canEdit: true }, error: null }));
+  await act(async () => finishLoad({ data: { data: nextData, sha: 'new-user', canEdit: true, isAdmin: true, canDelete: true }, error: null }));
   expect(context.currentTree?.members[0].birthDate).toBe('1970-05-06');
 });
 
@@ -234,7 +234,7 @@ it('discards a late privileged conflict reload after sign-out', async () => {
   await waitFor(() => expect(calls('GET')).toHaveLength(2));
   client.functions.invoke.mockResolvedValueOnce({ data: { data: rawData, sha: '', canEdit: false, limited: true }, error: null });
   await act(async () => auth.signOut());
-  await act(async () => finishConflict({ data: { data: rawData, sha: 'privileged', canEdit: true, limited: false }, error: null }));
+  await act(async () => finishConflict({ data: { data: rawData, sha: 'privileged', canEdit: true, isAdmin: true, canDelete: true, limited: false }, error: null }));
   await waitFor(() => expect(context.isSaving).toBe(false));
   expect(context.currentTree?.members[0].birthDate).toBeUndefined();
   expect(context.canEdit).toBe(false);

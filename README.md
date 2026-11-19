@@ -13,7 +13,7 @@ An interactive family tree in English and Marathi, published on GitHub Pages at 
   The panel uses the selected language's labels and available names, without an alternate-language name. Long content is divided into compact Previous/Next pages rather than a scrolling panel. Free-text notes, occupation, and location remain as entered.
 - **Add and edit members:** a step-by-step form: **Relationship** (child, spouse, parent or not linked, with a searchable list of people), then **Who** (photo, names, gender), then **Dates & details** (all optional). The Marathi name is filled in automatically and can be edited. When adding a child or spouse from a person's menu, the relationship step is skipped. When editing, any step can be opened and saved directly. Uploaded photos are resized to 400 px JPEGs. Turn off **Living** to record a death even when its date is unknown; this is saved as the optional `isDeceased` flag. Older records still infer deceased status from a death year or date. Year-only and year/month dates are supported, but impossible calendar dates and death dates definitely before birth are rejected. An unknown death year does not produce an estimated current age.
 - **Sign in:** choose **Continue with GitHub** or **Continue with email**. Errors are shown inside the form, with a Caps Lock warning on the password field.
-- **Accessibility:** dialogs trap keyboard focus, close with Escape and return focus to where you were. All text is available in English and Marathi.
+- **Accessibility:** dialogs trap keyboard focus, close with Escape and return focus to where you were. The tree can be panned with arrow keys when its viewport is focused. All text is available in English and Marathi.
 
 ## Demo
 
@@ -37,11 +37,11 @@ The recordings below use a fictional family (the Deshmukhs) and a demo editor ac
 | Admin signed in with email/password | Live data | ✓ | – | – | ✓ | ✓ |
 | Admin signed in **with GitHub** | Live data | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-Admins are the GitHub account `p23ghodake` and the GitHub account whose verified email is `ghodake.pankaj@gmail.com`. They must also be listed in `ALLOWED_GITHUB_USERS` to save anything. **Deleting members requires a session signed in through GitHub**; an email/password session is refused even for the admin email. The Reset/reload control is also shown only to an admin signed in with GitHub. The Edge Function enforces the deletion restriction: it compares each save with the current file on GitHub and rejects saves that remove members unless the session signed in with GitHub on an admin account. Undoing your own *add* counts as a removal, so it is also limited to that admin.
+Admin identities are configured only in the Edge Function's `ADMIN_USERS` secret. They must also be listed in `ALLOWED_GITHUB_USERS` to edit. **Deleting members requires an admin session signed in through GitHub**; email/password sessions cannot delete. The Reset/reload control is also shown only to an admin signed in with GitHub. The Edge Function enforces the deletion restriction by comparing each save with the current file on GitHub. Undoing an add counts as a removal, so only an admin can do it.
 
 The **tree line style** (Settings → Admin → *Tree lines*) can be changed by either admin identity, with GitHub or email/password sign-in. Each change is saved to GitHub straight away. The Edge Function rejects any save that changes `settings` unless it comes from an admin, and editors' member saves keep the admin's settings unchanged. After updating, redeploy the function (`npx supabase functions deploy family-data`) so the server check is active.
 
-The frontend admin list is in `src/lib/admin.ts`. On the server, set the optional `ADMIN_USERS` Edge Function secret (comma-separated GitHub usernames or GitHub emails) to override the built-in list; keep both in sync.
+The frontend receives the current user's admin and delete capabilities from the Edge Function; no admin email or identity list is embedded in the public app. Set `ADMIN_USERS` as a required Edge Function secret containing comma-separated GitHub usernames or confirmed GitHub emails. There is no built-in admin fallback.
 
 ## GitHub-backed family data
 
@@ -50,11 +50,11 @@ By default, family data is the root file `g_familyData.json` in `p23ghodake/Fami
 ### Supabase and GitHub setup
 
 1. Create a Supabase project. In **Authentication → Providers → GitHub**, enable GitHub and enter a GitHub OAuth App client ID and client secret. In the OAuth App, set its callback URL to `https://<project-ref>.supabase.co/auth/v1/callback`.
-2. In Supabase **Authentication → URL Configuration**, allow the production redirect `https://p23ghodake.github.io/FamilyTree/` and local redirect `http://localhost:3000/`.
+2. In Supabase **Authentication → URL Configuration**, allow the production redirect `https://p23ghodake.github.io/FamilyTree/` and local redirect `http://localhost:5173/`.
 3. Create a GitHub fine-grained personal access token restricted to `p23ghodake/FamilyTree-Data`, with **Contents: Read and write** only. If you override `DATA_REPO`, scope the token to that data repository instead. Do not put it in React `.env` files or GitHub Pages variables.
 4. Add the token as the Edge Function secret named `GITHUB_TOKEN` in Supabase **Project Settings → Edge Functions → Secrets**, or create an untracked `supabase/.env` containing `GITHUB_TOKEN=<token>` and run `supabase secrets set --env-file supabase/.env`. This file is ignored by Git and is not a React environment file. Supabase supplies `SUPABASE_URL` and `SUPABASE_ANON_KEY` to the function.
-5. Copy the Supabase project URL and browser-safe anon/publishable key into a local `.env` file using `.env.example` as a template. These two `REACT_APP_` values are public browser configuration, not secrets.
-6. In the GitHub repository's **Settings → Secrets and variables → Actions → Variables**, define `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` with those same public values. The Pages workflow injects them at build time.
+5. Copy the Supabase project URL and browser-safe anon/publishable key into a local `.env` file using `.env.example` as a template. The `VITE_` values are public browser configuration, not secrets.
+6. In the GitHub repository's **Settings → Secrets and variables → Actions → Variables**, define `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` with those same public values. The Pages workflow injects them at build time.
 
 No Supabase database, table, service-role key, or GitHub token is needed by the frontend.
 
@@ -68,7 +68,7 @@ npx supabase link --project-ref <project-ref>
 npx supabase functions deploy family-data
 ```
 
-Set the `ALLOWED_GITHUB_USERS` Edge Function secret to a comma-separated list of GitHub usernames allowed to read/write data (for example `npx supabase secrets set ALLOWED_GITHUB_USERS=user1,user2`); other signed-in users receive the limited view and get a 403 if they try to save. Entries may be GitHub usernames or emails (for email/password users created in Supabase Authentication → Users). Optionally set `READONLY_GITHUB_USERS` for users who can load data but not save changes.
+Set the `ALLOWED_GITHUB_USERS` Edge Function secret to a comma-separated list of GitHub usernames allowed to read/write data (for example `npx supabase secrets set ALLOWED_GITHUB_USERS=user1,user2`); other signed-in users receive the limited view and get a 403 if they try to save. Entries may be GitHub usernames or confirmed emails for email/password users. Set `ADMIN_USERS` to the admin GitHub usernames or confirmed emails; include each admin in `ALLOWED_GITHUB_USERS` as well. Optionally set `READONLY_GITHUB_USERS` for users who can load data but not save changes.
 
 Authorization uses the verified GitHub provider identity or a confirmed email, not editable user metadata. The sign-in method used for delete and reset permissions is read from the validated access token. Redeploy the `family-data` Edge Function after updating its authorization code:
 
@@ -76,7 +76,7 @@ Authorization uses the verified GitHub provider identity or a confirmed email, n
 npx supabase functions deploy family-data --project-ref <project-ref>
 ```
 
-Set or update the `GITHUB_TOKEN` Edge Function secret in the Supabase Dashboard, or use the ignored `supabase/.env` method above. The function keeps JWT verification enabled; it also validates each access token with Supabase Auth. Its default Contents API target is `g_familyData.json` in `p23ghodake/FamilyTree-Data`. Optional Edge Function secrets `DATA_REPO` (repository name under `p23ghodake`) and `DATA_FILE_PATH` (path within that repository) override these defaults; the GitHub token must have access to the chosen repository. Calendar-date and chronological-order validation also runs before the function saves a file; redeploy it when updating this validation.
+Set or update the `GITHUB_TOKEN` and `ADMIN_USERS` Edge Function secrets in the Supabase Dashboard, or use the ignored `supabase/.env` method above. The function keeps JWT verification enabled; it also validates each access token with Supabase Auth. Its default Contents API target is `g_familyData.json` in `p23ghodake/FamilyTree-Data`. Optional Edge Function secrets `DATA_REPO` (repository name under `p23ghodake`) and `DATA_FILE_PATH` (path within that repository) override these defaults; the GitHub token must have access to the chosen repository. Calendar-date and chronological-order validation also runs before the function saves a file; redeploy it when updating this validation.
 
 ### Reset
 
@@ -87,11 +87,11 @@ The Reset control is shown only to the admin signed in with GitHub who has edit 
 Set the two Actions **variables** described above, then push to `main` or run the Pages workflow. For local development, copy `.env.example` to `.env`, fill in the public Supabase URL and key, and run:
 
 ```sh
-npm install
-npm start
+npm ci
+npm run dev
 ```
 
-The `build/` folder is local build output; the Pages workflow builds the site itself on every push to `main`.
+The app is built with Vite into `build/`; the Pages workflow runs tests before building and deploying.
 
 ## Tests
 
@@ -99,11 +99,11 @@ The `build/` folder is local build output; the Pages workflow builds the site it
 npm test
 ```
 
-On Windows, if npm passes flags incorrectly, run the tools directly:
+On Windows, run the test and type-check tools directly if needed:
 
 ```sh
 node node_modules/typescript/bin/tsc --noEmit
-node node_modules/react-scripts/bin/react-scripts.js test --watchAll=false --ci --runInBand
+node node_modules/jest/bin/jest.js --ci --runInBand
 ```
 
-Main test files: `src/components/functional.test.tsx`, `src/components/ux.test.tsx`, `src/components/persistence.test.tsx`, `src/context/FamilyTreeContext.test.tsx`, `src/services/familyDataValidation.test.ts`, `src/lib/admin.test.ts` and the `src/processing/*.test.ts` files. The persistence tests mock Supabase responses, and the server-write tests execute the Edge Function handler with mocked HTTP requests; neither contacts production services.
+Main test files: `src/components/functional.test.tsx`, `src/components/ux.test.tsx`, `src/components/persistence.test.tsx`, `src/components/TreeView/MarriageHistorySection.test.tsx`, `src/context/FamilyTreeContext.test.tsx`, `src/context/LanguageContext.test.tsx`, `src/services/familyDataValidation.test.ts` and the `src/processing/*.test.ts` files. The persistence tests mock Supabase responses, and the server-write tests execute the Edge Function handler with mocked HTTP requests; neither contacts production services.

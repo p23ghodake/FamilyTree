@@ -1,4 +1,4 @@
-import { findInvalidDate } from '../_shared/dateValidation.ts';
+import { validateFamilyData } from '../_shared/familyDataValidation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,9 +45,6 @@ function githubErrorStatus(status: number): number {
   if (status === 409) return 409;
   return 500;
 }
-
-// Keep in sync with src/lib/admin.ts; the ADMIN_USERS secret overrides it.
-const DEFAULT_ADMINS = ['p23ghodake', 'ghodake.pankaj@gmail.com'];
 
 // The token was already validated by Supabase Auth; this only reads how the session signed in.
 function signedInWithOAuth(accessToken: string): boolean {
@@ -185,14 +182,19 @@ Deno.serve(async request => {
     return jsonResponse({ error: 'Server configuration error.' }, 500);
   }
 
-  const sendFamilyData = async (limited: boolean, canEdit: boolean): Promise<Response> => {
+  const sendFamilyData = async (
+    limited: boolean,
+    canEdit: boolean,
+    isAdmin = false,
+    canDelete = false,
+  ): Promise<Response> => {
     const file = await readFamilyFile(githubToken);
     if ('error' in file) return file.error;
     try {
       const data = JSON.parse(file.content);
       return limited
-        ? jsonResponse({ data: limitedView(data), sha: '', canEdit: false, limited: true })
-        : jsonResponse({ data, sha: file.sha, canEdit, limited: false });
+        ? jsonResponse({ data: limitedView(data), sha: '', canEdit: false, isAdmin: false, canDelete: false, limited: true })
+        : jsonResponse({ data, sha: file.sha, canEdit, isAdmin, canDelete, limited: false });
     } catch (error) {
       console.error('The family data file is not valid UTF-8 JSON:', error);
       return jsonResponse({ error: 'The family data file is not valid JSON.' }, 500);
@@ -257,15 +259,14 @@ Deno.serve(async request => {
   const identities = [login, email].filter((value): value is string => !!value);
   const canEdit = identities.some(id => editors.includes(id));
   const canView = canEdit || identities.some(id => viewers.includes(id));
-  const configuredAdmins = parseUsers('ADMIN_USERS');
-  const admins = configuredAdmins.length > 0 ? configuredAdmins : DEFAULT_ADMINS;
+  const admins = parseUsers('ADMIN_USERS');
   const githubEmail = githubIdentity?.identity_data?.email_verified === true && typeof githubIdentity.identity_data.email === 'string'
     ? githubIdentity.identity_data.email.toLowerCase()
     : undefined;
-  const canDelete = canEdit && signedInWithOAuth(token)
+  const isAdmin = canEdit && [login, email, githubEmail].some(id => !!id && admins.includes(id));
+  const canDelete = isAdmin && signedInWithOAuth(token)
     && [login, githubEmail].some(id => !!id && admins.includes(id));
-  // Display settings: the admin GitHub account or the admin's verified email, with either sign-in method.
-  const canChangeSettings = canEdit && [login, email, githubEmail].some(id => !!id && admins.includes(id));
+  const canChangeSettings = isAdmin;
   if (!canView) {
     if (request.method === 'GET') return sendFamilyData(true, false);
     return jsonResponse({ error: `Your account (${identities.join(' / ') || 'unknown'}) is not allowed to change family data.` }, 403);
@@ -274,7 +275,7 @@ Deno.serve(async request => {
     return jsonResponse({ error: 'Your GitHub account has read-only access to family data.' }, 403);
   }
 
-  if (request.method === 'GET') return sendFamilyData(false, canEdit);
+  if (request.method === 'GET') return sendFamilyData(false, canEdit, isAdmin, canDelete);
 
   let body: { data?: unknown; sha?: unknown };
   try {
@@ -286,8 +287,8 @@ Deno.serve(async request => {
     return jsonResponse({ error: 'A family data object and current file SHA are required.' }, 400);
   }
 
-  const dateError = findInvalidDate(body.data);
-  if (dateError) return jsonResponse({ error: dateError }, 400);
+  const validationError = validateFamilyData(body.data);
+  if (validationError) return jsonResponse({ error: validationError }, 400);
 
   if (!canDelete) {
     const current = await readFamilyFile(githubToken);

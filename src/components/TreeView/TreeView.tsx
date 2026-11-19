@@ -9,7 +9,7 @@ import { CONFIG } from '../../constants/config';
 import './TreeView.css';
 
 const TreeView: React.FC = () => {
-  const { currentTree, state, dispatch, matchedMemberIds, filteredMembers, advancedMatchedIds, relResult, debouncedSearchQuery, canEdit, displaySettings } = useFamilyTree();
+  const { currentTree, state, dispatch, matchedMemberIds, filteredMembers, advancedMatchedIds, relResult, debouncedSearchQuery, canEdit, isSaving, displaySettings } = useFamilyTree();
   const { t, lang } = useLanguage();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const treeChartRef = useRef<HTMLDivElement | null>(null);
@@ -18,6 +18,7 @@ const TreeView: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [navTransition, setNavTransition] = useState(false);
+  const navTransitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
   const panOrigin = useRef({ x: 0, y: 0 });
@@ -25,6 +26,26 @@ const TreeView: React.FC = () => {
   zoomRef.current = zoom;
   const panRef = useRef(pan); // sync ref so touch handlers always read latest pan
   panRef.current = pan;
+
+  const scheduleNavTransitionEnd = useCallback((duration: number) => {
+    if (navTransitionTimer.current !== null) clearTimeout(navTransitionTimer.current);
+    setNavTransition(true);
+    const timer = setTimeout(() => {
+      if (navTransitionTimer.current === timer) {
+        navTransitionTimer.current = null;
+        setNavTransition(false);
+      }
+    }, duration);
+    navTransitionTimer.current = timer;
+  }, []);
+
+  const cancelNavTransition = useCallback(() => {
+    if (navTransitionTimer.current !== null) clearTimeout(navTransitionTimer.current);
+    navTransitionTimer.current = null;
+    setNavTransition(false);
+  }, []);
+
+  useEffect(() => cancelNavTransition, [cancelNavTransition]);
 
   // Relationship mode: set of IDs in the found path (excluding source/target)
   const relPathSet = useMemo(() => {
@@ -102,14 +123,13 @@ const TreeView: React.FC = () => {
    *
    * Returns a cleanup that cancels pending timers (used as useEffect return value).
    *
-   * NOTE: contentRef, setPan, setNavTransition, zoomRef are all stable between renders,
-   * so empty deps is intentional – recreated only on remount.
+   * Ref-backed geometry and React state setters remain stable across renders.
    */
-  const scrollToMember = useCallback((memberId: string) => { // eslint-disable-line react-hooks/exhaustive-deps
+  const scrollToMember = useCallback((memberId: string) => {
     if (!contentRef.current) return () => {};
     const container = contentRef.current;
 
-    setNavTransition(true);
+    scheduleNavTransitionEnd(1200);
 
     let tBeacon: ReturnType<typeof setTimeout> | null = null;
 
@@ -139,14 +159,12 @@ const TreeView: React.FC = () => {
       tBeacon = setTimeout(() => el.classList.remove('pnode--scroll-target'), 1800);
     }, 50);
 
-    const t2 = setTimeout(() => setNavTransition(false), 1200);
-
     return () => {
       clearTimeout(t1);
-      clearTimeout(t2);
       if (tBeacon !== null) clearTimeout(tBeacon);
+      cancelNavTransition();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scheduleNavTransitionEnd, cancelNavTransition]);
 
   // Centre the first search match whenever the query changes
   useEffect(() => {
@@ -180,14 +198,14 @@ const TreeView: React.FC = () => {
     let raf2: number | null = null;
     const raf = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
-        initialFit();
+        initialFitRef.current();
       });
     });
     return () => {
       cancelAnimationFrame(raf);
       if (raf2 !== null) cancelAnimationFrame(raf2);
     };
-  }, [currentTreeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTreeId]);
 
   // Attach non-passive wheel listener so e.preventDefault() is guaranteed to work
   useEffect(() => {
@@ -211,7 +229,7 @@ const TreeView: React.FC = () => {
     };
     container.addEventListener('wheel', onWheel, { passive: false });
     return () => container.removeEventListener('wheel', onWheel);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Touch: one-finger pan, two-finger pinch-to-zoom (zoom toward the pinch midpoint)
   useEffect(() => {
@@ -229,7 +247,7 @@ const TreeView: React.FC = () => {
 
     const beginPan = (touch: Touch) => {
       mode = 'pan';
-      setNavTransition(false);
+      cancelNavTransition();
       panStartPoint = { x: touch.clientX, y: touch.clientY };
       panStartOrigin = { ...panRef.current };
     };
@@ -286,7 +304,7 @@ const TreeView: React.FC = () => {
       container.removeEventListener('touchend', onTouchEnd);
       container.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cancelNavTransition]);
 
   // ── Print: scale tree to fit page ────────────────────────────
   useEffect(() => {
@@ -330,16 +348,16 @@ const TreeView: React.FC = () => {
       window.removeEventListener('beforeprint', handleBeforePrint);
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pan handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    setNavTransition(false); // cancel navigation animation on manual pan
+    cancelNavTransition();
     isPanning.current = true;
     panStart.current = { x: e.clientX, y: e.clientY };
     panOrigin.current = { ...pan };
-  }, [pan]);
+  }, [pan, cancelNavTransition]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning.current) return;
@@ -356,6 +374,21 @@ const TreeView: React.FC = () => {
   const zoomIn = useCallback(() => setZoom(prev => Math.min(3, prev + 0.15)), []);
   const zoomOut = useCallback(() => setZoom(prev => Math.max(0.15, prev - 0.15)), []);
   const resetView = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
+  const handlePanKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget || state.relMode) return;
+    const distance = event.shiftKey ? 120 : 40;
+    const offsets: Record<string, { x: number; y: number }> = {
+      ArrowLeft: { x: distance, y: 0 },
+      ArrowRight: { x: -distance, y: 0 },
+      ArrowUp: { x: 0, y: distance },
+      ArrowDown: { x: 0, y: -distance },
+    };
+    const offset = offsets[event.key];
+    if (!offset) return;
+    event.preventDefault();
+    cancelNavTransition();
+    setPan(current => ({ x: current.x + offset.x / zoom, y: current.y + offset.y / zoom }));
+  }, [state.relMode, zoom, cancelNavTransition]);
 
   /**
    * Fit entire tree into the visible container.
@@ -380,14 +413,12 @@ const TreeView: React.FC = () => {
     const clamped = Math.max(0.15, Math.min(3, fitZoom));
 
     // Animate to the fitted zoom centred at origin
-    setNavTransition(true);
+    scheduleNavTransitionEnd(600);
     setZoom(clamped);
     setPan({ x: 0, y: 0 });
     container.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
 
-    const t = setTimeout(() => setNavTransition(false), 600);
-    return () => clearTimeout(t);
-  }, []);
+  }, [scheduleNavTransitionEnd]);
 
   /**
    * Initial fit used on load / tree switch. Unlike fitToScreen (which always fits
@@ -410,11 +441,10 @@ const TreeView: React.FC = () => {
     const clamped = Math.max(0.15, Math.min(3, fitZoom));
 
     if (clamped >= CONFIG.ui.READABLE_MIN_ZOOM) {
-      setNavTransition(true);
+      scheduleNavTransitionEnd(600);
       setZoom(clamped);
       setPan({ x: 0, y: 0 });
-      const t = setTimeout(() => setNavTransition(false), 600);
-      return () => clearTimeout(t);
+      return;
     }
 
     const primary = currentTree?.members.find(m => m.isPrimaryInTree) ?? currentTree?.members[0];
@@ -422,21 +452,24 @@ const TreeView: React.FC = () => {
     setZoom(CONFIG.ui.READABLE_MIN_ZOOM);
     setPan({ x: 0, y: 0 });
     if (primary) return scrollToMember(primary.id);
-  }, [currentTree, scrollToMember]);
+  }, [currentTree, scrollToMember, scheduleNavTransitionEnd]);
+
+  const initialFitRef = useRef(initialFit);
+  initialFitRef.current = initialFit;
 
   const handleMenuAction = useCallback((
     action: 'edit' | 'addChild' | 'addSpouse' | 'delete',
     memberId: string
   ) => {
     if (action === 'delete') {
-      if (!currentTree) return;
+      if (!currentTree || isSaving) return;
       // Confirmation is handled inline in PersonNode — dispatch directly
       dispatch({ type: 'DELETE_MEMBER', payload: { treeId: currentTree.familyTreeId, memberId } });
     } else {
       const modeMap = { edit: 'edit', addChild: 'addChild', addSpouse: 'addSpouse' } as const;
       dispatch({ type: 'OPEN_MEMBER_FORM', payload: { mode: modeMap[action], targetId: memberId } });
     }
-  }, [dispatch, currentTree]);
+  }, [dispatch, currentTree, isSaving]);
 
   if (!currentTree) {
     return <div className="tree-view__empty">{t.selectTreePrompt}</div>;
@@ -446,7 +479,11 @@ const TreeView: React.FC = () => {
     <div className="tree-view">
       <div
         ref={contentRef}
+        tabIndex={0}
+        role="region"
+        aria-label={`${t.ariaFamilyTree}. ${t.ariaTreePanInstructions}`}
         className={`tree-view__content${state.relMode ? ' tree-view__content--rel-mode' : ''}${state.relMode && state.relSource ? ' tree-view__content--rel-step-2' : ''}`}
+        onKeyDown={handlePanKeyDown}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -473,7 +510,7 @@ const TreeView: React.FC = () => {
                 isSearching={isSearching}
                 searchMatchedIds={matchedMemberIds}
                 onSelect={handleSelect}
-                onMenuAction={canEdit ? handleMenuAction : undefined}
+                onMenuAction={canEdit && !isSaving ? handleMenuAction : undefined}
                 filterMatchedIds={advancedMatchedIds}
                 filterActive={isFiltersActive(state.advancedFilters)}
                 marriageMatchedIds={advancedMatchedIds}

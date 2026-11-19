@@ -19,9 +19,9 @@ import { getNodeColors } from '../processing/nodeStyling';
 import { getImageConfig } from '../processing/imageRules';
 import { computeRelationship, RelationshipResult } from '../processing/relationshipFinder';
 import { memberMatchesQuery } from '../processing/searchFilter';
+import { getSoleParentChildIds } from '../processing/spouseRules';
 import { ThemeName, applyTheme, loadSavedTheme } from '../theme/themeConfig';
 import { useAuth } from '../lib/AuthContext';
-import { canDeleteMembers, isAdminUser } from '../lib/admin';
 import { useLanguage } from './LanguageContext';
 import { FamilyDataServiceError, getFamilyData, saveFamilyData } from '../services/familyDataService';
 
@@ -189,14 +189,25 @@ const initialState: State = {
 
 // ─── Actions ───
 
+type DataMutationAction =
+  | { type: 'IMPORT_DATA'; payload: ProcessedFamilyData }
+  | { type: 'ADD_MEMBER'; payload: { treeId: string; member: StyledFamilyMember; relatedId?: string; relType?: 'child' | 'spouse' | 'parentOf'; linkExistingChildren?: boolean } }
+  | { type: 'UPDATE_MEMBER'; payload: { treeId: string; member: StyledFamilyMember } }
+  | { type: 'DELETE_MEMBER'; payload: { treeId: string; memberId: string } }
+  | { type: 'END_MARRIAGE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; endYear: number; endReason?: 'divorce' | 'death' | 'annulment' | 'separation' } }
+  | { type: 'UPDATE_MARRIAGE_DATE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; marriageDate: string | null } }
+  | { type: 'SET_DISPLAY_SETTINGS'; payload: Partial<DisplaySettings> }
+  | { type: 'UNDO' }
+  | { type: 'REDO' };
+
 type Action =
   | { type: 'SET_DATA'; payload: ProcessedFamilyData }
   | { type: 'RESET_ACCESS' }
   | { type: 'SET_ERROR'; payload: string }
+  | { type: 'CLEAR_ERROR' }
   | { type: 'SELECT_TREE'; payload: string }
   | { type: 'SELECT_MEMBER'; payload: string | null }
   | { type: 'SET_SEARCH'; payload: string }
-  | { type: 'IMPORT_DATA'; payload: ProcessedFamilyData }
   | { type: 'SET_ADVANCED_FILTER'; payload: Partial<AdvancedFilters> }
   | { type: 'CLEAR_ADVANCED_FILTERS' }
   | { type: 'TOGGLE_REL_MODE' }
@@ -206,16 +217,10 @@ type Action =
   | { type: 'SET_AVATAR_STYLE'; payload: AvatarStyle }
   | { type: 'OPEN_MEMBER_FORM'; payload: { mode: MemberFormMode; targetId?: string } }
   | { type: 'CLOSE_MEMBER_FORM' }
-  | { type: 'ADD_MEMBER'; payload: { treeId: string; member: StyledFamilyMember; relatedId?: string; relType?: 'child' | 'spouse' | 'parentOf' } }
-  | { type: 'UPDATE_MEMBER'; payload: { treeId: string; member: StyledFamilyMember } }
-  | { type: 'DELETE_MEMBER'; payload: { treeId: string; memberId: string } }
-  | { type: 'END_MARRIAGE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; endYear: number; endReason?: 'divorce' | 'death' | 'annulment' | 'separation' } }
-  | { type: 'UPDATE_MARRIAGE_DATE'; payload: { treeId: string; spouse1Id: string; spouse2Id: string; marriageDate: string | null } }
-  | { type: 'SET_DISPLAY_SETTINGS'; payload: Partial<DisplaySettings> }
-  | { type: 'UNDO' }
-  | { type: 'REDO' };
+  | DataMutationAction
+  | { type: 'COMMIT_MUTATION'; payload: { action: DataMutationAction; data: ProcessedFamilyData } };
 
-const DATA_MUTATION_ACTIONS = new Set<Action['type']>([
+const DATA_MUTATION_ACTIONS = new Set<string>([
   'IMPORT_DATA',
   'ADD_MEMBER',
   'UPDATE_MEMBER',
@@ -227,6 +232,10 @@ const DATA_MUTATION_ACTIONS = new Set<Action['type']>([
   'REDO',
 ]);
 
+function isDataMutationAction(action: Action): action is DataMutationAction {
+  return DATA_MUTATION_ACTIONS.has(action.type);
+}
+
 /** True when `next` no longer contains a member that exists in `prev` (deletion, undo of an add, import). */
 function removesMembers(prev: ProcessedFamilyData, next: ProcessedFamilyData): boolean {
   const nextIds = new Set(next.familyTreesStyled.flatMap(tree => tree.members.map(member => member.id)));
@@ -234,8 +243,11 @@ function removesMembers(prev: ProcessedFamilyData, next: ProcessedFamilyData): b
 }
 
 function reducer(state: State, action: Action): State {
+  if (action.type === 'COMMIT_MUTATION') {
+    return { ...reduceState(state, action.payload.action), data: action.payload.data };
+  }
   const nextState = reduceState(state, action);
-  if (nextState.data && nextState.data !== state.data && DATA_MUTATION_ACTIONS.has(action.type)) {
+  if (nextState.data && nextState.data !== state.data && isDataMutationAction(action)) {
     return { ...nextState, data: processAllFamilyData(buildRawExport(nextState.data)) };
   }
   return nextState;
@@ -264,6 +276,8 @@ function reduceState(state: State, action: Action): State {
       };
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
     case 'SELECT_TREE':
       return { ...state, selectedTreeId: action.payload, selectedMemberId: null, relMode: false, relSource: null, relTarget: null };
     case 'SELECT_MEMBER':
@@ -292,7 +306,7 @@ function reduceState(state: State, action: Action): State {
 
     case 'ADD_MEMBER': {
       if (!state.data) return state;
-      const { treeId, member, relatedId, relType } = action.payload;
+      const { treeId, member, relatedId, relType, linkExistingChildren = false } = action.payload;
       return produce(state, draft => {
         const tree = draft.data!.familyTreesStyled.find(t => t.familyTreeId === treeId);
         if (!tree) return;
@@ -301,14 +315,15 @@ function reduceState(state: State, action: Action): State {
         const hasParentLink = (parentId: string, childId: string) =>
           tree.relationships.parentChild.some(r => r.parentId === parentId && r.childId === childId);
         if (relatedId && relType === 'spouse') {
-          // Existing children with only this one recorded parent become the new spouse's children too
-          const rel = tree.relationships.parentChild;
-          const singleParentKids = Array.from(new Set(
-            rel.filter(r => r.parentId === relatedId).map(r => r.childId)
-          )).filter(cid => rel.filter(r => r.childId === cid).length === 1);
-          singleParentKids.forEach(cid => {
-            rel.push({ parentId: member.id, childId: cid, lineStyle: { ...pcLine } });
-          });
+          if (linkExistingChildren) {
+            getSoleParentChildIds(tree, relatedId).forEach(childId => {
+              if (!hasParentLink(member.id, childId)) {
+                tree.relationships.parentChild.push({
+                  parentId: member.id, childId, lineStyle: { ...pcLine },
+                });
+              }
+            });
+          }
           tree.relationships.spouses.push({
             spouse1Id: relatedId, spouse2Id: member.id,
             status: 'current',
@@ -449,11 +464,9 @@ function reduceState(state: State, action: Action): State {
       return { ...state, relSource: null, relTarget: null };
 
     case 'SET_THEME':
-      applyTheme(action.payload);
       return { ...state, theme: action.payload };
 
     case 'SET_AVATAR_STYLE':
-      try { localStorage.setItem(AVATAR_STYLE_KEY, action.payload); } catch {}
       return { ...state, avatarStyle: action.payload };
 
     // Not part of undo history: settings are site-wide and owned by the admin.
@@ -493,6 +506,8 @@ interface FamilyTreeContextValue {
   dispatch: React.Dispatch<Action>;
   cloudReady: boolean;
   canEdit: boolean;
+  isAdmin: boolean;
+  canDelete: boolean;
   /** Visitor view: fewer details and features, read-only. */
   limitedView: boolean;
   cloudError: string | null;
@@ -506,6 +521,7 @@ interface FamilyTreeContextValue {
   exportData: () => void;
   importData: (jsonStr: string) => void;
   resetData: () => void;
+  retryLoad: () => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -530,6 +546,8 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   tRef.current = t;
   const [cloudReady, setCloudReady] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
   const [limitedView, setLimitedView] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -542,6 +560,10 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   const savingRef = useRef(false);
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
+  const isAdminRef = useRef(isAdmin);
+  isAdminRef.current = isAdmin;
+  const canDeleteRef = useRef(canDelete);
+  canDeleteRef.current = canDelete;
   stateRef.current = state;
 
   const setCloudReadyState = useCallback((ready: boolean) => {
@@ -557,8 +579,12 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     const payload = limited ? restrictData(processed)! : processed;
     shaRef.current = limited ? null : remote.sha;
     canEditRef.current = !limited && remote.canEdit === true;
+    isAdminRef.current = !limited && remote.isAdmin === true;
+    canDeleteRef.current = !limited && remote.canDelete === true;
     setLimitedView(limited);
     setCanEdit(canEditRef.current);
+    setIsAdmin(isAdminRef.current);
+    setCanDelete(canDeleteRef.current);
     stateRef.current = reducer(stateRef.current, { type: 'SET_DATA', payload });
     reducerDispatch({ type: 'SET_DATA', payload });
     setCloudReadyState(!limited);
@@ -566,13 +592,16 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   }, [setCloudReadyState]);
 
   const dispatch = useCallback((action: Action) => {
-    if (!DATA_MUTATION_ACTIONS.has(action.type)) {
+    if (!isDataMutationAction(action)) {
       stateRef.current = reducer(stateRef.current, action);
       reducerDispatch(action);
       return;
     }
 
-    if (savingRef.current) return;
+    if (savingRef.current) {
+      toast.error(tRef.current.saveInProgress, { id: 'family-save' });
+      return;
+    }
     if (!session) {
       toast.error(tRef.current.saveSignInRequired, { id: 'family-save' });
       return;
@@ -602,11 +631,11 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       const currentState = stateRef.current;
       const nextState = reducer(currentState, action);
       if (!nextState.data || nextState.data === currentState.data) return;
-      if (currentState.data && !canDeleteMembers(session) && removesMembers(currentState.data, nextState.data)) {
+      if (currentState.data && !canDeleteRef.current && removesMembers(currentState.data, nextState.data)) {
         toast.error(tRef.current.deleteAdminOnly, { id: 'family-save' });
         return;
       }
-      if (!isAdminUser(session.user) && !sameDisplaySettings(currentState.data?.settings, nextState.data.settings)) {
+      if (!isAdminRef.current && !sameDisplaySettings(currentState.data?.settings, nextState.data.settings)) {
         toast.error(tRef.current.connectorAdminOnly, { id: 'family-save' });
         return;
       }
@@ -620,8 +649,12 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
         const savedSha = await saveFamilyData(raw, shaRef.current);
         if (generation !== conflictGenerationRef.current) return;
         shaRef.current = savedSha;
-        stateRef.current = reducer(stateRef.current, action);
-        reducerDispatch(action);
+        const commitAction: Action = {
+          type: 'COMMIT_MUTATION',
+          payload: { action, data: nextState.data },
+        };
+        stateRef.current = reducer(stateRef.current, commitAction);
+        reducerDispatch(commitAction);
       } catch (error) {
         if (generation !== conflictGenerationRef.current) return;
         if (error instanceof FamilyDataServiceError && error.status === 409) {
@@ -659,7 +692,11 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     conflictGenerationRef.current += 1;
     shaRef.current = null;
     canEditRef.current = false;
+    isAdminRef.current = false;
+    canDeleteRef.current = false;
     setCanEdit(false);
+    setIsAdmin(false);
+    setCanDelete(false);
     setCloudReadyState(false);
     setLimitedView(userId === null);
     setCloudError(null);
@@ -673,6 +710,14 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     applyTheme(state.theme);
   }, [state.theme]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(AVATAR_STYLE_KEY, state.avatarStyle);
+    } catch (error) {
+      console.warn('Unable to persist avatar style:', error);
+    }
+  }, [state.avatarStyle]);
+
   // Everyone loads through the family-data function; visitors receive a limited, read-only view.
   useEffect(() => {
     if (authLoading) return;
@@ -681,7 +726,11 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
 
     shaRef.current = null;
     canEditRef.current = false;
+    isAdminRef.current = false;
+    canDeleteRef.current = false;
     setCanEdit(false);
+    setIsAdmin(false);
+    setCanDelete(false);
     setCloudReadyState(false);
     setCloudError(null);
 
@@ -779,7 +828,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
   }, [currentTree?.members, state.relSource, state.relTarget, dispatch]);
 
   const exportData = useCallback(() => {
-    if (!state.data || !isAdminUser(session?.user)) return;
+    if (!state.data || !isAdminRef.current) return;
     const rawExport = buildRawExport(state.data);
     const blob = new Blob([JSON.stringify(rawExport, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -787,16 +836,23 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     a.href = url;
     a.download = 'familyData.json';
     a.click();
-    URL.revokeObjectURL(url);
-  }, [state.data, session]);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [state.data]);
 
   const resetData = useCallback(() => {
-    if (!isAdminUser(session?.user) || !canEditRef.current) {
+    if (!isAdminRef.current || !canEditRef.current) {
       toast.error(tRef.current.resetAdminOnly, { id: 'family-save' });
       return;
     }
     setReloadKey(key => key + 1);
-  }, [session]);
+  }, []);
+
+  const retryLoad = useCallback(() => {
+    stateRef.current = reducer(stateRef.current, { type: 'CLEAR_ERROR' });
+    reducerDispatch({ type: 'CLEAR_ERROR' });
+    setCloudError(null);
+    setReloadKey(key => key + 1);
+  }, []);
 
   const importData = useCallback((jsonStr: string) => {
     let parsed: unknown;
@@ -821,7 +877,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
     try {
       const processed = processAllFamilyData(result.data);
       // Only the admin may bring in display settings; everyone else keeps the current ones.
-      if (!isAdminUser(session?.user) || !processed.settings) {
+      if (!isAdminRef.current || !processed.settings) {
         processed.settings = stateRef.current.data?.settings;
       }
       dispatch({ type: 'IMPORT_DATA', payload: processed });
@@ -835,7 +891,7 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
       console.error('Failed to process imported data:', e);
       toast.error(tRef.current.importProcessFailed, { id: 'import-error' });
     }
-  }, [dispatch, session]);
+  }, [dispatch]);
 
   // Style a raw member with computed fields (for add/edit)
   const styleNewMember = useCallback((
@@ -897,13 +953,14 @@ export function FamilyTreeProvider({ children }: { children: ReactNode }) {
 
   const undo = useCallback(() => dispatch({ type: 'UNDO' }), [dispatch]);
   const redo = useCallback(() => dispatch({ type: 'REDO' }), [dispatch]);
-  const canUndo = state.past.length > 0;
+  const canUndo = state.past.length > 0 && (
+    canDelete || !state.data || !removesMembers(state.data, state.past[state.past.length - 1])
+  );
   const canRedo = state.future.length > 0;
 
   const contextValue = useMemo<FamilyTreeContextValue>(
-    () => ({ state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state, dispatch, cloudReady, canEdit, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, undo, redo, canUndo, canRedo, styleNewMember, displaySettings],
+    () => ({ state, dispatch, cloudReady, canEdit, isAdmin, canDelete, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, retryLoad, undo, redo, canUndo, canRedo, styleNewMember, displaySettings }),
+    [state, dispatch, cloudReady, canEdit, isAdmin, canDelete, limitedView, cloudError, isSaving, currentTree, filteredMembers, matchedMemberIds, advancedMatchedIds, relResult, debouncedSearchQuery, exportData, importData, resetData, retryLoad, undo, redo, canUndo, canRedo, styleNewMember, displaySettings],
   );
 
   return (

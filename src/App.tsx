@@ -4,12 +4,17 @@ import { LanguageProvider } from './context/LanguageContext';
 import { FamilyTreeProvider } from './context/FamilyTreeContext';
 import { AuthProvider } from './lib/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { useLanguage } from './context/LanguageContext';
 import Layout from './components/Layout/Layout';
 
-function App() {
+function AppContent() {
+  const { t } = useLanguage();
   return (
-    <ErrorBoundary>
-      <LanguageProvider>
+    <ErrorBoundary
+      title={t.errorBoundaryTitle}
+      description={t.errorBoundaryDescription}
+      reload={t.errorBoundaryReload}
+    >
         <AuthProvider>
           <FamilyTreeProvider>
             <Layout />
@@ -23,8 +28,15 @@ function App() {
             />
           </FamilyTreeProvider>
         </AuthProvider>
-      </LanguageProvider>
     </ErrorBoundary>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

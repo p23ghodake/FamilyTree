@@ -103,7 +103,11 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
   }, [active, measureTarget]);
 
   const handleClose = useCallback(() => {
-    localStorage.setItem(CONFIG.storage.TOUR_SEEN_KEY, '1');
+    try {
+      localStorage.setItem(CONFIG.storage.TOUR_SEEN_KEY, '1');
+    } catch (error) {
+      console.warn('Unable to persist tour preference:', error);
+    }
     onClose();
   }, [onClose]);
 
@@ -212,7 +216,7 @@ const TourOverlay: React.FC<Props> = ({ active, onClose }) => {
 
         {step.media && (
           <div className="tour-tooltip__media">
-            <img src={`${process.env.PUBLIC_URL}/tour/${step.media}`} alt="" width={456} height={288} />
+            <img src={`${process.env.PUBLIC_URL || ''}/tour/${step.media}`} alt="" width={456} height={288} />
           </div>
         )}
         <h3 className="tour-tooltip__title">{titles[stepIndex]}</h3>

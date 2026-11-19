@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { getDisplayFirstName } from '../../processing/displayName';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
-import { useAuth } from '../../lib/AuthContext';
 import { getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
 import { StyledFamilyMember, AvatarStyle } from '../../types/FamilyTypes';
 import { BabyIcon, HeartIcon, MoreVerticalIcon, PencilIcon, Trash2Icon } from '../Icons';
@@ -33,8 +32,7 @@ export const PersonNode = React.memo<{
   onMenuAction?: (action: 'edit' | 'addChild' | 'addSpouse' | 'delete', memberId: string) => void;
 }>(({ member, isSelected, isHighlighted, isHidden, isFormerSpouse, relRole, relStep, showMarriageBadge, avatarStyle, onClick, onMenuAction }) => {
   const { t, lang } = useLanguage();
-  const { currentTree } = useFamilyTree();
-  const { canDelete } = useAuth();
+  const { currentTree, canDelete } = useFamilyTree();
   const displayName = getDisplayFirstName(member, lang);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);

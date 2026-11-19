@@ -30,3 +30,38 @@ it('renders selected member details for visitors without edit controls', () => {
   fireEvent.click(screen.getByRole('button', { name: translations.en.close }));
   expect(dispatch).toHaveBeenCalledWith({ type: 'SELECT_MEMBER', payload: null });
 });
+
+it('offers a retry when the initial family-data load fails', () => {
+  const retryLoad = jest.fn();
+  (useFamilyTree as jest.Mock).mockReturnValue({
+    state: { data: null, error: 'Network down' },
+    currentTree: null,
+    retryLoad,
+    isSaving: false,
+  });
+  render(<Layout />);
+  fireEvent.click(screen.getByRole('button', { name: translations.en.retryLoad }));
+  expect(retryLoad).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the load-error view usable when browser storage is blocked', () => {
+  const retryLoad = jest.fn();
+  const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    throw new Error('Storage disabled');
+  });
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  (useFamilyTree as jest.Mock).mockReturnValue({
+    state: { data: null, error: 'Network down' },
+    currentTree: null,
+    retryLoad,
+    isSaving: false,
+  });
+  try {
+    render(<Layout />);
+    expect(screen.getByRole('button', { name: translations.en.retryLoad })).toBeTruthy();
+    expect(warn).toHaveBeenCalled();
+  } finally {
+    getItem.mockRestore();
+    warn.mockRestore();
+  }
+});

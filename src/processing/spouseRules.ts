@@ -32,6 +32,14 @@ export function getCurrentSpouseId(tree: StyledFamilyTree, memberId: string): st
   return rel.spouse1Id === memberId ? rel.spouse2Id : rel.spouse1Id;
 }
 
+export function getSoleParentChildIds(tree: StyledFamilyTree, parentId: string): string[] {
+  const relations = tree.relationships.parentChild;
+  const childIds = new Set(relations.filter(r => r.parentId === parentId).map(r => r.childId));
+  return Array.from(childIds).filter(childId =>
+    relations.filter(r => r.childId === childId).length === 1
+  );
+}
+
 /** True when any child with a known birth date is a boy under 21 or a girl under 18. */
 export function hasUnderageChildren(tree: StyledFamilyTree, memberId: string, now: Date = new Date()): boolean {
   const childIds = new Set(tree.relationships.parentChild.filter(r => r.parentId === memberId).map(r => r.childId));

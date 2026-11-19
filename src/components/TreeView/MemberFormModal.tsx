@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../lib/AuthContext';
 import { StyledFamilyMember } from '../../types/FamilyTypes';
 import { AlertTriangleIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FemaleIcon, HelpCircleIcon, MaleIcon, Trash2Icon, XIcon } from '../Icons';
 import { transliterateToMarathi } from '../../processing/transliteration';
 import { findDuplicates } from '../../processing/duplicateDetection';
 import { containsDigit, isFutureDate, isFutureYear, sanitizeImageUrl } from '../../processing/dataValidation';
 import toast from 'react-hot-toast';
-import { ageOnDate, getCurrentSpouseId, hasUnderageChildren } from '../../processing/spouseRules';
+import { ageOnDate, getCurrentSpouseId, getSoleParentChildIds, hasUnderageChildren } from '../../processing/spouseRules';
 import { computeAge, isMemberDeceased } from '../../processing/ageCalculation';
 import { daysInMonth, eventDate, isDateDefinitelyBefore, isValidIsoDate, isValidYear } from '../../processing/dateValidation';
 import YearPicker from '../YearPicker';
@@ -122,14 +121,15 @@ const MAX_YEAR = new Date().getFullYear();
 // ─── Modal Component ───
 
 const MemberFormModal: React.FC = () => {
-  const { state, dispatch, currentTree, styleNewMember, isSaving, canEdit } = useFamilyTree();
-  const { canDelete } = useAuth();
+  const { state, dispatch, currentTree, styleNewMember, isSaving, canEdit, canDelete } = useFamilyTree();
   const { t } = useLanguage();
   const { memberFormMode, memberFormTargetId } = state;
 
   const targetMember = memberFormMode && memberFormTargetId && currentTree
     ? currentTree.members.find(m => m.id === memberFormTargetId) ?? null
     : null;
+  const targetMemberRef = useRef(targetMember);
+  targetMemberRef.current = targetMember;
 
   const isEdit = memberFormMode === 'edit';
   const editMember = isEdit ? targetMember : null;
@@ -142,6 +142,7 @@ const MemberFormModal: React.FC = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [living, setLiving] = useState(true);
   const [editingMarathi, setEditingMarathi] = useState(false);
+  const [linkExistingChildren, setLinkExistingChildren] = useState(false);
 
   // Relationship state — only used when mode === 'add'
   const [relationType, setRelationType] = useState<RelationshipType>('none');
@@ -153,11 +154,12 @@ const MemberFormModal: React.FC = () => {
   // Pre-fill form when opening
   useEffect(() => {
     if (!memberFormMode) return;
-    if (isEdit && editMember) {
-      setFields(memberToFields(editMember));
-      setLiving(!isMemberDeceased(editMember));
+    const currentTarget = targetMemberRef.current;
+    if (memberFormMode === 'edit' && currentTarget) {
+      setFields(memberToFields(currentTarget));
+      setLiving(!isMemberDeceased(currentTarget));
     } else {
-      const lastName = targetMember?.lastName ?? '';
+      const lastName = currentTarget?.lastName ?? '';
       setFields({ ...EMPTY_FIELDS, lastName });
       setLiving(true);
     }
@@ -166,12 +168,20 @@ const MemberFormModal: React.FC = () => {
     setErrors({});
     setStepIndex(0);
     setEditingMarathi(false);
+    setLinkExistingChildren(false);
     setConfirmingDelete(false);
-  }, [memberFormMode, memberFormTargetId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [memberFormMode, memberFormTargetId]);
 
   // Members available to link as a relationship target
   const members = currentTree?.members;
   const allMembers = useMemo(() => members ?? [], [members]);
+  const spouseTargetId = memberFormMode === 'addSpouse'
+    ? memberFormTargetId
+    : isStandaloneAdd && relationType === 'spouseOf' ? relatedMemberId : null;
+  const linkableExistingChildren = useMemo(
+    () => currentTree && spouseTargetId ? getSoleParentChildIds(currentTree, spouseTargetId) : [],
+    [currentTree, spouseTargetId],
+  );
 
   // Duplicate detection — only while adding (not editing)
   const duplicates = useMemo(() => {
@@ -182,7 +192,7 @@ const MemberFormModal: React.FC = () => {
       fields.birthYear ? parseInt(fields.birthYear) : null,
       allMembers,
     );
-  }, [isEdit, fields.firstName, fields.lastName, fields.birthYear, allMembers]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isEdit, fields.firstName, fields.lastName, fields.birthYear, allMembers]);
 
   const set = useCallback(<K extends keyof FormFields>(key: K, value: FormFields[K]) => {
     setFields(prev => ({ ...prev, [key]: value }));
@@ -355,7 +365,13 @@ const MemberFormModal: React.FC = () => {
 
     dispatch({
       type: 'ADD_MEMBER',
-      payload: { treeId: currentTree.familyTreeId, member: styledMember, relatedId, relType },
+      payload: {
+        treeId: currentTree.familyTreeId,
+        member: styledMember,
+        relatedId,
+        relType,
+        ...(relType === 'spouse' && { linkExistingChildren }),
+      },
     });
   };
 
@@ -537,8 +553,8 @@ const MemberFormModal: React.FC = () => {
                   relationType={relationType}
                   relatedMemberId={relatedMemberId}
                   error={errors.relationship}
-                  onRelationTypeChange={type => { setRelationType(type); setRelatedMemberId(''); setErrors(prev => ({ ...prev, relationship: undefined })); }}
-                  onRelatedMemberChange={id => { setRelatedMemberId(id); setErrors(prev => ({ ...prev, relationship: undefined })); }}
+                  onRelationTypeChange={type => { setRelationType(type); setRelatedMemberId(''); setLinkExistingChildren(false); setErrors(prev => ({ ...prev, relationship: undefined })); }}
+                  onRelatedMemberChange={id => { setRelatedMemberId(id); setLinkExistingChildren(false); setErrors(prev => ({ ...prev, relationship: undefined })); }}
                 />
               </>
             )}
@@ -639,6 +655,21 @@ const MemberFormModal: React.FC = () => {
                 <h3 className="mf-q" tabIndex={-1} data-autofocus>
                   {t.wizardQDetails} <span className="mf-hint">{t.wizardOptional}</span>
                 </h3>
+                {linkableExistingChildren.length > 0 && (
+                  <div className="mf-field">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={linkExistingChildren}
+                      className="mf-switch"
+                      onClick={() => setLinkExistingChildren(value => !value)}
+                    >
+                      <span className="mf-switch__track" aria-hidden="true" />
+                      {t.switchLinkExistingChildren}
+                    </button>
+                    <span className="mf-hint">{t.hintLinkExistingChildren}</span>
+                  </div>
+                )}
                 {renderDate('birth')}
                 <button type="button" role="switch" aria-checked={living} className="mf-switch" onClick={() => setLiving(v => !v)}>
                   <span className="mf-switch__track" aria-hidden="true" />

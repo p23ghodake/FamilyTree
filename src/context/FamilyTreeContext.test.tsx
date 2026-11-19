@@ -48,7 +48,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
   (useAuth as jest.Mock).mockReturnValue({ session: { user: adminUser, access_token: githubToken }, loading: false });
-  (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: 'original', canEdit: true });
+  (getFamilyData as jest.Mock).mockResolvedValue({
+    data: rawData, sha: 'original', canEdit: true, isAdmin: true, canDelete: true,
+  });
   (saveFamilyData as jest.Mock).mockResolvedValue('saved');
 });
 
@@ -61,8 +63,22 @@ it('starts with Hide females off and lets Clear switch every filter off', async 
   expect(NO_FILTERS.hideFemale).toBe(false);
 });
 
+it('persists theme and avatar changes from effects outside the reducer', async () => {
+  await mountEditor();
+  act(() => {
+    context.dispatch({ type: 'SET_THEME', payload: 'dark' });
+    context.dispatch({ type: 'SET_AVATAR_STYLE', payload: 'emoji' });
+  });
+  await waitFor(() => {
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(localStorage.getItem('ft-theme')).toBe('dark');
+    expect(localStorage.getItem('ft-avatar-style')).toBe('emoji');
+  });
+});
+
 it('lets only administrators delete members, including through undo', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser, access_token: githubToken }, loading: false });
+  (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: 'original', canEdit: true });
   await mountEditor();
   act(() => context.dispatch({ type: 'DELETE_MEMBER', payload: { treeId: 'test-tree', memberId: 'child' } }));
   await waitFor(() => expect(context.isSaving).toBe(false));
@@ -72,6 +88,7 @@ it('lets only administrators delete members, including through undo', async () =
   const member = context.styleNewMember({ id: 'new', firstName: 'New', lastName: 'Family', gender: 'unknown' });
   act(() => context.dispatch({ type: 'ADD_MEMBER', payload: { treeId: 'test-tree', member } }));
   await waitFor(() => expect(context.currentTree?.members).toHaveLength(3));
+  expect(context.canUndo).toBe(false);
   act(() => context.dispatch({ type: 'UNDO' }));
   await waitFor(() => expect(context.isSaving).toBe(false));
   expect(saveFamilyData).toHaveBeenCalledTimes(1);
@@ -116,6 +133,44 @@ it('rebuilds parent links and generations after adding a child', async () => {
   expect(context.currentTree?.members[1].childrenIds).toEqual(['grandchild']);
 });
 
+it('does not automatically link existing children to a newly added spouse', async () => {
+  await mountEditor();
+  const spouse = context.styleNewMember({ id: 'spouse', firstName: 'Spouse', lastName: 'Family', gender: 'female' });
+  act(() => context.dispatch({ type: 'ADD_MEMBER', payload: {
+    treeId: 'test-tree', member: spouse, relatedId: 'parent', relType: 'spouse',
+  } }));
+  await waitFor(() => expect(context.currentTree?.members).toHaveLength(3));
+  await waitFor(() => expect(context.isSaving).toBe(false));
+
+  expect(context.currentTree?.relationships.parentChild.map(({ parentId, childId }) => ({ parentId, childId })))
+    .toEqual([{ parentId: 'parent', childId: 'child' }]);
+});
+
+it('links only single-parent children when explicitly requested for a new spouse', async () => {
+  const data = JSON.parse(JSON.stringify(rawData)) as RawFamilyData;
+  data.familyTrees[0].members.push(
+    { id: 'other-parent', firstName: 'Other', lastName: 'Family', gender: 'female', birthYear: 1972, deathYear: null },
+    { id: 'shared-child', firstName: 'Shared', lastName: 'Family', gender: 'unknown', birthYear: 2001, deathYear: null },
+  );
+  data.familyTrees[0].relationships!.parentChild.push(
+    { parentId: 'parent', childId: 'shared-child' },
+    { parentId: 'other-parent', childId: 'shared-child' },
+  );
+  (getFamilyData as jest.Mock).mockResolvedValue({ data, sha: 'original', canEdit: true });
+  await mountEditor();
+  const spouse = context.styleNewMember({ id: 'spouse', firstName: 'Spouse', lastName: 'Family', gender: 'female' });
+  act(() => context.dispatch({ type: 'ADD_MEMBER', payload: {
+    treeId: 'test-tree', member: spouse, relatedId: 'parent', relType: 'spouse', linkExistingChildren: true,
+  } }));
+  await waitFor(() => expect(context.currentTree?.members).toHaveLength(5));
+  await waitFor(() => expect(context.isSaving).toBe(false));
+
+  const parentLinks = context.currentTree!.relationships.parentChild
+    .filter(({ parentId }) => parentId === 'spouse')
+    .map(({ childId }) => childId);
+  expect(parentLinks).toEqual(['child']);
+});
+
 it('ignores a duplicate submission while the first save is pending', async () => {
   await mountEditor();
   let finishSave!: (sha: string) => void;
@@ -130,6 +185,7 @@ it('ignores a duplicate submission while the first save is pending', async () =>
   await act(async () => finishSave('saved'));
   await waitFor(() => expect(context.isSaving).toBe(false));
   expect(context.currentTree?.members.map(member => member.id)).toEqual(['parent', 'child', 'new']);
+  expect(toast.error).toHaveBeenCalledWith(expect.any(String), { id: 'family-save' });
 });
 
 it('retains the form and original data when a save fails', async () => {
@@ -158,6 +214,7 @@ it('rejects an import that contains a future date', async () => {
 
 it('prevents non-admin editors from resetting shared data', async () => {
   (useAuth as jest.Mock).mockReturnValue({ session: { user: editorUser, access_token: githubToken }, loading: false });
+  (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: 'original', canEdit: true });
   await mountEditor();
   act(() => context.resetData());
   expect(getFamilyData).toHaveBeenCalledTimes(1);
@@ -173,6 +230,20 @@ it('shows an error when the first load fails', async () => {
   expect(context.state.data).toBeNull();
   expect(context.canEdit).toBe(false);
   expect(context.cloudReady).toBe(false);
+  (console.error as jest.Mock).mockRestore();
+});
+
+it('retries the initial family-data load after an error', async () => {
+  (getFamilyData as jest.Mock).mockRejectedValueOnce(new Error('Network down'));
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  render(<FamilyTreeProvider><Probe /></FamilyTreeProvider>);
+  await waitFor(() => expect(context.state.error).toBe('Network down'));
+
+  (getFamilyData as jest.Mock).mockResolvedValue({ data: rawData, sha: 'retry-sha', canEdit: true });
+  act(() => context.retryLoad());
+  await waitFor(() => expect(context.state.data).not.toBeNull());
+  expect(context.state.error).toBeNull();
+  expect(getFamilyData).toHaveBeenCalledTimes(2);
   (console.error as jest.Mock).mockRestore();
 });
 

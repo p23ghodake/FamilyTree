@@ -30,18 +30,21 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:ci
 
       - name: Build project
         run: npm run build
         env:
-          REACT_APP_SUPABASE_URL: ${{ vars.REACT_APP_SUPABASE_URL }}
-          REACT_APP_SUPABASE_ANON_KEY: ${{ vars.REACT_APP_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || vars.REACT_APP_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || vars.REACT_APP_SUPABASE_ANON_KEY }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './build' # This tells GitHub to look for your Create React App build folder
+          path: './build' # Vite is configured to write its production output to build/
 
       - name: Deploy to GitHub Pages
         id: deployment

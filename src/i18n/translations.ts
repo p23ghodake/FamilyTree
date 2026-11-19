@@ -28,6 +28,8 @@ type Translations = {
   labelParent: string;
   labelSpouse: string;
   labelChild: string;
+  switchLinkExistingChildren: string;
+  hintLinkExistingChildren: string;
   // Name section
   sectionEnglishName: string;
   labelFirstName: string;
@@ -197,6 +199,10 @@ type Translations = {
   // ── Layout ──
   loadingTree: string;
   errorLoadTree: string;
+  retryLoad: string;
+  errorBoundaryTitle: string;
+  errorBoundaryDescription: string;
+  errorBoundaryReload: string;
   printMembers: string;
   printPrinted: string;
   // ── TreeView zoom controls ──
@@ -207,6 +213,7 @@ type Translations = {
   // ── TreeView empty state ──
   selectTreePrompt: string;
   ariaFamilyTree: string;
+  ariaTreePanInstructions: string;
   // ── TopBar ──
   toastResetSuccess: string;
   toastUndo: string;
@@ -292,6 +299,7 @@ type Translations = {
   saveSignInRequired: string;
   saveNoPermission: string;
   saveNotReady: string;
+  saveInProgress: string;
   saveFailed: (error: string) => string;
   saveConflict: string;
   saveConflictReloadFailed: (error: string) => string;
@@ -451,6 +459,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     labelParent: 'Parent',
     labelSpouse: 'Spouse',
     labelChild: 'Child',
+    switchLinkExistingChildren: 'Also connect existing children to the new spouse',
+    hintLinkExistingChildren: 'Only children with exactly one recorded parent are included.',
     sectionEnglishName: 'English Name',
     labelFirstName: 'First Name',
     placeholderFirstName: 'First name',
@@ -605,6 +615,10 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // Layout
     loadingTree: 'Loading family tree data...',
     errorLoadTree: 'Failed to load family tree data',
+    retryLoad: 'Try again',
+    errorBoundaryTitle: 'Something went wrong',
+    errorBoundaryDescription: 'An unexpected error occurred. Changes are saved to the shared family data only after a successful save.',
+    errorBoundaryReload: 'Reload app',
     printMembers: 'members',
     printPrinted: 'Printed',
     // TreeView zoom controls
@@ -615,6 +629,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // TreeView empty state
     selectTreePrompt: 'Select a family tree to view',
     ariaFamilyTree: 'Family tree',
+    ariaTreePanInstructions: 'Use the arrow keys to pan the tree. Hold Shift to pan farther.',
     // TopBar
     toastResetSuccess: 'Family tree reset to original data.',
     toastUndo: 'Change undone',
@@ -718,6 +733,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     saveSignInRequired: 'Sign in before changing family data.',
     saveNoPermission: 'You do not have permission to change this family data.',
     saveNotReady: 'Family data is not ready to save. Reload the latest data and try again.',
+    saveInProgress: 'A save is already in progress. Your new change was not submitted; try again when saving finishes.',
     saveFailed: (error) => `Family data was not saved: ${error}`,
     saveConflict: 'Another user saved changes first. The latest data has been loaded; please reapply your change.',
     saveConflictReloadFailed: (error) => `Save conflict detected, and the latest data could not be loaded: ${error}`,
@@ -876,6 +892,8 @@ export const translations: Record<'en' | 'mr', Translations> = {
     labelParent: 'पालक',
     labelSpouse: 'जोडीदार',
     labelChild: 'मूल',
+    switchLinkExistingChildren: 'विद्यमान मुलांना नवीन जोडीदाराशीही जोडा',
+    hintLinkExistingChildren: 'फक्त एकच नोंदवलेला पालक असलेली मुले जोडली जातील.',
     sectionEnglishName: 'इंग्रजी नाव',
     labelFirstName: 'पहिले नाव',
     placeholderFirstName: 'पहिले नाव',
@@ -1030,6 +1048,10 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // Layout
     loadingTree: 'कुटुंब वृक्ष डेटा लोड होत आहे...',
     errorLoadTree: 'कुटुंब वृक्ष डेटा लोड करण्यात अयशस्वी',
+    retryLoad: 'पुन्हा प्रयत्न करा',
+    errorBoundaryTitle: 'काहीतरी चूक झाली',
+    errorBoundaryDescription: 'अनपेक्षित त्रुटी आली. यशस्वी जतन झाल्यानंतरच बदल सामायिक कुटुंब डेटामध्ये जतन होतात.',
+    errorBoundaryReload: 'अॅप पुन्हा लोड करा',
     printMembers: 'सदस्य',
     printPrinted: 'मुद्रित',
     // TreeView zoom controls
@@ -1040,6 +1062,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     // TreeView empty state
     selectTreePrompt: 'पाहण्यासाठी कुटुंब वृक्ष निवडा',
     ariaFamilyTree: 'कुटुंब वृक्ष',
+    ariaTreePanInstructions: 'वृक्ष हलवण्यासाठी बाण की वापरा. अधिक अंतर हलवण्यासाठी Shift धरून ठेवा.',
     // TopBar
     toastResetSuccess: 'कुटुंब वृक्ष मूळ डेटावर रीसेट केला.',
     toastUndo: 'बदल पूर्ववत केला',
@@ -1143,6 +1166,7 @@ export const translations: Record<'en' | 'mr', Translations> = {
     saveSignInRequired: 'कौटुंबिक माहिती बदलण्यापूर्वी साइन इन करा.',
     saveNoPermission: 'ही कौटुंबिक माहिती बदलण्याची तुम्हाला परवानगी नाही.',
     saveNotReady: 'माहिती जतन करण्यास तयार नाही. नवीनतम माहिती पुन्हा लोड करून प्रयत्न करा.',
+    saveInProgress: 'बदल जतन होत आहे. नवीन बदल पाठवला नाही; जतन पूर्ण झाल्यावर पुन्हा प्रयत्न करा.',
     saveFailed: (error) => `कौटुंबिक माहिती जतन झाली नाही: ${error}`,
     saveConflict: 'दुसऱ्या वापरकर्त्याने आधी बदल जतन केले. नवीनतम माहिती लोड केली आहे; कृपया तुमचा बदल पुन्हा करा.',
     saveConflictReloadFailed: (error) => `जतन करताना संघर्ष झाला आणि नवीनतम माहिती लोड झाली नाही: ${error}`,

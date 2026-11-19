@@ -1,13 +1,10 @@
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { requireSupabase, supabase } from './supabase';
-import { canDeleteMembers, isAdminUser } from './admin';
 
 interface AuthContextValue {
   session: Session | null;
   loading: boolean;
-  isAdmin: boolean;
-  canDelete: boolean;
   signInWithGitHub: () => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -53,8 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(() => ({
     session,
     loading,
-    isAdmin: isAdminUser(session?.user),
-    canDelete: canDeleteMembers(session),
     signInWithGitHub: async () => {
       const { error } = await requireSupabase().auth.signInWithOAuth({
         provider: 'github',

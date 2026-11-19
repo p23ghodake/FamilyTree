@@ -45,12 +45,12 @@ beforeEach(() => {
       theme: 'light', avatarStyle: 'initials',
     },
     currentTree: data.familyTreesStyled[0],
-    canEdit: true, cloudReady: true, limitedView: false, cloudError: null, isSaving: false,
+    canEdit: true, isAdmin: false, canDelete: false, cloudReady: true, limitedView: false, cloudError: null, isSaving: false,
     canUndo: true, canRedo: true,
     filteredMembers: data.familyTreesStyled[0].members,
     matchedMemberIds: new Set(), advancedMatchedIds: new Set(), relResult: null,
     debouncedSearchQuery: '', dispatch: jest.fn(), exportData: jest.fn(), importData: jest.fn(),
-    resetData: jest.fn(), undo: jest.fn(), redo: jest.fn(),
+    resetData: jest.fn(), retryLoad: jest.fn(), undo: jest.fn(), redo: jest.fn(),
     styleNewMember: jest.fn(),
     displaySettings: { ...DEFAULT_DISPLAY_SETTINGS },
   };
@@ -83,7 +83,8 @@ it('shows reset only for admins and confirms the shared GitHub impact', () => {
   const openSettings = () => fireEvent.click(screen.getByRole('button', { name: t.settingsTitle }));
   openSettings();
   expect(screen.queryByRole('button', { name: t.settingsResetShared })).toBeNull();
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true, canDelete: true });
+  context.isAdmin = true;
+  context.canDelete = true;
   const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
   view.rerender(<TopBar />);
   fireEvent.click(screen.getByRole('button', { name: t.settingsResetShared }));
@@ -103,7 +104,7 @@ it('shows the tree line style controls only to admins and saves each change', ()
   expect(screen.queryByRole('combobox', { name: t.settingsConnectorStyle })).toBeNull();
   fireEvent.keyDown(document.body, { key: 'Escape' });
 
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+  context.isAdmin = true;
   view.rerender(<TopBar />);
   openSettings();
   expect(screen.getByText(t.connectorSettingsHint)).toBeTruthy();
@@ -138,7 +139,7 @@ it('does not render lineage or share tree actions', () => {
 it('shows the poster view only to admins', () => {
   const view = render(<TopBar />);
   expect(screen.queryByRole('button', { name: t.viewPoster })).toBeNull();
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+  context.isAdmin = true;
   view.rerender(<TopBar />);
   expect(screen.getByRole('button', { name: t.viewPoster })).toBeTruthy();
 });
@@ -297,7 +298,7 @@ it('restores the poster download button when font inlining fails', async () => {
 });
 
 it('restores tree and viewport styles when PNG export fails', async () => {
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true });
+  context.isAdmin = true;
   (toPng as jest.Mock).mockRejectedValue(new Error('Image failed'));
   jest.spyOn(console, 'error').mockImplementation(() => {});
   const view = render(<><TopBar />
@@ -358,6 +359,33 @@ it('rejects a known underage new spouse', () => {
   fireEvent.click(screen.getByRole('button', { name: t.btnAddNamed('New') }));
   expect(screen.getByText(t.belowMarriageAge('New Family', 10, 21))).toBeTruthy();
   expect(context.dispatch).not.toHaveBeenCalled();
+});
+
+it('lets the editor explicitly link eligible existing children to a new spouse', () => {
+  context.currentTree = {
+    ...context.currentTree!,
+    relationships: {
+      ...context.currentTree!.relationships,
+      parentChild: [{ parentId: 'single', childId: 'one', lineStyle: {
+        strokeColorHex: '#000000', strokeWidthPx: 2, lineStyle: 'solid',
+      } }],
+    },
+  };
+  context.state.memberFormMode = 'addSpouse';
+  context.state.memberFormTargetId = 'single';
+  render(<MemberFormModal />);
+  fillNamesAndContinue();
+
+  const linkSwitch = screen.getByRole('switch', { name: t.switchLinkExistingChildren });
+  expect(linkSwitch.getAttribute('aria-checked')).toBe('false');
+  expect(screen.getByText(t.hintLinkExistingChildren)).toBeTruthy();
+  fireEvent.click(linkSwitch);
+  fireEvent.click(screen.getByRole('button', { name: t.btnAddNamed('New') }));
+
+  expect(context.dispatch).toHaveBeenCalledWith(expect.objectContaining({
+    type: 'ADD_MEMBER',
+    payload: expect.objectContaining({ relatedId: 'single', relType: 'spouse', linkExistingChildren: true }),
+  }));
 });
 
 it('rejects names that contain numbers', () => {
@@ -441,12 +469,13 @@ it('lets editors jump between steps and save from any of them', () => {
 });
 
 it('shows member deletion only to the admin signed in with GitHub', () => {
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true, canDelete: false });
+  context.isAdmin = true;
+  context.canDelete = false;
   context.state.memberFormMode = 'edit';
   context.state.memberFormTargetId = 'one';
   const view = render(<MemberFormModal />);
   expect(screen.queryByRole('button', { name: t.btnDeleteMember })).toBeNull();
-  (useAuth as jest.Mock).mockReturnValue({ session: null, loading: false, isAdmin: true, canDelete: true });
+  context.canDelete = true;
   view.rerender(<MemberFormModal />);
   fireEvent.click(screen.getByRole('button', { name: t.btnDeleteMember }));
   fireEvent.click(screen.getByRole('button', { name: t.btnYesDelete }));

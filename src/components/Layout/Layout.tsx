@@ -12,13 +12,16 @@ import { CONFIG } from '../../constants/config';
 import './Layout.css';
 
 const Layout: React.FC = () => {
-  const { state, currentTree } = useFamilyTree();
+  const { state, currentTree, retryLoad, isSaving } = useFamilyTree();
   const { t, lang } = useLanguage();
   const [tourActive, setTourActive] = useState(false);
 
   // Auto-show tour for first-time visitors
   useEffect(() => {
-    if (!localStorage.getItem(CONFIG.storage.TOUR_SEEN_KEY)) {
+    try {
+      if (!localStorage.getItem(CONFIG.storage.TOUR_SEEN_KEY)) setTourActive(true);
+    } catch (error) {
+      console.warn('Unable to read tour preference:', error);
       setTourActive(true);
     }
   }, []);
@@ -36,6 +39,9 @@ const Layout: React.FC = () => {
           <div className="layout__error-icon">⚠️</div>
           <p>{t.errorLoadTree}</p>
           <p className="layout__error-msg">{state.error}</p>
+          <button type="button" onClick={retryLoad} disabled={isSaving}>
+            {t.retryLoad}
+          </button>
         </div>
       </div>
     );

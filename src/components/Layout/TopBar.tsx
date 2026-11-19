@@ -24,9 +24,9 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const {
     state, dispatch, currentTree,
     exportData, resetData, undo, redo, canUndo, canRedo,
-    canEdit, cloudReady, isSaving,
+    canEdit, cloudReady, isSaving, isAdmin, canDelete,
   } = useFamilyTree();
-  const { session, loading: authLoading, signOut, isAdmin, canDelete } = useAuth();
+  const { session, loading: authLoading, signOut } = useAuth();
   const { t, lang } = useLanguage();
 
   const [showLogin, setShowLogin] = useState(false);
