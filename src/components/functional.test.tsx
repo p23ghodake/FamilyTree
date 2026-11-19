@@ -155,13 +155,11 @@ it('offers only men as the poster starting person', () => {
   context.currentTree = people.familyTreesStyled[0];
   context.state = { ...context.state, data: people, selectedMemberId: 'sita' };
   render(<PosterModal onClose={jest.fn()} />);
-  const picker = screen.getByRole('combobox', { name: t.posterFindPerson }) as HTMLInputElement;
+  const picker = screen.getByRole('combobox', { name: t.posterStartFrom }) as HTMLSelectElement;
   expect(picker.value).toBe('ram');
-  fireEvent.focus(picker);
-  const peopleList = screen.getByRole('listbox', { name: t.posterStartFrom });
-  expect(within(peopleList).getAllByRole('option').map(option => option.textContent)).toEqual(['kush (ram)', 'lav (ram)', 'ram']);
-  fireEvent.click(within(peopleList).getByRole('option', { name: 'lav (ram)' }));
-  expect(picker.value).toBe('lav (ram)');
+  expect(Array.from(picker.options).map(option => option.textContent)).toEqual(['kush (ram)', 'lav (ram)', 'ram']);
+  fireEvent.change(picker, { target: { value: 'lav' } });
+  expect(picker.value).toBe('lav');
 });
 
 it('lets the poster switch style while keeping name-only tags and clean paper', () => {

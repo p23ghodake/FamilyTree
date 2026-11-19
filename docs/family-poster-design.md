@@ -76,13 +76,14 @@ Keep each style's defining details distinct. Avoid introducing random variation 
 ## Poster controls and responsive behavior
 
 - Poster settings show no visible field labels, group headings or explanatory text; each control keeps a localized accessible name and tooltip instead. Controls should update the preview immediately.
-- The starting person is selected from one searchable combobox sorted by display name, with the father's name added to disambiguate duplicate first names. Preserve keyboard selection, localized names, and the same disambiguation.
+- The starting person is selected from a native dropdown listing all eligible men, sorted by localized display name, with the father's name added to disambiguate duplicate first names. There is no search field or filtered results list; keyboard navigation uses the browser's native select behavior.
 - The style control is a dropdown that shows the localized style names only; do not add illustrated previews.
 - Keep the download action visually grouped apart from composition controls. Disable it when there is no useful layout or while an export is in progress.
 - The dialog is bounded by the viewport and uses an independently scrollable canvas. On larger screens, place the Family and Appearance controls at the left of the top toolbar, with the download/close actions at the right; the toolbar shows no title or icon (the dialog keeps its accessible name). On tablets, phones and short landscape screens, use the full viewport and let Customize expand the same settings below the actions.
 - Poster action buttons are icon-only on every screen size, with localized tooltips and accessible names. Keep person names, dropdown choices and the zoom percentage visible.
 - Keep Fit, zoom percentage, zoom buttons and Reset in a floating bar at the bottom-right of the preview, outside the scrolling sheet and exported SVG. Reserve canvas space below the fitted sheet so the controls do not cover the artwork. Use larger controls and safe-area spacing on compact screens.
 - Fit mode shows the complete sheet. Zooming (buttons, Ctrl/⌘ + wheel or pinch) leaves Fit and lets the poster be panned and scrolled without clipping the rendered SVG; Fit returns to the whole sheet.
+- The SVG artwork is a separate memoized component with stable drawing inputs. Zoom, Customize and export-busy state changes do not re-render the artwork; changes to family data, composition, language or font metrics still update it. This does not remove the browser rendering cost of the existing tree shadow.
 
 ## Output, accessibility, and localization
 

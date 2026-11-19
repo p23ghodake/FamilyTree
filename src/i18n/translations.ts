@@ -358,9 +358,6 @@ type Translations = {
   posterCloseCustomization: string;
   posterFamilyControls: string;
   posterAppearance: string;
-  posterFindPerson: string;
-  posterNoMatches: string;
-  posterChooseMatch: string;
   posterNameStyle: string;
   posterHeritageNames: string;
   posterReadableNames: string;
@@ -787,9 +784,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterCloseCustomization: 'Close customization',
     posterFamilyControls: 'Family',
     posterAppearance: 'Appearance',
-    posterFindPerson: 'Find a starting person',
-    posterNoMatches: 'No matching starting people.',
-    posterChooseMatch: 'Choose a matching person',
     posterNameStyle: 'Name style',
     posterHeritageNames: 'Heritage script',
     posterReadableNames: 'Readable',
@@ -1215,9 +1209,6 @@ export const translations: Record<'en' | 'mr', Translations> = {
     posterCloseCustomization: 'सानुकूल पर्याय बंद करा',
     posterFamilyControls: 'कुटुंब',
     posterAppearance: 'स्वरूप',
-    posterFindPerson: 'सुरुवातीची व्यक्ती शोधा',
-    posterNoMatches: 'जुळणारी सुरुवातीची व्यक्ती सापडली नाही.',
-    posterChooseMatch: 'जुळणारी व्यक्ती निवडा',
     posterNameStyle: 'नावांची शैली',
     posterHeritageNames: 'पारंपरिक शैली',
     posterReadableNames: 'सुवाच्य',

@@ -1,14 +1,14 @@
-import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useDialog } from '../useDialog';
 import { getDisplayFirstName } from '../../processing/displayName';
-import { buildPosterLayout, findPosterRoot, PosterNode } from '../../processing/posterLayout';
+import { buildPosterLayout, findPosterRoot, PosterLayout, PosterNode } from '../../processing/posterLayout';
 import { CheckIcon, DownloadIcon, Maximize2Icon, MinusIcon, PlusIcon, RotateCcwIcon, SlidersHorizontalIcon, XIcon } from '../Icons';
 import {
-  BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, PosterTheme,
+  BARK_DARK, BARK_LIGHT, BARK_MID, buildPosterArt, LEAF_DEFS, LeafArt, LeafShape, mix, PAPER, Point, PosterArt, PosterTheme,
   rng, SHADOW_OFFSET, SOIL, THEMES,
 } from './posterArt';
 import PosterThemePicker from './PosterThemePicker';
@@ -271,9 +271,9 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   useDialog(dialogRef, () => { if (compact && settingsOpen) closeSettings(); else onClose(); }, hasTree, returnFocus);
   useLayoutEffect(() => {
     const settings = settingsRef.current;
-    if (compact && settingsOpen) settings?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+    if (compact && settingsOpen) settings?.querySelector<HTMLSelectElement>('select')?.focus();
     else if (compact && (toolbarFocus.current === 'settings' || settings?.contains(document.activeElement))) customizeRef.current?.focus();
-    else if (!compact && (toolbarFocus.current === 'toggle' || document.activeElement === customizeRef.current)) settings?.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+    else if (!compact && (toolbarFocus.current === 'toggle' || document.activeElement === customizeRef.current)) settings?.querySelector<HTMLSelectElement>('select')?.focus();
   }, [compact, settingsOpen]);
 
   const members = useMemo(() => currentTree?.members ?? [], [currentTree]);
@@ -290,9 +290,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
   const [generations, setGenerations] = useState(4);
   const [theme, setTheme] = useState<PosterTheme>('autumn');
   const [nameStyle, setNameStyle] = useState<PosterNameStyle>('heritage');
-  const [personQuery, setPersonQuery] = useState('');
-  const [personPickerOpen, setPersonPickerOpen] = useState(false);
-  const [activePersonIndex, setActivePersonIndex] = useState(0);
   const [fit, setFit] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [fitScale, setFitScale] = useState(1);
@@ -336,38 +333,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
       })
       .sort((a, b) => a.label.localeCompare(b.label, lang === 'mr' ? 'mr' : 'en'));
   }, [members, parentChild, byId, nameOf, lang]);
-  const selectedPerson = personOptions.find(person => person.id === rootId);
-  const matchingPeople = useMemo(() => {
-    const query = personQuery.trim().toLocaleLowerCase(lang);
-    return personOptions.filter(person => person.label.toLocaleLowerCase(lang).includes(query));
-  }, [personOptions, personQuery, lang]);
-  const personListId = useId();
-  const selectPerson = useCallback((id: string) => {
-    setRootId(id);
-    setPersonQuery('');
-    setPersonPickerOpen(false);
-    setActivePersonIndex(0);
-    settingsRef.current?.querySelector<HTMLInputElement>('.poster-person-picker input')?.focus();
-  }, []);
-  const handlePersonPickerKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'ArrowDown' && matchingPeople.length > 0) {
-      event.preventDefault();
-      setPersonPickerOpen(true);
-      setActivePersonIndex(index => Math.min(index + 1, matchingPeople.length - 1));
-    } else if (event.key === 'ArrowUp' && matchingPeople.length > 0) {
-      event.preventDefault();
-      setPersonPickerOpen(true);
-      setActivePersonIndex(index => Math.max(index - 1, 0));
-    } else if (event.key === 'Enter' && personPickerOpen && matchingPeople.length > 0) {
-      event.preventDefault();
-      selectPerson(matchingPeople[Math.min(activePersonIndex, matchingPeople.length - 1)].id);
-    } else if (event.key === 'Escape' && personPickerOpen) {
-      event.preventDefault();
-      setPersonPickerOpen(false);
-      setPersonQuery('');
-      setActivePersonIndex(0);
-    }
-  }, [activePersonIndex, matchingPeople, personPickerOpen, selectPerson]);
   useEffect(() => {
     if (personOptions.some(person => person.id === rootId)) return;
     const selected = state.selectedMemberId;
@@ -462,7 +427,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     }),
     [layout, focusDepth, posOf, cardH, groundY, trunkH, artScale, offsetX, contentW, theme],
   );
-  const spec = THEMES[theme];
   const exportSize = useMemo(() => {
     const scale = exportScale(width, height);
     return { width: Math.round(width * scale), height: Math.round(height * scale) };
@@ -612,22 +576,6 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
 
   if (!currentTree) return null;
 
-  const title = t.posterFamilyName(familyName);
-  // Keep the title under the trunk, but fully on the sheet (rough width estimate for a script font).
-  const maxTitleHalf = (width - FRAME_INSET * 2 - 30) / 2;
-  const titleHalf = Math.min(maxTitleHalf, Math.max(160, title.length * titleSize * 0.24));
-  const titleRoom = Math.max(1, titleHalf * 1.8);
-  const titleTextWidth = textWidth(title, "'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive", titleSize);
-  const titleFit = titleTextWidth > titleRoom ? { textLength: titleRoom, lengthAdjust: 'spacingAndGlyphs' as const } : {};
-  const titleX = Math.min(width - titleHalf - FRAME_INSET - 30, Math.max(titleHalf + FRAME_INSET + 30, rootPos.x));
-  const titleY = groundY + TITLE_GAP + titleSize * 1.45;
-  const frameCorners = [
-    `translate(${FRAME_INSET} ${FRAME_INSET})`,
-    `translate(${width - FRAME_INSET} ${FRAME_INSET}) scale(-1 1)`,
-    `translate(${FRAME_INSET} ${height - FRAME_INSET}) scale(1 -1)`,
-    `translate(${width - FRAME_INSET} ${height - FRAME_INSET}) scale(-1 -1)`,
-  ];
-
   return createPortal(
     <div className="poster-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={dialogRef} className="poster-modal" role="dialog" aria-modal="true" aria-label={t.posterTitle} onFocusCapture={event => { toolbarFocus.current = settingsRef.current?.contains(event.target) ? 'settings' : customizeRef.current?.contains(event.target) ? 'toggle' : null; }}>
@@ -662,54 +610,16 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
               <fieldset className="poster-settings__fields" disabled={isExporting || (compact && !settingsOpen)}>
                 <fieldset className="poster-settings-group" aria-label={t.posterFamilyControls}>
                   <div className="poster-family-fields">
-                    <div className="poster-field poster-field--search poster-person-picker">
-                      <input
-                        type="search"
-                        role="combobox"
-                        aria-autocomplete="list"
-                        aria-controls={personListId}
-                        aria-expanded={personPickerOpen}
-                        aria-activedescendant={personPickerOpen && matchingPeople.length > 0 ? `${personListId}-option-${activePersonIndex}` : undefined}
-                        aria-label={t.posterFindPerson}
-                        title={t.posterFindPerson}
-                        placeholder={t.posterFindPerson}
-                        value={personQuery || selectedPerson?.label || ''}
+                    <div className="poster-field">
+                      <select
+                        aria-label={t.posterStartFrom}
+                        title={t.posterStartFrom}
+                        value={rootId}
                         disabled={personOptions.length === 0}
-                        onFocus={event => {
-                          event.currentTarget.select();
-                          setPersonQuery('');
-                          setPersonPickerOpen(true);
-                          setActivePersonIndex(Math.max(personOptions.findIndex(person => person.id === rootId), 0));
-                        }}
-                        onBlur={() => setPersonPickerOpen(false)}
-                        onChange={event => {
-                          setPersonQuery(event.target.value);
-                          setPersonPickerOpen(true);
-                          setActivePersonIndex(0);
-                        }}
-                        onKeyDown={handlePersonPickerKeyDown}
-                      />
-                      {personPickerOpen && matchingPeople.length > 0 && (
-                        <div id={personListId} className="poster-person-picker__list" role="listbox" aria-label={t.posterStartFrom}>
-                          {matchingPeople.map((person, index) => (
-                            <button
-                              key={person.id}
-                              id={`${personListId}-option-${index}`}
-                              type="button"
-                              className="poster-person-picker__option"
-                              role="option"
-                              aria-selected={person.id === rootId}
-                              data-active={index === activePersonIndex}
-                              onMouseDown={event => event.preventDefault()}
-                              onMouseEnter={() => setActivePersonIndex(index)}
-                              onClick={() => selectPerson(person.id)}
-                            >
-                              {person.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {personPickerOpen && matchingPeople.length === 0 && <p className="poster-person-picker__empty" role="status">{t.posterNoMatches}</p>}
+                        onChange={event => setRootId(event.target.value)}
+                      >
+                        {personOptions.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}
+                      </select>
                     </div>
                     <div className="poster-field">
                       <select aria-label={t.posterGenerations} title={t.posterGenerations} value={generations} onChange={e => setGenerations(Number(e.target.value))}>
@@ -749,179 +659,11 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
             <p className="poster-hint" role="status">{t.posterNoRelatives}</p>
           )}
           <div ref={sheetRef} className={`poster-sheet${far ? ' poster-sheet--far' : ''}`} style={fit ? undefined : { width: Math.round(width * zoom), height: Math.round(height * zoom) }}>
-            <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={title}>
-              <defs>
-                <style>{SVG_STYLE}</style>
-                {LEAF_SHAPES.map(shape => {
-                  const def = LEAF_DEFS[shape];
-                  return (
-                    <g key={shape} id={`poster-leaf-${shape}`}>
-                      <path d={def.body} />
-                      {def.half && <path d={def.half} fill="#ffffff" opacity={0.14} />}
-                      {def.lower && <path d={def.lower} fill="#1d2a12" opacity={0.12} />}
-                      {def.vein && <path className="poster-detail" d={def.vein} fill="none" stroke="#2a1d12" strokeOpacity={0.4} strokeWidth={0.035} strokeLinecap="round" />}
-                      {def.centre && <path d={def.centre} fill="#e8b84a" />}
-                    </g>
-                  );
-                })}
-                {/* Bark lit from the upper left across the whole tree, so overlapping limbs share one tone */}
-                <linearGradient id="poster-bark" gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={width} y2={height}>
-                  <stop offset="0" stopColor={mix(BARK_MID, BARK_LIGHT, 0.35)} />
-                  <stop offset="1" stopColor={mix(BARK_MID, BARK_DARK, 0.5)} />
-                </linearGradient>
-                <linearGradient id="poster-tag" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stopColor="#fffdf7" />
-                  <stop offset="1" stopColor="#f1e6cf" />
-                </linearGradient>
-                <linearGradient id="poster-tag-focus" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stopColor="#fffbe6" />
-                  <stop offset="1" stopColor="#f3e3b3" />
-                </linearGradient>
-                <linearGradient id="poster-soil" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stopColor={SOIL} stopOpacity={0.95} />
-                  <stop offset="0.6" stopColor={SOIL} stopOpacity={0.7} />
-                  <stop offset="1" stopColor={SOIL} stopOpacity={0} />
-                </linearGradient>
-                <radialGradient id="poster-canopy">
-                  <stop offset="0" stopColor={spec.canopy} stopOpacity={0.2} />
-                  <stop offset="0.6" stopColor={spec.canopy} stopOpacity={0.09} />
-                  <stop offset="1" stopColor={spec.canopy} stopOpacity={0} />
-                </radialGradient>
-                <radialGradient id="poster-dapple">
-                  <stop offset="0" stopColor="#fff4bd" stopOpacity={0.9} />
-                  <stop offset="1" stopColor="#fff4bd" stopOpacity={0} />
-                </radialGradient>
-                <radialGradient id="poster-ground-shadow">
-                  <stop offset="0" stopColor={BARK_DARK} stopOpacity={0.22} />
-                  <stop offset="1" stopColor={BARK_DARK} stopOpacity={0} />
-                </radialGradient>
-                <linearGradient id="poster-background" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stopColor="#f5f0e5" />
-                  <stop offset="0.7" stopColor={PAPER} />
-                  <stop offset="1" stopColor="#e9dcc5" />
-                </linearGradient>
-                <filter id="poster-cast" x="-5%" y="-5%" width="110%" height="110%">
-                  <feColorMatrix type="matrix" values="0 0 0 0 0.18  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.2 0" />
-                  <feGaussianBlur stdDeviation="3.5" />
-                </filter>
-                <filter id="poster-banner-shadow" x="-20%" y="-40%" width="140%" height="190%">
-                  <feDropShadow dx="2" dy="3" stdDeviation="2.5" floodColor="#2f2117" floodOpacity="0.4" />
-                </filter>
-              </defs>
-              <rect width={width} height={height} fill="url(#poster-background)" />
-
-              {art.canopy.map((c, i) => <circle key={`c${i}`} cx={c.cx.toFixed(1)} cy={c.cy.toFixed(1)} r={c.r.toFixed(1)} fill="url(#poster-canopy)" />)}
-              {art.dappled.map((spot, i) => (
-                <circle key={`dp${i}`} cx={spot.cx.toFixed(1)} cy={spot.cy.toFixed(1)} r={spot.r.toFixed(1)}
-                  fill="url(#poster-dapple)" opacity={spot.opacity.toFixed(2)} />
-              ))}
-              {/* The whole tree again, blurred and offset, as its shadow on the paper */}
-              <use href="#poster-tree" transform={`translate(${SHADOW_OFFSET.x} ${SHADOW_OFFSET.y})`} filter="url(#poster-cast)" />
-              <ellipse cx={art.ground.cx} cy={art.ground.cy} rx={art.ground.rx} ry={18} fill="url(#poster-ground-shadow)" />
-
-              <g id="poster-tree">
-                {art.aerialRoots.map((d, i) => <path key={`a${i}`} d={d} fill="url(#poster-bark)" opacity={0.92} />)}
-                {art.backLeaves.map((leaf, i) => <Leaf key={`b${i}`} leaf={leaf} />)}
-                {art.wood.map((piece, i) => (
-                  <g key={`w${i}`}>
-                    <path d={piece.body} fill="url(#poster-bark)" />
-                    {piece.shade && <path d={piece.shade} fill={SHADOW_INK} opacity={0.42} />}
-                    {piece.light && <path d={piece.light} fill="#d9b48a" opacity={0.2} />}
-                    {piece.grain && <path className="poster-detail" d={piece.grain} stroke={SHADOW_INK} strokeWidth={0.8} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.3} />}
-                    {piece.cracks && <path className="poster-detail" d={piece.cracks} stroke={SHADOW_INK} strokeWidth={1.1} strokeLinecap="round" fill="none" opacity={0.5} />}
-                    {piece.knots.map((k, j) => (
-                      <g key={j} className="poster-detail" transform={`translate(${k.cx.toFixed(1)} ${k.cy.toFixed(1)}) rotate(${k.angle.toFixed(1)})`}>
-                        <ellipse rx={k.rx * 1.7} ry={k.ry * 1.9} fill="none" stroke={SHADOW_INK} strokeWidth={0.9} opacity={0.35} />
-                        <ellipse rx={k.rx} ry={k.ry} fill={SHADOW_INK} opacity={0.55} />
-                        <ellipse rx={k.rx * 0.45} ry={k.ry * 0.4} fill="#1f150f" opacity={0.6} />
-                      </g>
-                    ))}
-                  </g>
-                ))}
-                {art.twigs.map((d, i) => <path key={`t${i}`} d={d} fill={BARK_DARK} />)}
-                {art.leaves.map((leaf, i) => <Leaf key={`l${i}`} leaf={leaf} />)}
-                {art.berries.map((b, i) => (
-                  <circle key={`f${i}`} cx={b.cx.toFixed(1)} cy={b.cy.toFixed(1)} r={b.r.toFixed(1)} fill={b.color} stroke="#3a1d12" strokeOpacity={0.35} strokeWidth={0.5} />
-                ))}
-              </g>
-
-              {/* Soil mound over the root tips, with grass and pebbles */}
-              {art.ground.mound && <path d={art.ground.mound} fill="url(#poster-soil)" />}
-              {art.ground.footings.map((f, i) => <ellipse key={`ft${i}`} cx={f.x} cy={f.y} rx={9} ry={3.5} fill="url(#poster-soil)" />)}
-              <g className="poster-detail">
-                {art.ground.pebbles.map((p, i) => (
-                  <ellipse key={`p${i}`} cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry} transform={`rotate(${p.angle.toFixed(1)} ${p.cx.toFixed(1)} ${p.cy.toFixed(1)})`}
-                    fill="#a39784" stroke="#6f6252" strokeWidth={0.8} />
-                ))}
-                {art.ground.grass && <path d={art.ground.grass} stroke={spec.grass} strokeWidth={1.3} strokeLinecap="round" fill="none" />}
-                {art.fallen.map((leaf, i) => <Leaf key={`f${i}`} leaf={leaf} />)}
-              </g>
-
-              {/* Member cards: hanging name tags, one per person, with his wives on the same tag */}
-              {layout.nodes.map(n => {
-                const m = byId.get(n.id);
-                if (!m || n.kind === 'fork') return null;
-                const { x, y } = posOf(n);
-                const { people, w, rows, h } = cardLayouts.get(n.id)!;
-                const font = lang === 'mr' ? 'mr' : 'en';
-                const left = x - w / 2;
-                const top = y - h / 2;
-                const female = m.gender === 'female';
-                const colors = female ? CARD_COLORS.female : CARD_COLORS.male;
-                const focus = n.depth === focusDepth;
-                const nameClass = `poster-card__name--${font}`;
-                const holes = [left + w * 0.24, left + w * 0.76];
-                const nail = { x, y: top - 12 };
-                const tilt = cardTilt(n.id);
-                return (
-                  <g key={`c-${n.id}`} className="poster-card" transform={`rotate(${tilt.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`}>
-                    <title>{people.map(p => p.name).join(' ♥ ')}</title>
-                    <g filter="url(#poster-banner-shadow)">
-                      <path d={leafCard(left, top, w, h, female)} fill={focus ? 'url(#poster-tag-focus)' : 'url(#poster-tag)'} stroke={colors.edge} strokeWidth={focus ? 3 : 2} />
-                    </g>
-                    <path d={leafCard(left + 3.5, top + 3.5, w - 7, h - 7, female)} fill="none" stroke={colors.edge} strokeWidth={0.8} opacity={0.4} />
-                    {holes.map(hx => <circle key={hx} cx={hx} cy={top + 6} r={2} fill="#e6d8bd" stroke={colors.edge} strokeWidth={0.8} />)}
-                    <path d={`M${holes[0]},${top + 6}L${nail.x},${nail.y}L${holes[1]},${top + 6}`} stroke={TWINE} strokeWidth={1.3} strokeLinejoin="round" fill="none" />
-                    <circle cx={nail.x} cy={nail.y} r={3.2} fill="#3a2a20" />
-                    <circle cx={nail.x - 1} cy={nail.y - 1} r={1.1} fill="#b09070" />
-                    {rows.map(row => {
-                      const p = people[row.person];
-                      if (row.kind === 'heart') return <text key={`h${row.person}`} x={x} y={top + row.baseline} textAnchor="middle" className="poster-card__heart">♥</text>;
-                      return (
-                        <text key={`n${p.id}`} x={x} y={top + row.baseline} textAnchor="middle" className={nameClass} fill={colors.text} style={{ fontFamily: nameFont.family, fontSize: nameFont.size }}>
-                          {p.name}
-                        </text>
-                      );
-                    })}
-                  </g>
-                );
-              })}
-
-              <g className="poster-detail">{art.drifting.map((leaf, i) => <Leaf key={`d${i}`} leaf={leaf} />)}</g>
-
-              {/* Decorative frame */}
-              <rect x={FRAME_INSET} y={FRAME_INSET} width={width - FRAME_INSET * 2} height={height - FRAME_INSET * 2} fill="none" stroke={BARK_DARK} strokeWidth={2} opacity={0.55} />
-              <rect x={FRAME_INSET + 7} y={FRAME_INSET + 7} width={width - FRAME_INSET * 2 - 14} height={height - FRAME_INSET * 2 - 14} fill="none" stroke={BARK_DARK} strokeWidth={0.8} opacity={0.45} />
-              {frameCorners.map((transform, i) => (
-                <g key={`fr${i}`} transform={transform}>
-                  <path d={FLOURISH} stroke={BARK_DARK} strokeWidth={1.3} strokeLinecap="round" fill="none" opacity={0.6} />
-                  {[0, 1].map(j => (
-                    <Leaf key={j} leaf={{ x: 24 + j * 7, y: 24 + j * 7, angle: j ? 0 : 90, size: 13, squash: 1, color: spec.outer[(i + j) % spec.outer.length], shape: spec.shapes[0], opacity: 0.85 }} />
-                  ))}
-                </g>
-              ))}
-
-              {/* Title */}
-              <rect x={titleX - titleHalf} y={titleY - titleSize * 1.05} width={titleHalf * 2} height={titleSize * 1.75}
-                rx={12} fill="#f8f1e4" fillOpacity={0.88} stroke={BARK_DARK} strokeOpacity={0.38} />
-              <text x={titleX} y={titleY} textAnchor="middle" className="poster-title-text" style={{ fontSize: titleSize }} {...titleFit}>{title}</text>
-              <g transform={`translate(${titleX} ${titleY + titleSize * 0.5}) scale(${titleSize / 40})`}>
-                <path d="M-150,0 C-80,-6 80,-6 150,0" stroke={BARK_DARK} strokeWidth={1.4} fill="none" />
-                {[-120, -80, -40, 40, 80, 120].map((dx, i) => (
-                  <Leaf key={dx} leaf={{ x: dx, y: -3, angle: i % 2 ? -25 : -155, size: 13, squash: 1, color: spec.outer[(i * 3) % spec.outer.length], shape: spec.shapes[i % spec.shapes.length], opacity: 0.9 }} />
-                ))}
-              </g>
-            </svg>
+            <PosterArtwork
+              width={width} height={height} groundY={groundY} rootX={rootPos.x} titleSize={titleSize}
+              title={t.posterFamilyName(familyName)} lang={lang} layout={layout} art={art} theme={theme}
+              byId={byId} posOf={posOf} cardLayouts={cardLayouts} nameFont={nameFont}
+            />
           </div>
             </div>
           </div>
@@ -931,5 +673,219 @@ const PosterModal: React.FC<Props> = ({ onClose, returnFocus }) => {
     document.body,
   );
 };
+
+interface PosterArtworkProps {
+  width: number;
+  height: number;
+  groundY: number;
+  rootX: number;
+  titleSize: number;
+  title: string;
+  lang: 'en' | 'mr';
+  layout: PosterLayout;
+  art: PosterArt;
+  theme: PosterTheme;
+  byId: ReadonlyMap<string, RawFamilyMember>;
+  posOf: (node: PosterNode) => Point;
+  cardLayouts: ReadonlyMap<string, CardLayout>;
+  nameFont: PosterNameFont;
+}
+
+const PosterArtwork = React.memo(function PosterArtwork({
+  width, height, groundY, rootX, titleSize, title, lang, layout, art, theme, byId, posOf, cardLayouts, nameFont,
+}: PosterArtworkProps) {
+  const spec = THEMES[theme];
+  const focusDepth = layout.focusDepth;
+  // Keep the title under the trunk, but fully on the sheet (rough width estimate for a script font).
+  const maxTitleHalf = (width - FRAME_INSET * 2 - 30) / 2;
+  const titleHalf = Math.min(maxTitleHalf, Math.max(160, title.length * titleSize * 0.24));
+  const titleRoom = Math.max(1, titleHalf * 1.8);
+  const titleTextWidth = textWidth(title, "'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive", titleSize);
+  const titleFit = titleTextWidth > titleRoom ? { textLength: titleRoom, lengthAdjust: 'spacingAndGlyphs' as const } : {};
+  const titleX = Math.min(width - titleHalf - FRAME_INSET - 30, Math.max(titleHalf + FRAME_INSET + 30, rootX));
+  const titleY = groundY + TITLE_GAP + titleSize * 1.45;
+  const frameCorners = [
+    `translate(${FRAME_INSET} ${FRAME_INSET})`,
+    `translate(${width - FRAME_INSET} ${FRAME_INSET}) scale(-1 1)`,
+    `translate(${FRAME_INSET} ${height - FRAME_INSET}) scale(1 -1)`,
+    `translate(${width - FRAME_INSET} ${height - FRAME_INSET}) scale(-1 -1)`,
+  ];
+
+  return (
+    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={title}>
+      <defs>
+        <style>{SVG_STYLE}</style>
+        {LEAF_SHAPES.map(shape => {
+          const def = LEAF_DEFS[shape];
+          return (
+            <g key={shape} id={`poster-leaf-${shape}`}>
+              <path d={def.body} />
+              {def.half && <path d={def.half} fill="#ffffff" opacity={0.14} />}
+              {def.lower && <path d={def.lower} fill="#1d2a12" opacity={0.12} />}
+              {def.vein && <path className="poster-detail" d={def.vein} fill="none" stroke="#2a1d12" strokeOpacity={0.4} strokeWidth={0.035} strokeLinecap="round" />}
+              {def.centre && <path d={def.centre} fill="#e8b84a" />}
+            </g>
+          );
+        })}
+        {/* Bark lit from the upper left across the whole tree, so overlapping limbs share one tone */}
+        <linearGradient id="poster-bark" gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={width} y2={height}>
+          <stop offset="0" stopColor={mix(BARK_MID, BARK_LIGHT, 0.35)} />
+          <stop offset="1" stopColor={mix(BARK_MID, BARK_DARK, 0.5)} />
+        </linearGradient>
+        <linearGradient id="poster-tag" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#fffdf7" />
+          <stop offset="1" stopColor="#f1e6cf" />
+        </linearGradient>
+        <linearGradient id="poster-tag-focus" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#fffbe6" />
+          <stop offset="1" stopColor="#f3e3b3" />
+        </linearGradient>
+        <linearGradient id="poster-soil" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor={SOIL} stopOpacity={0.95} />
+          <stop offset="0.6" stopColor={SOIL} stopOpacity={0.7} />
+          <stop offset="1" stopColor={SOIL} stopOpacity={0} />
+        </linearGradient>
+        <radialGradient id="poster-canopy">
+          <stop offset="0" stopColor={spec.canopy} stopOpacity={0.2} />
+          <stop offset="0.6" stopColor={spec.canopy} stopOpacity={0.09} />
+          <stop offset="1" stopColor={spec.canopy} stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="poster-dapple">
+          <stop offset="0" stopColor="#fff4bd" stopOpacity={0.9} />
+          <stop offset="1" stopColor="#fff4bd" stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="poster-ground-shadow">
+          <stop offset="0" stopColor={BARK_DARK} stopOpacity={0.22} />
+          <stop offset="1" stopColor={BARK_DARK} stopOpacity={0} />
+        </radialGradient>
+        <linearGradient id="poster-background" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#f5f0e5" />
+          <stop offset="0.7" stopColor={PAPER} />
+          <stop offset="1" stopColor="#e9dcc5" />
+        </linearGradient>
+        <filter id="poster-cast" x="-5%" y="-5%" width="110%" height="110%">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.18  0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0.2 0" />
+          <feGaussianBlur stdDeviation="3.5" />
+        </filter>
+        <filter id="poster-banner-shadow" x="-20%" y="-40%" width="140%" height="190%">
+          <feDropShadow dx="2" dy="3" stdDeviation="2.5" floodColor="#2f2117" floodOpacity="0.4" />
+        </filter>
+      </defs>
+      <rect width={width} height={height} fill="url(#poster-background)" />
+
+      {art.canopy.map((c, i) => <circle key={`c${i}`} cx={c.cx.toFixed(1)} cy={c.cy.toFixed(1)} r={c.r.toFixed(1)} fill="url(#poster-canopy)" />)}
+      {art.dappled.map((spot, i) => (
+        <circle key={`dp${i}`} cx={spot.cx.toFixed(1)} cy={spot.cy.toFixed(1)} r={spot.r.toFixed(1)}
+          fill="url(#poster-dapple)" opacity={spot.opacity.toFixed(2)} />
+      ))}
+      {/* The whole tree again, blurred and offset, as its shadow on the paper */}
+      <use href="#poster-tree" transform={`translate(${SHADOW_OFFSET.x} ${SHADOW_OFFSET.y})`} filter="url(#poster-cast)" />
+      <ellipse cx={art.ground.cx} cy={art.ground.cy} rx={art.ground.rx} ry={18} fill="url(#poster-ground-shadow)" />
+
+      <g id="poster-tree">
+        {art.aerialRoots.map((d, i) => <path key={`a${i}`} d={d} fill="url(#poster-bark)" opacity={0.92} />)}
+        {art.backLeaves.map((leaf, i) => <Leaf key={`b${i}`} leaf={leaf} />)}
+        {art.wood.map((piece, i) => (
+          <g key={`w${i}`}>
+            <path d={piece.body} fill="url(#poster-bark)" />
+            {piece.shade && <path d={piece.shade} fill={SHADOW_INK} opacity={0.42} />}
+            {piece.light && <path d={piece.light} fill="#d9b48a" opacity={0.2} />}
+            {piece.grain && <path className="poster-detail" d={piece.grain} stroke={SHADOW_INK} strokeWidth={0.8} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.3} />}
+            {piece.cracks && <path className="poster-detail" d={piece.cracks} stroke={SHADOW_INK} strokeWidth={1.1} strokeLinecap="round" fill="none" opacity={0.5} />}
+            {piece.knots.map((k, j) => (
+              <g key={j} className="poster-detail" transform={`translate(${k.cx.toFixed(1)} ${k.cy.toFixed(1)}) rotate(${k.angle.toFixed(1)})`}>
+                <ellipse rx={k.rx * 1.7} ry={k.ry * 1.9} fill="none" stroke={SHADOW_INK} strokeWidth={0.9} opacity={0.35} />
+                <ellipse rx={k.rx} ry={k.ry} fill={SHADOW_INK} opacity={0.55} />
+                <ellipse rx={k.rx * 0.45} ry={k.ry * 0.4} fill="#1f150f" opacity={0.6} />
+              </g>
+            ))}
+          </g>
+        ))}
+        {art.twigs.map((d, i) => <path key={`t${i}`} d={d} fill={BARK_DARK} />)}
+        {art.leaves.map((leaf, i) => <Leaf key={`l${i}`} leaf={leaf} />)}
+        {art.berries.map((b, i) => (
+          <circle key={`f${i}`} cx={b.cx.toFixed(1)} cy={b.cy.toFixed(1)} r={b.r.toFixed(1)} fill={b.color} stroke="#3a1d12" strokeOpacity={0.35} strokeWidth={0.5} />
+        ))}
+      </g>
+
+      {/* Soil mound over the root tips, with grass and pebbles */}
+      {art.ground.mound && <path d={art.ground.mound} fill="url(#poster-soil)" />}
+      {art.ground.footings.map((f, i) => <ellipse key={`ft${i}`} cx={f.x} cy={f.y} rx={9} ry={3.5} fill="url(#poster-soil)" />)}
+      <g className="poster-detail">
+        {art.ground.pebbles.map((p, i) => (
+          <ellipse key={`p${i}`} cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry} transform={`rotate(${p.angle.toFixed(1)} ${p.cx.toFixed(1)} ${p.cy.toFixed(1)})`}
+            fill="#a39784" stroke="#6f6252" strokeWidth={0.8} />
+        ))}
+        {art.ground.grass && <path d={art.ground.grass} stroke={spec.grass} strokeWidth={1.3} strokeLinecap="round" fill="none" />}
+        {art.fallen.map((leaf, i) => <Leaf key={`f${i}`} leaf={leaf} />)}
+      </g>
+
+      {/* Member cards: hanging name tags, one per person, with his wives on the same tag */}
+      {layout.nodes.map(n => {
+        const m = byId.get(n.id);
+        if (!m || n.kind === 'fork') return null;
+        const { x, y } = posOf(n);
+        const { people, w, rows, h } = cardLayouts.get(n.id)!;
+        const font = lang === 'mr' ? 'mr' : 'en';
+        const left = x - w / 2;
+        const top = y - h / 2;
+        const female = m.gender === 'female';
+        const colors = female ? CARD_COLORS.female : CARD_COLORS.male;
+        const focus = n.depth === focusDepth;
+        const nameClass = `poster-card__name--${font}`;
+        const holes = [left + w * 0.24, left + w * 0.76];
+        const nail = { x, y: top - 12 };
+        const tilt = cardTilt(n.id);
+        return (
+          <g key={`c-${n.id}`} className="poster-card" transform={`rotate(${tilt.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`}>
+            <title>{people.map(p => p.name).join(' ♥ ')}</title>
+            <g filter="url(#poster-banner-shadow)">
+              <path d={leafCard(left, top, w, h, female)} fill={focus ? 'url(#poster-tag-focus)' : 'url(#poster-tag)'} stroke={colors.edge} strokeWidth={focus ? 3 : 2} />
+            </g>
+            <path d={leafCard(left + 3.5, top + 3.5, w - 7, h - 7, female)} fill="none" stroke={colors.edge} strokeWidth={0.8} opacity={0.4} />
+            {holes.map(hx => <circle key={hx} cx={hx} cy={top + 6} r={2} fill="#e6d8bd" stroke={colors.edge} strokeWidth={0.8} />)}
+            <path d={`M${holes[0]},${top + 6}L${nail.x},${nail.y}L${holes[1]},${top + 6}`} stroke={TWINE} strokeWidth={1.3} strokeLinejoin="round" fill="none" />
+            <circle cx={nail.x} cy={nail.y} r={3.2} fill="#3a2a20" />
+            <circle cx={nail.x - 1} cy={nail.y - 1} r={1.1} fill="#b09070" />
+            {rows.map(row => {
+              const p = people[row.person];
+              if (row.kind === 'heart') return <text key={`h${row.person}`} x={x} y={top + row.baseline} textAnchor="middle" className="poster-card__heart">♥</text>;
+              return (
+                <text key={`n${p.id}`} x={x} y={top + row.baseline} textAnchor="middle" className={nameClass} fill={colors.text} style={{ fontFamily: nameFont.family, fontSize: nameFont.size }}>
+                  {p.name}
+                </text>
+              );
+            })}
+          </g>
+        );
+      })}
+
+      <g className="poster-detail">{art.drifting.map((leaf, i) => <Leaf key={`d${i}`} leaf={leaf} />)}</g>
+
+      {/* Decorative frame */}
+      <rect x={FRAME_INSET} y={FRAME_INSET} width={width - FRAME_INSET * 2} height={height - FRAME_INSET * 2} fill="none" stroke={BARK_DARK} strokeWidth={2} opacity={0.55} />
+      <rect x={FRAME_INSET + 7} y={FRAME_INSET + 7} width={width - FRAME_INSET * 2 - 14} height={height - FRAME_INSET * 2 - 14} fill="none" stroke={BARK_DARK} strokeWidth={0.8} opacity={0.45} />
+      {frameCorners.map((transform, i) => (
+        <g key={`fr${i}`} transform={transform}>
+          <path d={FLOURISH} stroke={BARK_DARK} strokeWidth={1.3} strokeLinecap="round" fill="none" opacity={0.6} />
+          {[0, 1].map(j => (
+            <Leaf key={j} leaf={{ x: 24 + j * 7, y: 24 + j * 7, angle: j ? 0 : 90, size: 13, squash: 1, color: spec.outer[(i + j) % spec.outer.length], shape: spec.shapes[0], opacity: 0.85 }} />
+          ))}
+        </g>
+      ))}
+
+      {/* Title */}
+      <rect x={titleX - titleHalf} y={titleY - titleSize * 1.05} width={titleHalf * 2} height={titleSize * 1.75}
+        rx={12} fill="#f8f1e4" fillOpacity={0.88} stroke={BARK_DARK} strokeOpacity={0.38} />
+      <text x={titleX} y={titleY} textAnchor="middle" className="poster-title-text" style={{ fontSize: titleSize }} {...titleFit}>{title}</text>
+      <g transform={`translate(${titleX} ${titleY + titleSize * 0.5}) scale(${titleSize / 40})`}>
+        <path d="M-150,0 C-80,-6 80,-6 150,0" stroke={BARK_DARK} strokeWidth={1.4} fill="none" />
+        {[-120, -80, -40, 40, 80, 120].map((dx, i) => (
+          <Leaf key={dx} leaf={{ x: dx, y: -3, angle: i % 2 ? -25 : -155, size: 13, squash: 1, color: spec.outer[(i * 3) % spec.outer.length], shape: spec.shapes[i % spec.shapes.length], opacity: 0.9 }} />
+        ))}
+      </g>
+    </svg>
+  );
+});
 
 export default PosterModal;

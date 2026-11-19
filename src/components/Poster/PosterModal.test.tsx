@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { translations } from '../../i18n/translations';
 import { processAllFamilyData } from '../../processing/dataProcessor';
 import PosterModal from './PosterModal';
+import * as posterArt from './posterArt';
 
 jest.mock('../../context/FamilyTreeContext', () => ({
   ...jest.requireActual('../../context/FamilyTreeContext'), useFamilyTree: jest.fn(),
@@ -93,7 +94,7 @@ it('keeps settings and export in the toolbar with zoom inside the preview outsid
   expect(screen.queryByRole('complementary')).toBeNull();
   expect(style.value).toBe('autumn');
   expect(settings.querySelectorAll('legend, label, p, .poster-field > span')).toHaveLength(0);
-  for (const name of [t.posterFindPerson, t.posterGenerations, t.posterStyle, t.posterNameStyle]) {
+  for (const name of [t.posterStartFrom, t.posterGenerations, t.posterStyle, t.posterNameStyle]) {
     expect(within(settings).getByRole('combobox', { name }).getAttribute('title')).toBe(name);
   }
   expect(settings.querySelectorAll('.poster-theme-preview')).toHaveLength(0);
@@ -117,19 +118,73 @@ it.each(['en', 'mr'] as const)('keeps poster action buttons icon-only with %s na
   expect(screen.queryByRole('region', { name: labels.posterCustomize })).toBeNull();
 });
 
-it('searches and selects the starting person from one combined picker', () => {
+it.each(['en', 'mr'] as const)('selects the starting person from a plain localized %s dropdown', lang => {
+  const labels = translations[lang];
+  (useLanguage as jest.Mock).mockReturnValue({ lang, t: labels });
   render(<PosterModal onClose={jest.fn()} />);
-  const picker = screen.getByRole('combobox', { name: t.posterFindPerson }) as HTMLInputElement;
-  expect(picker.value).toBe('Ramchandra Vithoba');
-  picker.focus();
-  fireEvent.change(picker, { target: { value: 'Lav' } });
-  expect(screen.getByRole('option', { name: 'Lav (Ramchandra Vithoba)' })).toBeTruthy();
-  fireEvent.keyDown(picker, { key: 'Enter' });
-  expect(picker.value).toBe('Lav (Ramchandra Vithoba)');
-  expect(picker.getAttribute('aria-expanded')).toBe('false');
-  fireEvent.change(picker, { target: { value: 'no-such-person' } });
-  expect(screen.getByText(t.posterNoMatches)).toBeTruthy();
+  const picker = screen.getByRole('combobox', { name: labels.posterStartFrom }) as HTMLSelectElement;
+  expect(picker.tagName).toBe('SELECT');
+  expect(picker.value).toBe('dad');
+  expect(Array.from(picker.options).map(option => option.textContent)).toEqual(lang === 'en'
+    ? ['Lav (Ramchandra Vithoba)', 'Ramchandra Vithoba']
+    : ['रामचंद्र विठोबा', 'लव (रामचंद्र विठोबा)']);
+  expect(screen.queryByRole('searchbox')).toBeNull();
+  expect(document.querySelector('input[type="search"]')).toBeNull();
+  fireEvent.change(picker, { target: { value: 'son' } });
+  expect(picker.value).toBe('son');
+  const image = screen.getByRole('img', { name: labels.posterFamilyName('Family') });
+  const focusedCard = image.querySelector('[fill="url(#poster-tag-focus)"]')?.closest('.poster-card');
+  expect(focusedCard?.querySelector('text')?.textContent).toBe(lang === 'en' ? 'Lav' : 'लव');
   expect(picker.disabled).toBe(false);
+});
+
+it('disables the starting-person dropdown when there are no eligible men', () => {
+  context.currentTree = {
+    ...data.familyTreesStyled[0],
+    members: data.familyTreesStyled[0].members.filter(member => member.gender === 'female'),
+    relationships: { parentChild: [], spouses: [] },
+  };
+  render(<PosterModal onClose={jest.fn()} />);
+  const picker = screen.getByRole('combobox', { name: t.posterStartFrom }) as HTMLSelectElement;
+  expect(picker.options).toHaveLength(0);
+  expect(picker.disabled).toBe(true);
+});
+
+it('skips artwork rendering for zoom and toolbar changes but redraws when the style changes', () => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+  // Gradient colors are evaluated inside the SVG render, not the memoized art builder.
+  const renderColors = jest.spyOn(posterArt, 'mix');
+  render(<PosterModal onClose={jest.fn()} />);
+  const image = screen.getByRole('img', { name: t.posterFamilyName('Family') });
+  const artwork = image.innerHTML;
+  renderColors.mockClear();
+  fireEvent.click(screen.getByRole('button', { name: t.posterCustomize }));
+  fireEvent.click(screen.getByRole('button', { name: t.posterDone }));
+  fireEvent.click(screen.getByRole('button', { name: t.tooltipZoomIn }));
+  fireEvent.click(screen.getByRole('button', { name: t.posterResetView }));
+  fireEvent.click(screen.getByRole('button', { name: t.posterFit }));
+  expect(renderColors).not.toHaveBeenCalled();
+  expect(image.innerHTML).toBe(artwork);
+  fireEvent.click(screen.getByRole('button', { name: t.posterCustomize }));
+  fireEvent.change(screen.getByRole('combobox', { name: t.posterStyle }), { target: { value: 'spring' } });
+  expect(renderColors).toHaveBeenCalled();
+  expect(image.innerHTML).not.toBe(artwork);
+});
+
+it('refreshes memoized names when family data or the language changes', () => {
+  const view = render(<PosterModal onClose={jest.fn()} />);
+  context.currentTree = {
+    ...data.familyTreesStyled[0],
+    members: data.familyTreesStyled[0].members.map(member => member.id === 'son' ? { ...member, firstName: 'Updated name' } : member),
+  };
+  view.rerender(<PosterModal onClose={jest.fn()} />);
+  const image = screen.getByRole('img', { name: t.posterFamilyName('Family') });
+  expect(within(image).getByText((_content, element) => element?.tagName === 'text' && element.textContent === 'Updated name')).toBeTruthy();
+  (useLanguage as jest.Mock).mockReturnValue({ lang: 'mr', t: translations.mr });
+  view.rerender(<PosterModal onClose={jest.fn()} />);
+  expect(image.getAttribute('aria-label')).toBe(translations.mr.posterFamilyName('Family'));
+  expect(within(image).getByText((_content, element) => element?.tagName === 'text' && element.textContent === 'लव')).toBeTruthy();
+  expect(within(image).queryByText('Updated name')).toBeNull();
 });
 
 it.each(['heritage', 'readable'])('keeps long names on one line at the original %s font size', style => {
@@ -301,9 +356,9 @@ it('expands mobile settings in the top toolbar and dismisses them before closing
   customize.focus();
   fireEvent.click(customize);
   const settings = within(toolbar).getByRole('region', { name: t.posterCustomize });
-  const search = within(settings).getByRole('combobox', { name: t.posterFindPerson });
+  const picker = within(settings).getByRole('combobox', { name: t.posterStartFrom });
   expect(customize.getAttribute('aria-expanded')).toBe('true');
-  expect(search.matches(':focus')).toBe(true);
+  expect(picker.matches(':focus')).toBe(true);
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
   const fit = screen.getByRole('button', { name: t.posterFit });
   const reset = screen.getByRole('button', { name: t.posterResetView });
@@ -357,13 +412,13 @@ it.each([
 
 it('restores focus when the browser blurs hidden settings during resizing', () => {
   render(<PosterModal onClose={jest.fn()} />);
-  const search = screen.getByRole('combobox', { name: t.posterFindPerson });
-  search.focus();
+  const picker = screen.getByRole('combobox', { name: t.posterStartFrom });
+  picker.focus();
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
-  search.blur();
+  picker.blur();
   fireEvent(window, new Event('resize'));
   expect(screen.getByRole('button', { name: t.posterCustomize }).matches(':focus')).toBe(true);
-  expect(screen.queryByRole('combobox', { name: t.posterFindPerson })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: t.posterStartFrom })).toBeNull();
   const reset = screen.getByRole('button', { name: t.posterResetView });
   reset.focus();
   fireEvent.keyDown(reset, { key: 'Tab' });
@@ -372,7 +427,7 @@ it('restores focus when the browser blurs hidden settings during resizing', () =
 
 it('does not steal focus from preview zoom when settings collapse during resizing', () => {
   render(<PosterModal onClose={jest.fn()} />);
-  screen.getByRole('combobox', { name: t.posterFindPerson }).focus();
+  screen.getByRole('combobox', { name: t.posterStartFrom }).focus();
   const fit = screen.getByRole('button', { name: t.posterFit });
   fit.focus();
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
@@ -397,7 +452,7 @@ it('selects a valid poster root when family data arrives after opening', () => {
   expect(screen.queryByRole('dialog')).toBeNull();
   context.currentTree = data.familyTreesStyled[0];
   view.rerender(<PosterModal onClose={jest.fn()} />);
-  expect((screen.getByRole('combobox', { name: t.posterFindPerson }) as HTMLInputElement).value).toBe('Ramchandra Vithoba');
+  expect((screen.getByRole('combobox', { name: t.posterStartFrom }) as HTMLSelectElement).value).toBe('dad');
   fireEvent.wheel(screen.getByRole('img', { name: t.posterFamilyName('Family') }), { ctrlKey: true, deltaY: -100 });
   expect(screen.getByRole('status', { name: t.posterZoomLevel }).textContent).toBe('122%');
 });
@@ -421,7 +476,9 @@ it('measures Fit after late-arriving data even when the poster dimensions stay u
 it('rejects unsuccessful poster-font responses and re-enables the controls', async () => {
   Object.defineProperty(globalThis, 'fetch', { configurable: true, value: jest.fn().mockResolvedValue({ ok: false, status: 404 }) });
   jest.spyOn(console, 'error').mockImplementation(() => {});
+  const renderColors = jest.spyOn(posterArt, 'mix');
   render(<PosterModal onClose={jest.fn()} />);
+  renderColors.mockClear();
   const download = screen.getByRole('button', { name: t.posterDownload });
   const nameStyle = screen.getByRole('combobox', { name: t.posterNameStyle });
   fireEvent.click(download);
@@ -429,6 +486,7 @@ it('rejects unsuccessful poster-font responses and re-enables the controls', asy
   await waitFor(() => expect(toast.error).toHaveBeenCalledWith(t.alertExportFailed));
   expect((download as HTMLButtonElement).disabled).toBe(false);
   expect(nameStyle.matches(':disabled')).toBe(false);
+  expect(renderColors).not.toHaveBeenCalled();
 });
 
 it('exports the readable, single-line SVG as PNG without editor controls', async () => {
