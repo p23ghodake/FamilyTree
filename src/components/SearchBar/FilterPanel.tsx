@@ -52,7 +52,7 @@ const FilterPanel: React.FC = () => {
         <label className={chipClass(f.location !== '')}>
           <MapPinIcon size={12} />
           <select
-            className="filter-panel__select"
+            className="filter-panel__select ui-select"
             aria-label={t.labelLocation}
             value={f.location}
             onChange={e => set({ location: e.target.value })}
@@ -62,14 +62,14 @@ const FilterPanel: React.FC = () => {
           </select>
         </label>
       </div>
-      <div className="filter-panel__foot">
-        <span>{activeCount > 0 ? t.filtersOnCount(activeCount) : t.filtersTitle}</span>
-        {activeCount > 0 && (
+      {activeCount > 0 && (
+        <div className="filter-panel__foot">
+          <span>{t.filtersOnCount(activeCount)}</span>
           <button type="button" className="filter-panel__clear" onClick={() => dispatch({ type: 'CLEAR_ADVANCED_FILTERS' })}>
             {t.filterClear}
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

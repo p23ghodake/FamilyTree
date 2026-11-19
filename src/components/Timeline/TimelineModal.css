@@ -39,7 +39,7 @@
 }
 
 .tl-dot__initials {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--tl-color);
   line-height: 1;
@@ -88,7 +88,7 @@
 }
 
 .tl-tooltip__meta {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--tl-color);
   font-weight: 500;
 }
@@ -149,7 +149,7 @@
 }
 
 .tl-header__tree {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   background: var(--bg-secondary);
   border-radius: 20px;
@@ -173,7 +173,7 @@
   border: 1.5px solid var(--border);
   background: var(--bg-secondary);
   color: var(--text-muted);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
   white-space: nowrap;
@@ -238,7 +238,7 @@
 }
 .tl-empty svg { opacity: 0.35; }
 .tl-empty p { margin: 0; }
-.tl-empty__hint { font-size: 11.5px; opacity: 0.7; }
+.tl-empty__hint { font-size: var(--fs-xs); opacity: 0.7; }
 
 /* ── Scroll area ── */
 .tl-scroll {
@@ -294,7 +294,7 @@
 }
 
 .tl-axis__tick-label {
-  font-size: 9.5px;
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 4px;
   white-space: nowrap;
@@ -316,7 +316,7 @@
   gap: 8px;
   padding: 9px 18px;
   border-top: 1px solid var(--border);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -331,7 +331,7 @@
   .tl-modal { height: 460px; }
   .tl-canvas { grid-template-rows: 155px 52px 155px; }
   .tl-header__filters { gap: 4px; }
-  .tl-filter { padding: 3px 8px; font-size: 10.5px; }
+  .tl-filter { padding: 3px 8px; font-size: var(--fs-xs); }
 }
 
 @media (prefers-reduced-motion: reduce) {

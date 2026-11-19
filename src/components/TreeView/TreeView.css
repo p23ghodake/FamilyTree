@@ -25,6 +25,9 @@
   overflow: auto;
   padding: 40px 30px 60px;
   position: relative;
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(color-mix(in srgb, var(--connector-line) 22%, transparent) 0.7px, transparent 0.7px);
+  background-size: 24px 24px;
 }
 
 .tree-view__content:focus-visible {
@@ -237,7 +240,7 @@
 }
 
 .pnode--scroll-target .pnode__name {
-  color: var(--scroll-beacon-color);
+  color: var(--accent-text);
   font-weight: 700;
   transition: color 0.3s;
 }
@@ -339,7 +342,7 @@
 }
 
 .pnode__dates {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   text-align: center;
   white-space: nowrap;
@@ -512,7 +515,7 @@
   bottom: calc(100% + 3px);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
   white-space: nowrap;
@@ -571,7 +574,7 @@
   border: 1px solid var(--toolbar-border);
   border-radius: 12px;
   padding: 4px 6px;
-  box-shadow: 0 2px 8px var(--node-shadow);
+  box-shadow: var(--shadow-sm);
   z-index: var(--z-above);
 }
 
@@ -604,7 +607,7 @@
 }
 
 .zoom-controls__level {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-muted);
   min-width: 40px;
@@ -612,7 +615,6 @@
 }
 
 .zoom-controls__reset {
-  font-size: 18px;
   margin-left: 2px;
 }
 
@@ -670,12 +672,10 @@
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
-  height: 6px;
-}
-
-.tree-view__colorbar span {
-  flex: 1;
+  height: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  background: linear-gradient(90deg, var(--accent-light), var(--accent), var(--accent-hover));
+  pointer-events: none;
 }
 
 /* ─── Relationship mode banner ─── */
@@ -685,15 +685,16 @@
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, var(--accent), var(--accent-text));
-  color: var(--text-inverse);
-  font-size: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  font-size: var(--fs-xs);
   font-weight: 600;
-  padding: 8px 20px;
-  border-radius: 20px;
+  padding: 7px 14px;
+  border-radius: var(--radius-lg);
   pointer-events: none;
   z-index: var(--z-dropdown);
-  box-shadow: 0 4px 16px var(--node-shadow);
+  box-shadow: var(--shadow-sm);
   white-space: nowrap;
   animation: banner-in 0.3s ease;
 }
@@ -804,13 +805,13 @@
   }
 
   .pnode__name {
-    font-size: 10px;
-    min-height: 30px; /* 10px × 1.5 × 2 lines */
+    font-size: 11px;
+    min-height: 33px;
     max-width: 86px;
   }
 
   .pnode__dates {
-    font-size: 9px;
+    font-size: 10px;
     max-width: 86px;
   }
 
@@ -936,8 +937,8 @@
    ═══════════════════════════════════════════ */
 
 .tree-chart li {
-  --line: color-mix(in srgb, var(--tree-accent, var(--accent)) 38%, var(--connector-line));
-  --line-glow: color-mix(in srgb, var(--tree-accent, var(--accent)) 28%, transparent);
+  --line: color-mix(in srgb, var(--tree-accent, var(--accent)) 48%, var(--connector-line));
+  --line-glow: color-mix(in srgb, var(--tree-accent, var(--accent)) 30%, transparent);
 }
 
 /* Vertical drop from parent: gradient fading into the children bar */

@@ -58,6 +58,7 @@
   --success-bg:       #f0fdf4;
   --warning:          #f59e0b;
   --warning-bg:       #fffbeb;
+  --warning-text:     #92400e;
 
   /* ─── Relationship panel tokens ─── */
   --rel-blood-light:  #fca5a5;
@@ -66,6 +67,8 @@
   --rel-marriage-bg:  #fdf2f8;
   --rel-blood-dark:   #dc2626;
   --rel-marriage-dark: #db2777;
+  --rel-blood-text:   #991b1b;
+  --rel-marriage-text: #9d174d;
 
   /* ─── Filter panel tokens ─── */
   --filter-marriage-color: #ec4899;
@@ -127,14 +130,17 @@
   --success-bg:       #052e16;
   --warning:          #fbbf24;
   --warning-bg:       #451a03;
+  --warning-text:     #fbbf24;
 
   /* ─── Relationship panel tokens ─── */
   --rel-blood-light:  #fca5a5;
-  --rel-blood-bg:     #fff1f2;
+  --rel-blood-bg:     rgba(248, 113, 113, 0.12);
   --rel-marriage-light: #f9a8d4;
-  --rel-marriage-bg:  #fdf2f8;
-  --rel-blood-dark:   #dc2626;
-  --rel-marriage-dark: #db2777;
+  --rel-marriage-bg:  rgba(244, 114, 182, 0.12);
+  --rel-blood-dark:   #fca5a5;
+  --rel-marriage-dark: #f9a8d4;
+  --rel-blood-text:   #fca5a5;
+  --rel-marriage-text: #f9a8d4;
 
   /* ─── Filter panel tokens ─── */
   --filter-marriage-color: #ec4899;
@@ -196,6 +202,7 @@
   --success-bg:       #eafaf1;
   --warning:          #e67e22;
   --warning-bg:       #fef9e7;
+  --warning-text:     #92400e;
 
   /* ─── Relationship panel tokens ─── */
   --rel-blood-light:  #fca5a5;
@@ -204,6 +211,8 @@
   --rel-marriage-bg:  #fdf2f8;
   --rel-blood-dark:   #dc2626;
   --rel-marriage-dark: #db2777;
+  --rel-blood-text:   #991b1b;
+  --rel-marriage-text: #9d174d;
 
   /* ─── Filter panel tokens ─── */
   --filter-marriage-color: #ec4899;
@@ -265,6 +274,7 @@
   --success-bg:       #e8f5e9;
   --warning:          #f9a825;
   --warning-bg:       #fffde7;
+  --warning-text:     #854d0e;
 
   /* ─── Relationship panel tokens ─── */
   --rel-blood-light:  #fca5a5;
@@ -273,6 +283,8 @@
   --rel-marriage-bg:  #fdf2f8;
   --rel-blood-dark:   #dc2626;
   --rel-marriage-dark: #db2777;
+  --rel-blood-text:   #991b1b;
+  --rel-marriage-text: #9d174d;
 
   /* ─── Filter panel tokens ─── */
   --filter-marriage-color: #ec4899;
@@ -334,6 +346,7 @@
   --success-bg:       #e0f2f1;
   --warning:          #e65100;
   --warning-bg:       #fff3e0;
+  --warning-text:     #9a3412;
 
   /* ─── Relationship panel tokens ─── */
   --rel-blood-light:  #fca5a5;
@@ -342,6 +355,8 @@
   --rel-marriage-bg:  #fdf2f8;
   --rel-blood-dark:   #dc2626;
   --rel-marriage-dark: #db2777;
+  --rel-blood-text:   #991b1b;
+  --rel-marriage-text: #9d174d;
 
   /* ─── Filter panel tokens ─── */
   --filter-marriage-color: #ec4899;
@@ -403,6 +418,7 @@
   --success-bg:       #e8f5e9;
   --warning:          #f57f17;
   --warning-bg:       #fffde7;
+  --warning-text:     #9a3412;
 
   /* ─── Relationship panel tokens ─── */
   --rel-blood-light:  #fca5a5;
@@ -411,6 +427,8 @@
   --rel-marriage-bg:  #fdf2f8;
   --rel-blood-dark:   #dc2626;
   --rel-marriage-dark: #db2777;
+  --rel-blood-text:   #991b1b;
+  --rel-marriage-text: #9d174d;
 
   /* ─── Filter panel tokens ─── */
   --filter-marriage-color: #ec4899;

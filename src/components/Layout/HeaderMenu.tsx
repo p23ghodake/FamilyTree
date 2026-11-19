@@ -38,7 +38,7 @@ const ConnectorSettings: React.FC = () => {
         {isSaving ? <Loader2Icon size={16} /> : <ActivityIcon size={16} />}
         <span>{t.settingsConnectorStyle}</span>
         <select
-          className="hdr-menu__select"
+          className="hdr-menu__select ui-select"
           value={connectorStyle}
           disabled={disabled}
           onChange={e => set({ connectorStyle: e.target.value as DisplaySettings['connectorStyle'] })}
@@ -51,7 +51,7 @@ const ConnectorSettings: React.FC = () => {
       <label className="hdr-menu__row hdr-menu__row--sub">
         <span>{t.settingsConnectorShape}</span>
         <select
-          className="hdr-menu__select"
+          className="hdr-menu__select ui-select"
           value={connectorShape}
           disabled={disabled}
           onChange={e => set({ connectorShape: e.target.value as DisplaySettings['connectorShape'] })}
@@ -65,7 +65,7 @@ const ConnectorSettings: React.FC = () => {
           <label className="hdr-menu__row hdr-menu__row--sub">
             <span>{t.settingsConnectorSpeed}</span>
             <select
-              className="hdr-menu__select"
+              className="hdr-menu__select ui-select"
               value={connectorSpeed}
               disabled={disabled}
               onChange={e => set({ connectorSpeed: e.target.value as DisplaySettings['connectorSpeed'] })}
@@ -79,7 +79,7 @@ const ConnectorSettings: React.FC = () => {
             <label className="hdr-menu__row hdr-menu__row--sub">
               <span>{t.settingsConnectorTiming}</span>
               <select
-                className="hdr-menu__select"
+                className="hdr-menu__select ui-select"
                 value={connectorTiming}
                 disabled={disabled}
                 onChange={e => set({ connectorTiming: e.target.value as DisplaySettings['connectorTiming'] })}
@@ -117,7 +117,7 @@ const HeaderMenu: React.FC<HeaderMenuProps> = ({
       <div className="hdr-menu__row">
         <LanguagesIcon size={16} />
         <span id="hdr-menu-language">{t.settingsLanguage}</span>
-        <span className="hdr-menu__lang" role="group" aria-labelledby="hdr-menu-language">
+        <span className="hdr-menu__lang ui-segmented" role="group" aria-labelledby="hdr-menu-language">
           <button type="button" aria-pressed={lang === 'en'} onClick={() => { if (lang !== 'en') toggleLang(); }}>{t.langLabelEn}</button>
           <button type="button" aria-pressed={lang === 'mr'} onClick={() => { if (lang !== 'mr') toggleLang(); }}>{t.langLabelMr}</button>
         </span>
@@ -146,7 +146,7 @@ const HeaderMenu: React.FC<HeaderMenuProps> = ({
         <UserIcon size={16} />
         <span>{t.settingsAvatarStyle}</span>
         <select
-          className="hdr-menu__select"
+          className="hdr-menu__select ui-select"
           value={state.avatarStyle}
           onChange={e => dispatch({ type: 'SET_AVATAR_STYLE', payload: e.target.value as AvatarStyle })}
         >

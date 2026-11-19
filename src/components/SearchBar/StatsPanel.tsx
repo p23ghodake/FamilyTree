@@ -134,7 +134,7 @@ const StatsPanel: React.FC<{ visible: boolean }> = ({ visible }) => {
           </h3>
           <div className="stats-panel__bars">
             {stats.generations.map(([gen, count]) => (
-              <div key={gen} className="stats-panel__bar-row">
+              <div key={gen} className={`stats-panel__bar-row${count === stats.maxGenCount ? ' stats-panel__bar-row--max' : ''}`}>
                 <span className="stats-panel__bar-label">{t.genLabel(gen)}</span>
                 <div className="stats-panel__bar-track">
                   <div className="stats-panel__bar-fill" style={{ width: `${(count / stats.maxGenCount) * 100}%` }} />

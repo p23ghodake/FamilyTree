@@ -1020,10 +1020,6 @@
   overflow: hidden;
 }
 
-[data-theme='dark'] .member-form__dup-warning {
-  background: rgba(245, 158, 11, 0.08);
-}
-
 .member-form__dup-header {
   display: flex;
   align-items: center;
@@ -1033,10 +1029,6 @@
   font-weight: 600;
   color: var(--warning-text, #92400e);
   border-bottom: 1px solid var(--warning, #f59e0b);
-}
-
-[data-theme='dark'] .member-form__dup-header {
-  color: #fbbf24;
 }
 
 .member-form__dup-list {
@@ -1104,21 +1096,10 @@
   color: var(--danger, #dc2626);
 }
 
-[data-theme='dark'] .member-form__dup-badge--high {
-  background: rgba(220, 38, 38, 0.18);
-  color: #f87171;
-}
-
 .member-form__dup-badge--medium {
   background: var(--warning-bg, #fffbeb);
   color: var(--warning-text, #92400e);
   border: 1px solid var(--warning, #f59e0b);
-}
-
-[data-theme='dark'] .member-form__dup-badge--medium {
-  background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
-  border-color: #f59e0b;
 }
 
 .member-form__dup-hint {

@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { isFiltersActive, useFamilyTree } from '../../context/FamilyTreeContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { Maximize2Icon } from '../Icons';
+import { Maximize2Icon, RotateCcwIcon } from '../Icons';
 import { buildTreeFromMembers } from '../../processing/treeBuilder';
 import { TreeBranch } from './TreeBranch';
 import ConnectorFlow from './ConnectorFlow';
@@ -547,7 +547,7 @@ const TreeView: React.FC = () => {
         <button className="zoom-controls__btn" onClick={zoomIn} title={t.tooltipZoomIn} aria-label={t.tooltipZoomIn}>＋</button>
         <span className="zoom-controls__level">{Math.round(zoom * 100)}%</span>
         <button className="zoom-controls__btn" onClick={zoomOut} title={t.tooltipZoomOut} aria-label={t.tooltipZoomOut}>−</button>
-        <button className="zoom-controls__btn zoom-controls__reset" onClick={resetView} title={t.tooltipZoomReset} aria-label={t.tooltipZoomReset}>⟲</button>
+        <button className="zoom-controls__btn zoom-controls__reset" onClick={resetView} title={t.tooltipZoomReset} aria-label={t.tooltipZoomReset}><RotateCcwIcon size={15} /></button>
         <div className="zoom-controls__divider" />
         <button className="zoom-controls__btn zoom-controls__fit" onClick={fitToScreen} title={t.tooltipFitToScreen} aria-label={t.tooltipFitToScreen}>
           <Maximize2Icon size={14} />
@@ -555,15 +555,7 @@ const TreeView: React.FC = () => {
       </div>
 
       {/* Bottom color bar */}
-      <div className="tree-view__colorbar">
-        <span style={{ background: '#3B82F6' }} />
-        <span style={{ background: '#60A5FA' }} />
-        <span style={{ background: '#A855F7' }} />
-        <span style={{ background: '#F59E0B' }} />
-        <span style={{ background: '#10B981' }} />
-        <span style={{ background: '#EF4444' }} />
-        <span style={{ background: '#EC4899' }} />
-      </div>
+      <div className="tree-view__colorbar" aria-hidden="true" />
     </div>
   );
 };

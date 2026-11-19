@@ -7,8 +7,8 @@
   transform: translateX(-50%);
   background: var(--modal-bg);
   border: 1.5px solid var(--modal-border);
-  border-radius: 16px;
-  box-shadow: 0 16px 48px var(--node-shadow);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   padding: 16px 20px;
   min-width: 380px;
   max-width: 640px;
@@ -128,7 +128,7 @@
 }
 
 .relationship-panel__step--disabled {
-  opacity: 0.4;
+  opacity: 0.62;
   pointer-events: none;
 }
 

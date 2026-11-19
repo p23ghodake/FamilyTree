@@ -23,9 +23,9 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 28px;
+  height: 32px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--input-border);
   background: var(--input-bg);
   color: var(--text-secondary);
@@ -40,8 +40,8 @@
 
 .filter-panel__chip--on {
   border-color: var(--accent);
-  background: var(--accent-light);
-  color: var(--accent-text);
+  background: var(--selected-bg);
+  color: var(--selected-fg);
   font-weight: 600;
 }
 
@@ -54,21 +54,23 @@
 .filter-panel__count {
   min-width: 16px;
   padding: 0 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--filter-marriage-color);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   line-height: 16px;
   text-align: center;
 }
 
 .filter-panel__select {
+  min-height: 0;
+  padding: 0 22px 0 0;
   border: 0;
-  background: transparent;
+  background-color: transparent;
   color: inherit;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   outline: none;
   max-width: 140px;
@@ -85,7 +87,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
@@ -95,7 +97,7 @@
   background: none;
   color: var(--accent-text);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -103,7 +105,7 @@
 .filter-panel__clear:hover { text-decoration: underline; }
 
 @media (pointer: coarse) {
-  .filter-panel__chip { height: 34px; }
+  .filter-panel__chip { height: 36px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

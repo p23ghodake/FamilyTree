@@ -39,7 +39,7 @@ const Layout: React.FC = () => {
           <div className="layout__error-icon">⚠️</div>
           <p>{t.errorLoadTree}</p>
           <p className="layout__error-msg">{state.error}</p>
-          <button type="button" onClick={retryLoad} disabled={isSaving}>
+          <button type="button" className="layout__retry ui-button ui-button--primary" onClick={retryLoad} disabled={isSaving}>
             {t.retryLoad}
           </button>
         </div>

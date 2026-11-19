@@ -239,7 +239,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
       <div className="top-bar__actions">
         {canEdit && (
           <>
-            <button type="button" className="top-bar__primary" onClick={openAddMember} disabled={isSaving} title={t.tooltipAddMember} data-tour="add-member">
+            <button type="button" className="top-bar__primary ui-button ui-button--primary" onClick={openAddMember} disabled={isSaving} title={t.tooltipAddMember} data-tour="add-member">
               <PlusIcon size={15} /><span className="top-bar__label">{t.headerAddMember}</span>
             </button>
             <span className="top-bar__group">
@@ -285,7 +285,7 @@ const TopBar: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
               >
                 <SettingsIcon size={16} />
               </button>
-              <button type="button" className="top-bar__signin" onClick={() => setShowLogin(true)} disabled={authLoading} title={t.authSignInTooltip} data-tour="sign-in">
+              <button type="button" className="top-bar__signin ui-button ui-button--primary" onClick={() => setShowLogin(true)} disabled={authLoading} title={t.authSignInTooltip} data-tour="sign-in">
                 {authLoading ? t.authChecking : t.authSignIn}
               </button>
             </>

@@ -4,7 +4,7 @@
   height: 100vh;
   height: 100dvh;
   background: var(--bg-app);
-  font-family: 'Inter', sans-serif;
+  font-family: inherit;
   color: var(--text-primary);
 }
 
@@ -24,9 +24,13 @@
 }
 
 .layout__error-msg {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: 4px;
+}
+
+.layout__retry {
+  margin-top: 16px;
 }
 
 .layout__spinner {
